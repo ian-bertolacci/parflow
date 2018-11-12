@@ -33,6 +33,7 @@
 
 #include "parflow.h"
 #include "amps.h"
+#include <hot_loops.h>
 
 #ifdef HAVE_SAMRAI
 #include "SAMRAI/SAMRAI_config.h"
@@ -357,4 +358,3 @@ int main(int argc, char *argv [])
 
   return 0;
 }
-

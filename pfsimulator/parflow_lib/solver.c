@@ -36,6 +36,10 @@
 #include "parflow.h"
 #include "solver.h"
 
+/*
+Defines:
+PFModule * Solver_module;
+*/
 amps_ThreadLocalDcl(PFModule *, Solver_module);
 
 /*--------------------------------------------------------------------------

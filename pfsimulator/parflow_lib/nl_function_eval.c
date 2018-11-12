@@ -31,6 +31,7 @@
 #include "llnltyps.h"
 //#include "math.h"
 #include "float.h"
+// #include <hot_loops.h>
 
 /*---------------------------------------------------------------------
  * Define module structures
@@ -257,7 +258,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
 
   /* Calculate accumulation terms for the function values */
-
+  TIME_SECTION_NAMED( "nl_function_eval.c:261",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -332,9 +333,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       fp[ip] = (sp[ip] * dp[ip] - osp[ip] * odp[ip]) * pop[ipo] * vol * del_x_slope * del_y_slope * z_mult_dat[ip];
     });
   }
-
+  )
   /*@ Add in contributions from compressible storage */
-
+  TIME_SECTION_NAMED( "nl_function_eval.c:338",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -406,13 +407,13 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       fp[ip] += ss[ip] * vol * del_x_slope * del_y_slope * z_mult_dat[ip] * (pp[ip] * sp[ip] * dp[ip] - opp[ip] * osp[ip] * odp[ip]);
     });
   }
-
+  )
   /* Add in contributions from source terms - user specified sources and
    * flux wells.  Calculate phase source values overwriting current
    * saturation vector */
   PFModuleInvokeType(PhaseSourceInvoke, phase_source, (source, 0, problem, problem_data,
                                                        time));
-
+  TIME_SECTION_NAMED( "nl_function_eval.c:416",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -471,7 +472,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       fp[ip] -= vol * del_x_slope * del_y_slope * z_mult_dat[ip] * dt * (sp[ip] + et[ip]);
     });
   }
-
+  )
   bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
                                  (problem_data, grid, gr_domain, time));
 
@@ -502,7 +503,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
    * bc_patch_values[ival] in rel_perm_module code and remove this
    * loop.
    */
-
+  TIME_SECTION_NAMED( "nl_function_eval.c:506",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -537,7 +538,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
-
+  )
   /* Calculate relative permeability values overwriting current
    * phase source values */
 
@@ -547,6 +548,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
 
   /* Calculate contributions from second order derivatives and gravity */
+  TIME_SECTION_NAMED( "nl_function_eval.c:551",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -739,9 +741,10 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       fp[ip + sz_p] -= dt * u_upper;
     });
   }
-
+  )
   /*  Calculate correction for boundary conditions */
 
+  TIME_SECTION_NAMED( "nl_function_eval.c:747",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -1519,13 +1522,14 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
-
+  )
   /*
    * Reset values inserted for the DirichletBC back to the decoupled
    * problem used in the inactive cells.
    *
    * See comments above on why this is needed.
    */
+  TIME_SECTION_NAMED( "nl_function_eval.c:1532",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -1565,6 +1569,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
+  )
 
   FreeBCStruct(bc_struct);
 
@@ -1732,6 +1737,3 @@ int  NlFunctionEvalSizeOfTempData()
 {
   return 0;
 }
-
-
-

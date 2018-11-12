@@ -392,7 +392,7 @@ void    RichardsJacobianEval(
   PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation_der, pressure,
                                                            density, gravity, problem_data,
                                                            CALCDER));
-
+  TIME_SECTION_NAMED( "richards_jacobian_eval.c:395",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -466,6 +466,7 @@ void    RichardsJacobianEval(
                 * pop[ipo] * vol2 + ss[iv] * vol2 * (sdp[iv] * dp[iv] * pp[iv] + sp[iv] * ddp[iv] * pp[iv] + sp[iv] * dp[iv]); //sk start
     });
   }    /* End subgrid loop */
+  )
 
   bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
                                  (problem_data, grid, gr_domain, time));
@@ -473,7 +474,7 @@ void    RichardsJacobianEval(
   /* Get boundary pressure values for Dirichlet boundaries.   */
   /* These are needed for upstream weighting in mobilities - need boundary */
   /* values for rel perms and densities. */
-
+  TIME_SECTION_NAMED( "richards_jacobian_eval.c:477",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -508,7 +509,7 @@ void    RichardsJacobianEval(
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
-
+  )
   /* Calculate rel_perm and rel_perm_der */
 
   PFModuleInvokeType(PhaseRelPermInvoke, rel_perm_module,
@@ -519,6 +520,7 @@ void    RichardsJacobianEval(
                      (rel_perm_der, pressure, density, gravity, problem_data,
                       CALCDER));
 
+  TIME_SECTION_NAMED( "richards_jacobian_eval.c:523",
   /* Calculate contributions from second order derivatives and gravity */
   ForSubgridI(is, GridSubgrids(grid))
   {
@@ -737,6 +739,7 @@ void    RichardsJacobianEval(
       }
     });
   }  //
+  )
 
   /*  Calculate correction for boundary conditions */
 
@@ -749,7 +752,7 @@ void    RichardsJacobianEval(
     /*  of BC is involved.  Without this correction, only the symmetric */
     /*  part would be removed, incorrectly leaving the nonsymmetric     */
     /*  contribution on the diagonal.                                   */
-
+    TIME_SECTION_NAMED( "richards_jacobian_eval.c:755",
     ForSubgridI(is, GridSubgrids(grid))
     {
       subgrid = GridSubgrid(grid, is);
@@ -929,8 +932,10 @@ void    RichardsJacobianEval(
         });       /* End Patch Loop */
       }           /* End ipatch loop */
     }             /* End subgrid loop */
+  )
   }                  /* End if symm_part */
 
+  TIME_SECTION_NAMED( "richards_jacobian_eval.c:938",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -1294,7 +1299,7 @@ void    RichardsJacobianEval(
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
-
+)
   PFModuleInvokeType(RichardsBCInternalInvoke, bc_internal, (problem, problem_data, NULL, J, time,
                                                              pressure, CALCDER));
 
@@ -1341,6 +1346,7 @@ void    RichardsJacobianEval(
   if (ovlnd_flag && public_xtra->type == overland_flow)
   {
     /* begin loop to build JC */
+    TIME_SECTION_NAMED( "richards_jacobian_eval.c:1349",
     ForSubgridI(is, GridSubgrids(grid))
     {
       subgrid = GridSubgrid(grid, is);
@@ -1527,8 +1533,8 @@ void    RichardsJacobianEval(
         }         /* End switch BCtype */
       }           /* End ipatch loop */
     }             /* End subgrid loop */
+  )
   }
-
 
 
   /* Set pressures outside domain to zero.
@@ -1537,7 +1543,7 @@ void    RichardsJacobianEval(
    *
    * Should change this to set pressures to scaling value.
    * CSW: Should I set this to pressure * vol * dt ??? */
-
+  TIME_SECTION_NAMED( "richards_jacobian_eval.c:1546",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -1592,6 +1598,7 @@ void    RichardsJacobianEval(
 //#endif */
     });
   }
+)
 
 
   /*-----------------------------------------------------------------------
@@ -1859,4 +1866,3 @@ int  RichardsJacobianEvalSizeOfTempData()
 
   return sz;
 }
-
