@@ -31,7 +31,8 @@
 #include "llnltyps.h"
 //#include "math.h"
 #include "float.h"
-// #include <hot_loops.h>
+#include <omp.h>
+#include <loogie_config.h>
 
 /*---------------------------------------------------------------------
  * Define module structures
@@ -108,7 +109,7 @@ void     KINSolFunctionEval(
  *  of the stencil to the pressure array. */
 
 void NlFunctionEval(Vector *     pressure, /* Current pressure values */
-                    Vector *     fval, /* Return values of the nonlinear function */
+                    Vector *     fval, /* Return values of the nonlinear function */ // \param[out]
                     ProblemData *problem_data,  /* Geometry data for problem */
                     Vector *     saturation, /* Saturation / work vector */
                     Vector *     old_saturation, /* Saturation values at previous time step */
@@ -255,10 +256,13 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
   PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation, pressure, density,
                                                            gravity, problem_data, CALCFCN));
-
-
+                                                           int my_rank;
   /* Calculate accumulation terms for the function values */
-  TIME_SECTION_NAMED( "nl_function_eval.c:261",
+
+  Loogie_probe_make_server( );
+  Loogie_timer_t timer, subtimer;
+  Loogie_timer_ctr( &timer );
+
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -333,9 +337,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       fp[ip] = (sp[ip] * dp[ip] - osp[ip] * odp[ip]) * pop[ipo] * vol * del_x_slope * del_y_slope * z_mult_dat[ip];
     });
   }
-  )
   /*@ Add in contributions from compressible storage */
-  TIME_SECTION_NAMED( "nl_function_eval.c:338",
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -407,13 +410,20 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       fp[ip] += ss[ip] * vol * del_x_slope * del_y_slope * z_mult_dat[ip] * (pp[ip] * sp[ip] * dp[ip] - opp[ip] * osp[ip] * odp[ip]);
     });
   }
-  )
+  Loogie_timer_stop( &timer );
+
+  Loogie_create_and_queue_report( server, parflow_loogie_fields, 2,
+     Loogie_field_id_NAME, "nl_function_eval.c:338",
+     field_TIME, Loogie_timer_elapsed( &timer )
+  );
+
+  Loogie_timer_reset( &timer );
+
   /* Add in contributions from source terms - user specified sources and
    * flux wells.  Calculate phase source values overwriting current
    * saturation vector */
   PFModuleInvokeType(PhaseSourceInvoke, phase_source, (source, 0, problem, problem_data,
                                                        time));
-  TIME_SECTION_NAMED( "nl_function_eval.c:416",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -472,7 +482,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       fp[ip] -= vol * del_x_slope * del_y_slope * z_mult_dat[ip] * dt * (sp[ip] + et[ip]);
     });
   }
-  )
   bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
                                  (problem_data, grid, gr_domain, time));
 
@@ -503,7 +512,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
    * bc_patch_values[ival] in rel_perm_module code and remove this
    * loop.
    */
-  TIME_SECTION_NAMED( "nl_function_eval.c:506",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -538,7 +546,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
-  )
   /* Calculate relative permeability values overwriting current
    * phase source values */
 
@@ -548,9 +555,14 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
 
   /* Calculate contributions from second order derivatives and gravity */
-  TIME_SECTION_NAMED( "nl_function_eval.c:551",
+  int in_subgrid_iteration_count = 0;
+  int subgrid_count = 0;
+  // This is loop 551
+  // #pragma omp parallel for
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
+
     subgrid = GridSubgrid(grid, is);
 
     /* velocity vectors jjb */
@@ -558,7 +570,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     vy_sub = VectorSubvector(y_velocity, is);
     vz_sub = VectorSubvector(z_velocity, is);
 
-    Subgrid       *grid2d_subgrid = GridSubgrid(grid2d, is);
+    Subgrid *grid2d_subgrid = GridSubgrid(grid2d, is);
     int grid2d_iz = SubgridIZ(grid2d_subgrid);
 
     p_sub = VectorSubvector(pressure, is);
@@ -620,9 +632,20 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
     /* @RMM added to provide variable dz */
     z_mult_dat = SubvectorData(z_mult_sub);
-
     qx_sub = VectorSubvector(qx, is);
 
+    Loogie_timer_stop( &timer );
+
+    subgrid_count += 1;
+    Loogie_create_and_queue_report( server, parflow_loogie_fields, 5
+      , Loogie_field_id_NAME, "nl_function_eval.c:551.individual"
+      , field_SUBGRID_NX, nx
+      , field_SUBGRID_NY, ny
+      , field_SUBGRID_NZ, nz
+      , field_SUBGRID_IDX, is
+    );
+
+    Loogie_timer_start( &timer );
 
     GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
@@ -739,12 +762,21 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       fp[ip + 1] -= dt * u_right;
       fp[ip + sy_p] -= dt * u_front;
       fp[ip + sz_p] -= dt * u_upper;
+
     });
   }
-  )
+  Loogie_timer_stop( &timer );
+
+  Loogie_create_and_queue_report( server, parflow_loogie_fields, 3
+     , Loogie_field_id_NAME, "nl_function_eval.c:551"
+     , field_TIME, Loogie_timer_elapsed( &timer )
+     , field_SUBGRID_COUNT, subgrid_count
+  );
+
+  Loogie_timer_reset( &timer );
   /*  Calculate correction for boundary conditions */
 
-  TIME_SECTION_NAMED( "nl_function_eval.c:747",
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -1522,14 +1554,20 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
-  )
+  Loogie_timer_stop( &timer );
+
+  Loogie_create_and_queue_report( server, parflow_loogie_fields, 2,
+     Loogie_field_id_NAME, "nl_function_eval.c:757",
+     field_TIME, Loogie_timer_elapsed( &timer )
+  );
+
+  Loogie_timer_reset( &timer );
   /*
    * Reset values inserted for the DirichletBC back to the decoupled
    * problem used in the inactive cells.
    *
    * See comments above on why this is needed.
    */
-  TIME_SECTION_NAMED( "nl_function_eval.c:1532",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -1569,7 +1607,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
-  )
 
   FreeBCStruct(bc_struct);
 
@@ -1584,6 +1621,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   FreeVector(KS);
   FreeVector(qx);
   FreeVector(qy);
+
+  Loogie_server_send_queue( server );
 
   return;
 }

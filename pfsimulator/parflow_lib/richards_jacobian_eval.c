@@ -307,6 +307,11 @@ void    RichardsJacobianEval(
   CommHandle  *handle;
   VectorUpdateCommHandle  *vector_update_handle;
 
+  Loogie_probe_make_server( );
+  Loogie_timer_t timer, subtimer;
+  Loogie_timer_ctr( &timer );
+  Loogie_timer_ctr( &subtimer );
+
   // Determine if an overland flow boundary condition is being used.
   // If so will use the analytic Jacobian.
   if (public_xtra->type == not_set)
@@ -392,7 +397,9 @@ void    RichardsJacobianEval(
   PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation_der, pressure,
                                                            density, gravity, problem_data,
                                                            CALCDER));
-  TIME_SECTION_NAMED( "richards_jacobian_eval.c:395",
+
+
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -466,7 +473,12 @@ void    RichardsJacobianEval(
                 * pop[ipo] * vol2 + ss[iv] * vol2 * (sdp[iv] * dp[iv] * pp[iv] + sp[iv] * ddp[iv] * pp[iv] + sp[iv] * dp[iv]); //sk start
     });
   }    /* End subgrid loop */
-  )
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_fields, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:395",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
 
   bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
                                  (problem_data, grid, gr_domain, time));
@@ -474,7 +486,6 @@ void    RichardsJacobianEval(
   /* Get boundary pressure values for Dirichlet boundaries.   */
   /* These are needed for upstream weighting in mobilities - need boundary */
   /* values for rel perms and densities. */
-  TIME_SECTION_NAMED( "richards_jacobian_eval.c:477",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -509,7 +520,6 @@ void    RichardsJacobianEval(
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
-  )
   /* Calculate rel_perm and rel_perm_der */
 
   PFModuleInvokeType(PhaseRelPermInvoke, rel_perm_module,
@@ -520,7 +530,7 @@ void    RichardsJacobianEval(
                      (rel_perm_der, pressure, density, gravity, problem_data,
                       CALCDER));
 
-  TIME_SECTION_NAMED( "richards_jacobian_eval.c:523",
+  Loogie_timer_start( &timer );
   /* Calculate contributions from second order derivatives and gravity */
   ForSubgridI(is, GridSubgrids(grid))
   {
@@ -739,7 +749,12 @@ void    RichardsJacobianEval(
       }
     });
   }  //
-  )
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_fields, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:523",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
 
   /*  Calculate correction for boundary conditions */
 
@@ -752,7 +767,7 @@ void    RichardsJacobianEval(
     /*  of BC is involved.  Without this correction, only the symmetric */
     /*  part would be removed, incorrectly leaving the nonsymmetric     */
     /*  contribution on the diagonal.                                   */
-    TIME_SECTION_NAMED( "richards_jacobian_eval.c:755",
+    Loogie_timer_start( &timer );
     ForSubgridI(is, GridSubgrids(grid))
     {
       subgrid = GridSubgrid(grid, is);
@@ -932,10 +947,17 @@ void    RichardsJacobianEval(
         });       /* End Patch Loop */
       }           /* End ipatch loop */
     }             /* End subgrid loop */
-  )
+
+    Loogie_timer_stop( &timer );
+    Loogie_create_and_queue_report( server, parflow_loogie_fields, 2,
+      Loogie_field_id_NAME, "richards_jacobian_eval.c:755",
+      field_TIME, Loogie_timer_elapsed( &timer )
+    );
+    Loogie_timer_reset( &timer );
+
   }                  /* End if symm_part */
 
-  TIME_SECTION_NAMED( "richards_jacobian_eval.c:938",
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -1299,7 +1321,13 @@ void    RichardsJacobianEval(
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
-)
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_fields, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:938",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
+
   PFModuleInvokeType(RichardsBCInternalInvoke, bc_internal, (problem, problem_data, NULL, J, time,
                                                              pressure, CALCDER));
 
@@ -1346,7 +1374,6 @@ void    RichardsJacobianEval(
   if (ovlnd_flag && public_xtra->type == overland_flow)
   {
     /* begin loop to build JC */
-    TIME_SECTION_NAMED( "richards_jacobian_eval.c:1349",
     ForSubgridI(is, GridSubgrids(grid))
     {
       subgrid = GridSubgrid(grid, is);
@@ -1533,7 +1560,6 @@ void    RichardsJacobianEval(
         }         /* End switch BCtype */
       }           /* End ipatch loop */
     }             /* End subgrid loop */
-  )
   }
 
 
@@ -1543,7 +1569,6 @@ void    RichardsJacobianEval(
    *
    * Should change this to set pressures to scaling value.
    * CSW: Should I set this to pressure * vol * dt ??? */
-  TIME_SECTION_NAMED( "richards_jacobian_eval.c:1546",
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -1598,7 +1623,6 @@ void    RichardsJacobianEval(
 //#endif */
     });
   }
-)
 
 
   /*-----------------------------------------------------------------------
@@ -1650,6 +1674,8 @@ void    RichardsJacobianEval(
   FreeVector(KEns);
   FreeVector(KNns);
   FreeVector(KSns);
+
+  Loogie_server_send_queue( server );
 
   return;
 }

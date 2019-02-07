@@ -36,7 +36,6 @@
 #include  <inttypes.h>
 
 #include "amps.h"
-#include <hot_loops.h>
 
 int amps_mpi_initialized = FALSE;
 
@@ -115,7 +114,7 @@ int amps_Init(int *argc, char **argv[])
   int length;
 #endif
 
-  HOT_LOOPS_initialize_registry( &global_static_registry );
+
 
   char processor_name[MPI_MAX_PROCESSOR_NAME];
   unsigned char processor_Name[MPI_MAX_PROCESSOR_NAME];
