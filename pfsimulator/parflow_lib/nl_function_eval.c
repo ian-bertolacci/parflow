@@ -32,6 +32,9 @@
 //#include "math.h"
 #include "float.h"
 
+#include <stdint.h>
+#include <inttypes.h>
+
 /*---------------------------------------------------------------------
  * Define module structures
  *---------------------------------------------------------------------*/
@@ -246,6 +249,187 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   qx = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
   qy = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
 
+  // THIS IS THE OCTREE OBSERVE LOOP
+  ForSubgridI(is, GridSubgrids(grid))
+  {
+    subgrid = GridSubgrid(grid, is);
+
+    Subgrid       *grid2d_subgrid = GridSubgrid(grid2d, is);
+    int grid2d_iz = SubgridIZ(grid2d_subgrid);
+
+
+    #define N_COLORS 11
+    char* colors[N_COLORS] = { "blue", "green", "goldenrod1", "cyan", "aquamarine", "orange", "brown", "purple", "yellow", "red", "black" };
+
+    #define N_RESERVED_COLORS 4
+    #define RESERVED_COLOR_START (N_COLORS - N_RESERVED_COLORS)
+
+    #define SEEK_LEVEL (RESERVED_COLOR_START)
+    #define DEFAULT_BAD (RESERVED_COLOR_START+1)
+    #define NEGATIVE (RESERVED_COLOR_START+2)
+    #define NONCUBIC (RESERVED_COLOR_START+3)
+
+    unsigned int known_max_level = 7;
+    unsigned int octree_bg_level = 6;
+    for( int __level = 0; __level <= known_max_level; ++__level )
+    {
+      r = SubgridRX(subgrid);
+
+      ix = SubgridIX(subgrid) - 1;
+      iy = SubgridIY(subgrid) - 1;
+      iz = SubgridIZ(subgrid) - 1;
+
+      nx = SubgridNX(subgrid) + 1;
+      ny = SubgridNY(subgrid) + 1;
+      nz = SubgridNZ(subgrid) + 1;
+
+      char filename[30];
+      sprintf( filename, "out.%d.dot", __level );
+      FILE* graph = fopen(filename, "w");
+      fprintf(graph, "strict digraph \"\" {\n");
+      int leaf_count = 0;
+      int counter = 0;
+
+      printf("============================================\n");
+      printf("Level: %d\n", __level );
+      // printf("============================================\n");
+      GrGeomOctree  *PV_node;
+      double PV_ref = pow(2.0, r);
+
+
+      i = GrGeomSolidOctreeIX(gr_domain) * (int)PV_ref;
+      j = GrGeomSolidOctreeIY(gr_domain) * (int)PV_ref;
+      k = GrGeomSolidOctreeIZ(gr_domain) * (int)PV_ref;
+      {
+        int PV_i, PV_j, PV_k, PV_l;
+        int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;
+
+
+        PV_i = i;
+        PV_j = j;
+        PV_k = k;
+
+        {
+          int PV_level = octree_bg_level; // __level; //GrGeomSolidOctreeBGLevel(gr_domain) + r;
+          unsigned int PV_inc;
+          int           *PV_visiting;
+          int PV_visit_child;
+
+          PV_node = GrGeomSolidData(gr_domain);
+
+          PV_l = 0;
+          PV_inc = 1 << PV_level;
+          PV_visiting = ctalloc(int, PV_level + 2);
+          PV_visiting++;
+          PV_visiting[0] = 0;
+
+
+          int* node_parent_stack = ctalloc(int, PV_level + 2);
+          node_parent_stack[0] = counter;
+
+          while (PV_l >= 0)
+          {
+            /* if at the level of interest */
+            if (PV_l == PV_level)
+            {
+              if ((GrGeomOctreeCellIsInside(PV_node) || GrGeomOctreeCellIsFull(PV_node))){
+                // printf("level body\n");
+                fprintf(graph, "%d[fillcolor=\"%s\",style=filled];\n", node_parent_stack[PV_l], colors[SEEK_LEVEL] );
+              }
+              PV_visit_child = FALSE;
+            }
+
+            /* if this is a leaf PV_node */
+            else if (GrGeomOctreeCellIsLeaf(PV_node))
+            {
+              if ((GrGeomOctreeCellIsInside(PV_node) || GrGeomOctreeCellIsFull(PV_node))){
+
+                int PV_ixl = pfmax(ix, PV_i);
+                int PV_iyl = pfmax(iy, PV_j);
+                int PV_izl = pfmax(iz, PV_k);
+                int PV_ixu = pfmin((ix + nx), (PV_i + (int)PV_inc));
+                int PV_iyu = pfmin((iy + ny), (PV_j + (int)PV_inc));
+                int PV_izu = pfmin((iz + nz), (PV_k + (int)PV_inc));
+
+                typedef int64_t big_int;
+                big_int PV_ixd = PV_ixu - PV_ixl;
+                big_int PV_iyd = PV_iyu - PV_iyl;
+                big_int PV_izd = PV_izu - PV_izl;
+                // printf("%d, %d %d %d, %d %d\n", __level, PV_ixd, PV_iyd, PV_izd, ((int)floor( log2(PV_ixd) )), ((int) ceil( log2(PV_ixd) )));
+                // assert( PV_ixd == PV_iyd && PV_iyd == PV_izd && PV_ixd == PV_izd );
+                // assert( ((int)floor( log2(PV_ixd) )) == ((int) ceil( log2(PV_ixd) )) );
+                int color_id = 9;
+                if( PV_ixd == PV_iyd && PV_iyd == PV_izd && PV_ixd == PV_izd ){
+                  if( ((big_int)floor( log2(PV_ixd) )) == ((big_int) ceil( log2(PV_ixd) ))){
+                    color_id = ((big_int)floor( log2(PV_ixd) ));
+                  } else {
+                    color_id = NEGATIVE;
+                    // printf("%d, %d %d %d, %d %d, %s\n", __level, PV_ixd, PV_iyd, PV_izd, ((int)floor( log2(PV_ixd) )), ((int) ceil( log2(PV_ixd) )), colors[color_id]);
+                  }
+                }
+                if( PV_ixd <= 0 || PV_iyd <= 0 || PV_izd <= 0 ){
+                  color_id = NEGATIVE;
+                }
+
+                printf("%d, (%d, %d, %d)<(%d, %d, %d): (%+" PRId64 ", %+ " PRId64 ", %+ " PRId64 "), %d %d, %s\n", PV_l, PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu, PV_ixd, PV_iyd, PV_izd, ((big_int)floor( log2(PV_ixd) )), ((big_int) ceil( log2(PV_ixd) )), colors[color_id]);
+
+                fprintf(graph,"%d [shape=square,fillcolor=%s,fontcolor=white,style=filled];\n", node_parent_stack[PV_l], colors[color_id] );
+                leaf_count += 1;
+              }
+
+              PV_visit_child = FALSE;
+            }
+
+            /* have I visited all of the children? */
+            else if(
+              PV_l < __level &&
+              PV_visiting[PV_l] < GrGeomOctreeNumChildren
+              /// branching limiter
+              && PV_visiting[PV_l] < ((PV_l < 3)?2:GrGeomOctreeNumChildren)
+
+            )
+              PV_visit_child = TRUE;
+            else
+              PV_visit_child = FALSE;
+
+            /* visit either a child or the parent PV_node */
+            if (PV_visit_child)
+            {
+              // printf("Descending\n");
+              PV_node = GrGeomOctreeChild(PV_node, PV_visiting[PV_l]);
+              PV_inc = PV_inc >> 1;
+              PV_i += (int)(PV_inc) * ((PV_visiting[PV_l] & 1) ? 1 : 0);
+              PV_j += (int)(PV_inc) * ((PV_visiting[PV_l] & 2) ? 1 : 0);
+              PV_k += (int)(PV_inc) * ((PV_visiting[PV_l] & 4) ? 1 : 0);
+              PV_l++;
+              counter +=1 ;
+              PV_visiting[PV_l] = 0;
+              node_parent_stack[PV_l] = counter;
+              fprintf(graph, "%d -> %d;\n", node_parent_stack[PV_l-1], counter );
+            }
+            else
+            {
+              // printf("Ascending\n");
+              PV_l--;
+              PV_i -= (int)(PV_inc) * ((PV_visiting[PV_l] & 1) ? 1 : 0);
+              PV_j -= (int)(PV_inc) * ((PV_visiting[PV_l] & 2) ? 1 : 0);
+              PV_k -= (int)(PV_inc) * ((PV_visiting[PV_l] & 4) ? 1 : 0);
+              PV_inc = PV_inc << 1;
+              PV_node = GrGeomOctreeParent(PV_node);
+              PV_visiting[PV_l]++;
+            }
+          }
+
+          tfree(PV_visiting - 1);
+        }
+      }
+      printf("Total Count: %d, Leaf Count: %d\n", counter, leaf_count);
+      fprintf(graph,"}");
+      fclose( graph );
+      printf("============================================\n" );
+    }
+    exit(-1);
+  }
 
   /* Calculate pressure dependent properties: density and saturation */
 
@@ -621,7 +805,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
     qx_sub = VectorSubvector(qx, is);
 
-
+    // printf("r %d, GrGeomSolidOctreeBGLevel %d, level %d\n", r, GrGeomSolidOctreeBGLevel(gr_domain), GrGeomSolidOctreeBGLevel(gr_domain) + r);
+    // exit(-1);
     GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -1732,6 +1917,3 @@ int  NlFunctionEvalSizeOfTempData()
 {
   return 0;
 }
-
-
-
