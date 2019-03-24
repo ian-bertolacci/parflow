@@ -341,7 +341,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
             if (PV_l == PV_level)
             {
               if ((GrGeomOctreeCellIsInside(PV_node) || GrGeomOctreeCellIsFull(PV_node))){
-                printf("level body\n");
                 if ((PV_i >= ix) && (PV_i < (ix + nx)) &&
                     (PV_j >= iy) && (PV_j < (iy + ny)) &&
                     (PV_k >= iz) && (PV_k < (iz + nz)))
@@ -412,7 +411,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
               // NOTE! This is one way to limit the branching factor
               // && PV_visiting[PV_l] < ((PV_l < 3)?2:GrGeomOctreeNumChildren)
               // NOTE! This is how I try to get a small branch of the tree
-              && PV_visiting[PV_l] < ((PV_l <= __branch_at_level)?1:GrGeomOctreeNumChildren)
+              && PV_visiting[PV_l] < ((PV_l >= __branch_at_level)?GrGeomOctreeNumChildren:1)
 
             )
               PV_visit_child = TRUE;
