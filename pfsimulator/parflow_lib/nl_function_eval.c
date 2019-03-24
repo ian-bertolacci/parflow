@@ -257,21 +257,32 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     Subgrid       *grid2d_subgrid = GridSubgrid(grid2d, is);
     int grid2d_iz = SubgridIZ(grid2d_subgrid);
 
+    #define NCOLORS (13)
+    char* colors[NCOLORS] = { "white", "blue", "forestgreen",
+                              "greenyellow", "yellow", "orange",
+                              "gold2", "gold3", "red",
+                              "pink", "purple", "white",
+                              "black" };
+    #define COLOR_IDX_RESERVED (6)
+    #define COLOR_IDX_LEVEL (COLOR_IDX_RESERVED)
+    #define COLOR_IDX_LEVEL_EMPTY (COLOR_IDX_RESERVED+1)
+    #define COLOR_IDX_NEGATIVE (COLOR_IDX_RESERVED+2)
+    #define COLOR_IDX_NON_CUBE (COLOR_IDX_RESERVED+3)
+    #define COLOR_IDX_CUBE_NON_2_POWER (COLOR_IDX_RESERVED+4)
+    #define COLOR_IDX_DEFAULT (COLOR_IDX_RESERVED+5)
+    #define COLOR_IDX_BAD_LEAF_CONDITION (COLOR_IDX_RESERVED+6)
 
-    #define N_COLORS 11
-    char* colors[N_COLORS] = { "blue", "green", "goldenrod1", "cyan", "aquamarine", "orange", "brown", "purple", "yellow", "red", "black" };
-
-    #define N_RESERVED_COLORS 4
-    #define RESERVED_COLOR_START (N_COLORS - N_RESERVED_COLORS)
-
-    #define SEEK_LEVEL (RESERVED_COLOR_START)
-    #define DEFAULT_BAD (RESERVED_COLOR_START+1)
-    #define NEGATIVE (RESERVED_COLOR_START+2)
-    #define NONCUBIC (RESERVED_COLOR_START+3)
-
+    // There are specific to LW test
     unsigned int known_max_level = 7;
     unsigned int octree_bg_level = 6;
-    for( int __level = 0; __level <= known_max_level; ++__level )
+    // Level to descend to
+    int __descend_to_level = octree_bg_level;
+    // Level to start branching at
+    int __branch_at_level = 0;
+    // Use if trying to map different levels
+    // for( __descend_to_level = 0; __descend_to_level <= known_max_level; ++__descend_to_level )
+    // use if tyring to branch at and below specific level
+    // for( __branch_at_level = 0; __branch_at_level <= known_max_level; ++__branch_at_level )
     {
       r = SubgridRX(subgrid);
 
@@ -283,19 +294,18 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       ny = SubgridNY(subgrid) + 1;
       nz = SubgridNZ(subgrid) + 1;
 
-      char filename[30];
-      sprintf( filename, "out.%d.dot", __level );
+      char filename[512];
+      sprintf( filename, "out-Subgrid_%d-Depth_%d-BranchAtDepth_%d.dot", is, __descend_to_level, __branch_at_level );
       FILE* graph = fopen(filename, "w");
       fprintf(graph, "strict digraph \"\" {\n");
       int leaf_count = 0;
       int counter = 0;
 
       printf("============================================\n");
-      printf("Level: %d\n", __level );
+      printf("Level: %d\n", __descend_to_level );
       // printf("============================================\n");
       GrGeomOctree  *PV_node;
       double PV_ref = pow(2.0, r);
-
 
       i = GrGeomSolidOctreeIX(gr_domain) * (int)PV_ref;
       j = GrGeomSolidOctreeIY(gr_domain) * (int)PV_ref;
@@ -304,13 +314,12 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         int PV_i, PV_j, PV_k, PV_l;
         int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;
 
-
         PV_i = i;
         PV_j = j;
         PV_k = k;
 
         {
-          int PV_level = octree_bg_level; // __level; //GrGeomSolidOctreeBGLevel(gr_domain) + r;
+          int PV_level = octree_bg_level; // __descend_to_level; //GrGeomSolidOctreeBGLevel(gr_domain) + r;
           unsigned int PV_inc;
           int           *PV_visiting;
           int PV_visit_child;
@@ -323,7 +332,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
           PV_visiting++;
           PV_visiting[0] = 0;
 
-
           int* node_parent_stack = ctalloc(int, PV_level + 2);
           node_parent_stack[0] = counter;
 
@@ -333,8 +341,17 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
             if (PV_l == PV_level)
             {
               if ((GrGeomOctreeCellIsInside(PV_node) || GrGeomOctreeCellIsFull(PV_node))){
-                // printf("level body\n");
-                fprintf(graph, "%d[fillcolor=\"%s\",style=filled];\n", node_parent_stack[PV_l], colors[SEEK_LEVEL] );
+                printf("level body\n");
+                if ((PV_i >= ix) && (PV_i < (ix + nx)) &&
+                    (PV_j >= iy) && (PV_j < (iy + ny)) &&
+                    (PV_k >= iz) && (PV_k < (iz + nz)))
+                {
+                  printf( "Level: %d[label=\"#%d (%d,%d,%d)\",fillcolor=\"%s\",style=filled];\n", node_parent_stack[PV_l], node_parent_stack[PV_l], PV_i, PV_j, PV_k, colors[COLOR_IDX_LEVEL] );
+                  fprintf(graph, "%d[label=\"#%d (%d,%d,%d)\",fillcolor=\"%s\",style=filled];\n", node_parent_stack[PV_l], node_parent_stack[PV_l], PV_i, PV_j, PV_k, colors[COLOR_IDX_LEVEL] );
+                } else {
+                  printf("Level: %d[label=\"#%d ?(%d,%d,%d)?\",fillcolor=\"%s\",style=\"filled,bold,diagonals\",color=red];\n", node_parent_stack[PV_l], node_parent_stack[PV_l], PV_i, PV_j, PV_k, colors[COLOR_IDX_LEVEL_EMPTY] );
+                  fprintf(graph, "%d[label=\"#%d ?(%d,%d,%d)?\",fillcolor=\"%s\",style=\"filled,bold,diagonals\",color=red];\n", node_parent_stack[PV_l], node_parent_stack[PV_l], PV_i, PV_j, PV_k, colors[COLOR_IDX_LEVEL_EMPTY] );
+                }
               }
               PV_visit_child = FALSE;
             }
@@ -355,25 +372,33 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
                 big_int PV_ixd = PV_ixu - PV_ixl;
                 big_int PV_iyd = PV_iyu - PV_iyl;
                 big_int PV_izd = PV_izu - PV_izl;
-                // printf("%d, %d %d %d, %d %d\n", __level, PV_ixd, PV_iyd, PV_izd, ((int)floor( log2(PV_ixd) )), ((int) ceil( log2(PV_ixd) )));
-                // assert( PV_ixd == PV_iyd && PV_iyd == PV_izd && PV_ixd == PV_izd );
-                // assert( ((int)floor( log2(PV_ixd) )) == ((int) ceil( log2(PV_ixd) )) );
-                int color_id = 9;
+                int color_idx = COLOR_IDX_BAD_LEAF_CONDITION;
+
+                // is it a cube?
                 if( PV_ixd == PV_iyd && PV_iyd == PV_izd && PV_ixd == PV_izd ){
+                  // Is it a power of 2 sized cube?
                   if( ((big_int)floor( log2(PV_ixd) )) == ((big_int) ceil( log2(PV_ixd) ))){
-                    color_id = ((big_int)floor( log2(PV_ixd) ));
+                    color_idx = ((big_int)floor( log2(PV_ixd) ));
                   } else {
-                    color_id = NEGATIVE;
-                    // printf("%d, %d %d %d, %d %d, %s\n", __level, PV_ixd, PV_iyd, PV_izd, ((int)floor( log2(PV_ixd) )), ((int) ceil( log2(PV_ixd) )), colors[color_id]);
+                    color_idx = COLOR_IDX_NON_CUBE;
                   }
                 }
+                // Are any of the sizes negative or zero?
                 if( PV_ixd <= 0 || PV_iyd <= 0 || PV_izd <= 0 ){
-                  color_id = NEGATIVE;
+                  color_idx = COLOR_IDX_NEGATIVE;
                 }
 
-                printf("%d, (%d, %d, %d)<(%d, %d, %d): (%+" PRId64 ", %+ " PRId64 ", %+ " PRId64 "), %d %d, %s\n", PV_l, PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu, PV_ixd, PV_iyd, PV_izd, ((big_int)floor( log2(PV_ixd) )), ((big_int) ceil( log2(PV_ixd) )), colors[color_id]);
+                printf("Leaf: %d [label=\"#%d (%d,%d,%d)+(%+" PRId64 ",%+" PRId64 ",%+" PRId64 ")\",shape=square,style=filled,fillcolor=%s];\n",
+                              node_parent_stack[PV_l], node_parent_stack[PV_l],
+                              PV_ixl, PV_iyl, PV_izl,
+                              PV_ixd, PV_iyd, PV_izd,
+                              colors[color_idx]);
 
-                fprintf(graph,"%d [shape=square,fillcolor=%s,fontcolor=white,style=filled];\n", node_parent_stack[PV_l], colors[color_id] );
+                fprintf(graph,"%d [label=\"#%d (%d,%d,%d)+(%+" PRId64 ",%+" PRId64 ",%+" PRId64 ")\",shape=square,style=filled,fillcolor=%s];\n",
+                              node_parent_stack[PV_l], node_parent_stack[PV_l],
+                              PV_ixl, PV_iyl, PV_izl,
+                              PV_ixd, PV_iyd, PV_izd,
+                              colors[color_idx]);
                 leaf_count += 1;
               }
 
@@ -382,10 +407,12 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
             /* have I visited all of the children? */
             else if(
-              PV_l < __level &&
+              PV_l < __descend_to_level &&
               PV_visiting[PV_l] < GrGeomOctreeNumChildren
-              /// branching limiter
-              && PV_visiting[PV_l] < ((PV_l < 3)?2:GrGeomOctreeNumChildren)
+              // NOTE! This is one way to limit the branching factor
+              // && PV_visiting[PV_l] < ((PV_l < 3)?2:GrGeomOctreeNumChildren)
+              // NOTE! This is how I try to get a small branch of the tree
+              && PV_visiting[PV_l] < ((PV_l <= __branch_at_level)?1:GrGeomOctreeNumChildren)
 
             )
               PV_visit_child = TRUE;
