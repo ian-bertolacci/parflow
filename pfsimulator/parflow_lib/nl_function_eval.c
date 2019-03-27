@@ -622,7 +622,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     qx_sub = VectorSubvector(qx, is);
 
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoopSquare(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(p_sub, i, j, k);
       io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
@@ -1732,6 +1732,3 @@ int  NlFunctionEvalSizeOfTempData()
 {
   return 0;
 }
-
-
-

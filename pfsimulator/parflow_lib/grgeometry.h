@@ -117,6 +117,25 @@ typedef struct {
                          body); \
   }
 
+#define GrGeomInLoopSquare(i, j, k, grgeom, \
+                     r, ix, iy, iz, nx, ny, nz, body) \
+  { \
+    GrGeomOctree  *PV_node; \
+    double PV_ref = pow(2.0, r); \
+\
+\
+    i = GrGeomSolidOctreeIX(grgeom) * (int)PV_ref; \
+    j = GrGeomSolidOctreeIY(grgeom) * (int)PV_ref; \
+    k = GrGeomSolidOctreeIZ(grgeom) * (int)PV_ref; \
+    GrGeomOctreeNodeLoop_square_mod(i, j, k, PV_node, \
+                         GrGeomSolidData(grgeom), \
+                         GrGeomSolidOctreeBGLevel(grgeom) + r, \
+                         ix, iy, iz, nx, ny, nz, \
+                         (GrGeomOctreeCellIsInside(PV_node) || \
+                          GrGeomOctreeCellIsFull(PV_node)), \
+                         body); \
+  }
+
 /*--------------------------------------------------------------------------
  * GrGeomSolid looping macro:
  *   Macro for looping over the inside of a solid with non-unitary strides.

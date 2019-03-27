@@ -279,7 +279,46 @@ typedef struct grgeom_octree {
  *   Generic macro for looping over cell nodes.
  *--------------------------------------------------------------------------*/
 
-#define GrGeomOctreeNodeLoop(i, j, k, node, octree, level, \
+#define GrGeomOctreeNodeLoop GrGeomOctreeNodeLoop_original
+
+#define GrGeomOctreeNodeLoop_square_mod(i, j, k, node, octree, level, \
+                             ix, iy, iz, nx, ny, nz, value_test, \
+                             body) \
+  { \
+    printf("GrGeomOctreeNodeLoop_square_mod\n"); \
+    int PV_i, PV_j, PV_k; \
+    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu; \
+    unsigned int PV_inc; \
+    int *PV_visiting; \
+    PV_visiting = ctalloc(int, level + 2); \
+    PV_visiting++; \
+    printf("PV_visitng\n"); \
+    for( int iter = 0; iter < level + 1; ++iter  ){ \
+      PV_visiting[iter] = 0; \
+    } \
+    printf("post PV_visitng\n"); \
+    PV_i = i; \
+    PV_j = j; \
+    PV_k = k; \
+    PV_inc = 1 << level; \
+    PV_ixl = pfmax(ix, PV_i); \
+    PV_iyl = pfmax(iy, PV_j); \
+    PV_izl = pfmax(iz, PV_k); \
+    PV_ixu = pfmin((ix + nx), (PV_i + (int)PV_inc)); \
+    PV_iyu = pfmin((iy + ny), (PV_j + (int)PV_inc)); \
+    PV_izu = pfmin((iz + nz), (PV_k + (int)PV_inc)); \
+    for (k = PV_izl; k < PV_izu; k++) \
+      for (j = PV_iyl; j < PV_iyu; j++) \
+        for (i = PV_ixl; i < PV_ixu; i++) \
+        { \
+          printf("(%d, %d, %d)\n", i, j, k); \
+          body; \
+        } \
+    printf("tfree\n");\
+    tfree(PV_visiting - 1); \
+  }
+
+#define GrGeomOctreeNodeLoop_original(i, j, k, node, octree, level, \
                              ix, iy, iz, nx, ny, nz, value_test, \
                              body) \
   { \
@@ -414,7 +453,7 @@ typedef struct grgeom_octree {
                          ix, iy, iz, nx, ny, nz, \
                          (GrGeomOctreeCellIsInside(node)), \
     { \
-      for (PV_f = 0; PV_f < GrGeomOctreeNumFaces; PV_f++) \
+      for (PV_f = 0; PV_f < GrGeomOctreeNumFaces; PV_f++){ \
         if (GrGeomOctreeHasFace(node, PV_f)) \
         { \
           switch (PV_f) \
@@ -444,6 +483,7 @@ typedef struct grgeom_octree {
 \
           body; \
         } \
+      } \
     }) \
   }
 
