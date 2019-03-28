@@ -117,7 +117,7 @@ typedef struct {
                          body); \
   }
 
-#define GrGeomInLoopSquare(i, j, k, grgeom, \
+#define GrGeomInLoop_rectilinear(i, j, k, grgeom, \
                      r, ix, iy, iz, nx, ny, nz, body) \
   { \
     GrGeomOctree  *PV_node; \

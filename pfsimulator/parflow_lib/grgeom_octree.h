@@ -279,24 +279,15 @@ typedef struct grgeom_octree {
  *   Generic macro for looping over cell nodes.
  *--------------------------------------------------------------------------*/
 
-#define GrGeomOctreeNodeLoop GrGeomOctreeNodeLoop_original
+#define GrGeomOctreeNodeLoop GrGeomOctreeNodeLoop_octree
 
-#define GrGeomOctreeNodeLoop_square_mod(i, j, k, node, octree, level, \
+#define GrGeomOctreeNodeLoop_rectilinear(i, j, k, node, octree, level, \
                              ix, iy, iz, nx, ny, nz, value_test, \
                              body) \
   { \
-    printf("GrGeomOctreeNodeLoop_square_mod\n"); \
     int PV_i, PV_j, PV_k; \
     int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu; \
     unsigned int PV_inc; \
-    int *PV_visiting; \
-    PV_visiting = ctalloc(int, level + 2); \
-    PV_visiting++; \
-    printf("PV_visitng\n"); \
-    for( int iter = 0; iter < level + 1; ++iter  ){ \
-      PV_visiting[iter] = 0; \
-    } \
-    printf("post PV_visitng\n"); \
     PV_i = i; \
     PV_j = j; \
     PV_k = k; \
@@ -311,14 +302,11 @@ typedef struct grgeom_octree {
       for (j = PV_iyl; j < PV_iyu; j++) \
         for (i = PV_ixl; i < PV_ixu; i++) \
         { \
-          printf("(%d, %d, %d)\n", i, j, k); \
           body; \
         } \
-    printf("tfree\n");\
-    tfree(PV_visiting - 1); \
   }
 
-#define GrGeomOctreeNodeLoop_original(i, j, k, node, octree, level, \
+#define GrGeomOctreeNodeLoop_octree(i, j, k, node, octree, level, \
                              ix, iy, iz, nx, ny, nz, value_test, \
                              body) \
   { \
