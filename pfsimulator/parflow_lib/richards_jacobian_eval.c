@@ -456,7 +456,7 @@ void    RichardsJacobianEval(
     pop = SubvectorData(po_sub);     // porosity
     ss = SubvectorData(ss_sub);     // sepcific storage
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoop_rectilinear(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       im = SubmatrixEltIndex(J_sub, i, j, k);
       ipo = SubvectorEltIndex(po_sub, i, j, k);
@@ -593,7 +593,7 @@ void    RichardsJacobianEval(
     permyp = SubvectorData(permy_sub);
     permzp = SubvectorData(permz_sub);
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoop_rectilinear(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(p_sub, i, j, k);
       im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -1859,4 +1859,3 @@ int  RichardsJacobianEvalSizeOfTempData()
 
   return sz;
 }
-
