@@ -127,7 +127,7 @@ typedef struct {
     i = GrGeomSolidOctreeIX(grgeom) * (int)PV_ref; \
     j = GrGeomSolidOctreeIY(grgeom) * (int)PV_ref; \
     k = GrGeomSolidOctreeIZ(grgeom) * (int)PV_ref; \
-    GrGeomOctreeNodeLoop_square_mod(i, j, k, PV_node, \
+    GrGeomOctreeNodeLoop_rectilinear(i, j, k, PV_node, \
                          GrGeomSolidData(grgeom), \
                          GrGeomSolidOctreeBGLevel(grgeom) + r, \
                          ix, iy, iz, nx, ny, nz, \
