@@ -474,7 +474,7 @@ void    RichardsJacobianEval(
     });
   }    /* End subgrid loop */
   Loogie_timer_stop( &timer );
-  Loogie_create_and_queue_report( server, parflow_loogie_fields, 2,
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
     Loogie_field_id_NAME, "richards_jacobian_eval.c:395",
     field_TIME, Loogie_timer_elapsed( &timer )
   );
@@ -750,7 +750,7 @@ void    RichardsJacobianEval(
     });
   }  //
   Loogie_timer_stop( &timer );
-  Loogie_create_and_queue_report( server, parflow_loogie_fields, 2,
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
     Loogie_field_id_NAME, "richards_jacobian_eval.c:523",
     field_TIME, Loogie_timer_elapsed( &timer )
   );
@@ -949,7 +949,7 @@ void    RichardsJacobianEval(
     }             /* End subgrid loop */
 
     Loogie_timer_stop( &timer );
-    Loogie_create_and_queue_report( server, parflow_loogie_fields, 2,
+    Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
       Loogie_field_id_NAME, "richards_jacobian_eval.c:755",
       field_TIME, Loogie_timer_elapsed( &timer )
     );
@@ -1322,7 +1322,7 @@ void    RichardsJacobianEval(
     }          /* End ipatch loop */
   }            /* End subgrid loop */
   Loogie_timer_stop( &timer );
-  Loogie_create_and_queue_report( server, parflow_loogie_fields, 2,
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
     Loogie_field_id_NAME, "richards_jacobian_eval.c:938",
     field_TIME, Loogie_timer_elapsed( &timer )
   );
