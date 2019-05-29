@@ -64,6 +64,10 @@ using namespace SAMRAI;
 int main(int argc, char *argv [])
 {
 
+  Loogie_probe_make_server( );
+  Loogie_timer_t timer;
+  Loogie_timer_ctr( &timer );
+  Loogie_timer_start( &timer );
 
   FILE *file = NULL;
 
@@ -356,6 +360,15 @@ int main(int argc, char *argv [])
   tbox::SAMRAIManager::finalize();
   tbox::SAMRAI_MPI::finalize();
 #endif
+
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "parflow",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
+
+  Loogie_server_send_queue( server );
 
   return 0;
 }

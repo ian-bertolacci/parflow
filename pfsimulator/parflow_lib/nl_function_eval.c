@@ -122,11 +122,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
                     Vector *     y_velocity,
                     Vector *     z_velocity)
 {
-  Loogie_probe_make_server( );
-  Loogie_timer_t timer;
-  Loogie_timer_ctr( &timer );
-  Loogie_timer_start( &timer );
- 
   PFModule      *this_module = ThisPFModule;
   InstanceXtra  *instance_xtra = (InstanceXtra*)PFModuleInstanceXtra(this_module);
   PublicXtra    *public_xtra = (PublicXtra*)PFModulePublicXtra(this_module);
@@ -1585,15 +1580,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   FreeVector(qx);
   FreeVector(qy);
 
-  Loogie_timer_stop( &timer );
-  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
-    Loogie_field_id_NAME, "nl_function_eval",
-    field_TIME, Loogie_timer_elapsed( &timer )
-  );
-  Loogie_timer_reset( &timer );
-
-  Loogie_server_send_queue( server );
-
   return;
 }
 
@@ -1746,6 +1732,3 @@ int  NlFunctionEvalSizeOfTempData()
 {
   return 0;
 }
-
-
-

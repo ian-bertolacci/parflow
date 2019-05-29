@@ -196,11 +196,6 @@ void    RichardsJacobianEval(
                                                       * symmetric part of the Jacobian (1), or the
                                                       * full Jacobian */
 {
-  Loogie_probe_make_server( );
-  Loogie_timer_t timer;
-  Loogie_timer_ctr( &timer );
-  Loogie_timer_start( &timer );
-  
   PFModule      *this_module = ThisPFModule;
   InstanceXtra  *instance_xtra = (InstanceXtra*)PFModuleInstanceXtra(this_module);
   PublicXtra    *public_xtra = (PublicXtra*)PFModulePublicXtra(this_module);
@@ -471,7 +466,7 @@ void    RichardsJacobianEval(
                 * pop[ipo] * vol2 + ss[iv] * vol2 * (sdp[iv] * dp[iv] * pp[iv] + sp[iv] * ddp[iv] * pp[iv] + sp[iv] * dp[iv]); //sk start
     });
   }    /* End subgrid loop */
-  
+
   bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
                                  (problem_data, grid, gr_domain, time));
 
@@ -931,7 +926,7 @@ void    RichardsJacobianEval(
       }           /* End ipatch loop */
     }             /* End subgrid loop */
 
-    
+
   }                  /* End if symm_part */
 
   ForSubgridI(is, GridSubgrids(grid))
@@ -1645,15 +1640,6 @@ void    RichardsJacobianEval(
   FreeVector(KNns);
   FreeVector(KSns);
 
-  Loogie_timer_stop( &timer );
-  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
-    Loogie_field_id_NAME, "richards_jacobian_eval",
-    field_TIME, Loogie_timer_elapsed( &timer )
-  );
-  Loogie_timer_reset( &timer );
-
-  Loogie_server_send_queue( server );
-  
   return;
 }
 
