@@ -196,12 +196,11 @@ void    RichardsJacobianEval(
                                                       * symmetric part of the Jacobian (1), or the
                                                       * full Jacobian */
 {
-  
   Loogie_probe_make_server( );
   Loogie_timer_t timer;
   Loogie_timer_ctr( &timer );
   Loogie_timer_start( &timer );
-
+  
   PFModule      *this_module = ThisPFModule;
   InstanceXtra  *instance_xtra = (InstanceXtra*)PFModuleInstanceXtra(this_module);
   PublicXtra    *public_xtra = (PublicXtra*)PFModulePublicXtra(this_module);
@@ -1654,7 +1653,7 @@ void    RichardsJacobianEval(
   Loogie_timer_reset( &timer );
 
   Loogie_server_send_queue( server );
-
+  
   return;
 }
 
