@@ -31,8 +31,6 @@
 #include "llnltyps.h"
 //#include "math.h"
 #include "float.h"
-#include <omp.h>
-#include <loogie_config.h>
 
 /*---------------------------------------------------------------------
  * Define module structures
@@ -260,7 +258,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   /* Calculate accumulation terms for the function values */
 
   Loogie_probe_make_server( );
-  Loogie_timer_t timer, subtimer;
+  Loogie_timer_t timer;
   Loogie_timer_ctr( &timer );
   // This is loop 261
   Loogie_timer_start( &timer );
