@@ -33,9 +33,10 @@
 
 #include "parflow.h"
 #include "pfversion.h"
-#include "amps.h"
+extern "C" {
+  #include "amps.h"
 #include "fgetopt.h"  /* getopt replacement since getopt is not available on Windows */
-
+}
 #ifdef HAVE_SAMRAI
 #include "SAMRAI/SAMRAI_config.h"
 
@@ -343,17 +344,17 @@ int main(int argc, char *argv [])
 	{
 	  char filename[2048];
 	  sprintf(filename, "%s.timing.csv", GlobalsOutFileName);
-	  
+
 	  if ((file = fopen(filename, "a")) == NULL)
 	  {
 	    InputError("Error: can't open output file %s%s\n", filename, "");
 	  }
-	  
-	    fprintf(file, "%s,%f,%s,%s\n", "Total Runtime", 
+
+	    fprintf(file, "%s,%f,%s,%s\n", "Total Runtime",
 		    (double)wall_clock_time / (double)AMPS_TICKS_PER_SEC,
 		    "-nan", "0");
 	  }
-	  
+
 	  fclose(file);
       }
     }
@@ -406,4 +407,3 @@ int main(int argc, char *argv [])
 
   return 0;
 }
-

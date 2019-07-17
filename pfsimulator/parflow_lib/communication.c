@@ -33,7 +33,9 @@
 
 
 #include "parflow.h"
-#include "amps.h"
+extern "C" {
+  #include "amps.h"
+}
 #include "communication.h"
 
 
@@ -413,6 +415,3 @@ void         FinalizeCommunication(
 {
   (void)amps_Wait((amps_Handle)handle);
 }
-
-
-

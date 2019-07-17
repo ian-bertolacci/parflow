@@ -22,7 +22,7 @@ git_describe(PARFLOW_VERSION --tags)
 if (NOT PARFLOW_VERSION)
   file (STRINGS "VERSION" PARFLOW_VERSION)
 endif ()
-  
+
 message("Configuring version : ${PARFLOW_VERSION}")
 version_create_variables (PARFLOW)
 
@@ -429,7 +429,7 @@ endif()
 install (DIRECTORY ${CMAKE_BINARY_DIR}/config/ DESTINATION config)
 
 #-----------------------------------------------------------------------------
-# Doxygen 
+# Doxygen
 #-----------------------------------------------------------------------------
 set (PARFLOW_ENABLE_DOXYGEN False CACHE BOOL "Enable Doxygen and building of code documentation")
 
@@ -438,7 +438,7 @@ if ( ${PARFLOW_ENABLE_DOXYGEN} )
   if (DOXYGEN_FOUND)
     set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/docs/doxygen)
     set(DOXYGEN_IMAGE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/docs/doxygen/images)
-    
+
     message("Doxygen build started")
 
     doxygen_add_docs(doxygen

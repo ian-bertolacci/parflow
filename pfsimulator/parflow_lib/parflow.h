@@ -40,7 +40,9 @@
 #include <sys/param.h>
 #endif
 
-#include "amps.h"
+extern "C" {
+  #include "amps.h"
+}
 
 #include "info_header.h"
 #include "general.h"

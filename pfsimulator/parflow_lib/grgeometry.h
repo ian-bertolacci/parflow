@@ -37,7 +37,6 @@
 #include "grgeom_octree.h"
 #include "grgeom_list.h"
 
-
 /*--------------------------------------------------------------------------
  * Miscellaneous structures:
  *--------------------------------------------------------------------------*/
@@ -115,6 +114,29 @@ typedef struct {
                                  TRUE,                                  \
                                  body);                                 \
   }
+
+  /*--------------------------------------------------------------------------
+   * GrGeomSolid looping macro:
+   *   Macro for looping over the inside of a solid.
+   *--------------------------------------------------------------------------*/
+
+  #define GrGeomInLoopParallel(i, j, k, grgeom, \
+                       r, ix, iy, iz, nx, ny, nz, body) \
+    { \
+      GrGeomOctree  *PV_node; \
+      double PV_ref = pow(2.0, r); \
+  \
+  \
+      i = GrGeomSolidOctreeIX(grgeom) * (int)PV_ref; \
+      j = GrGeomSolidOctreeIY(grgeom) * (int)PV_ref; \
+      k = GrGeomSolidOctreeIZ(grgeom) * (int)PV_ref; \
+      GrGeomOctreeInteriorNodeLoopParallel(i, j, k, PV_node, \
+                                   GrGeomSolidData(grgeom),      \
+                                   GrGeomSolidOctreeBGLevel(grgeom) + r,  \
+                                   ix, iy, iz, nx, ny, nz,                \
+                                   TRUE,                                  \
+                                   body);                                 \
+    }
 
 /*--------------------------------------------------------------------------
  * GrGeomSolid looping macro:

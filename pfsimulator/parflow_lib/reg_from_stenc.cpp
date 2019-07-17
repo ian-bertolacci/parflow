@@ -1,0 +1,1 @@
+reg_from_stenc.c

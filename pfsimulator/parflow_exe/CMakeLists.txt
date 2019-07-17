@@ -1,6 +1,6 @@
-add_executable(parflow main.c)
+add_executable(parflow main.cpp)
 
-target_link_libraries(parflow pfsimulator pfkinsol amps)
+target_link_libraries(parflow pfsimulator pfkinsol amps kokkos dl pthread)
 
 if( ${PARFLOW_HAVE_CLM} )
   target_link_libraries(parflow pfclm)

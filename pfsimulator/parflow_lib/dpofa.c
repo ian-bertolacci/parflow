@@ -3,8 +3,8 @@
  *      -lf2c -lm   (in that order)
  */
 
+ #include <math.h>
 #include "f2c.h"
-#include <math.h>
 
 /* Table of constant values */
 
@@ -218,4 +218,3 @@ L60:
   ret_val = dtemp;
   return ret_val;
 } /* ddot_ */
-
