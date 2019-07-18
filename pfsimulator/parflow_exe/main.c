@@ -64,9 +64,12 @@ using namespace SAMRAI;
 
 #include <string.h>
 #include <ctype.h>
+#include <Kokkos_Core.hpp>
 
 int main(int argc, char *argv [])
 {
+
+  Kokkos::initialize(argc, argv);
   FILE *file = NULL;
 
   FILE *log_file = NULL;
@@ -405,5 +408,6 @@ int main(int argc, char *argv [])
   tbox::SAMRAI_MPI::finalize();
 #endif
 
+  Kokkos::finalize();
   return 0;
 }
