@@ -28,9 +28,6 @@
 
 #ifndef _GRGEOM_OCTREE_HEADER
 #define _GRGEOM_OCTREE_HEADER
-
-#include <Kokkos_Core.hpp>
-
 /** @file
  * @brief Octree for looping over geometries
  */
@@ -765,7 +762,96 @@ typedef struct grgeom_octree {
  * @param[in] value_test boolean if tests evaluated before body execution
  * @param[in] body code to execute
  */
-#define GrGeomOctreeInteriorNodeLoop(i, j, k, node, octree, level, \
+ #define GrGeomOctreeInteriorNodeLoop(i, j, k, node, octree, level, \
+                                      ix, iy, iz, nx, ny, nz, value_test, \
+                                      body) \
+   { \
+     int PV_i, PV_j, PV_k, PV_l; \
+     int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu; \
+ \
+ \
+     PV_i = i; \
+     PV_j = j; \
+     PV_k = k; \
+ \
+     GrGeomOctreeInteriorLoop(PV_i, PV_j, PV_k, PV_l, node, octree, level, value_test, \
+     { \
+       if ((PV_i >= ix) && (PV_i < (ix + nx)) && \
+           (PV_j >= iy) && (PV_j < (iy + ny)) && \
+           (PV_k >= iz) && (PV_k < (iz + nz))) \
+       { \
+         i = PV_i; \
+         j = PV_j; \
+         k = PV_k; \
+         body; \
+       } \
+     }, \
+     { \
+       /* find octree and region intersection */ \
+       PV_ixl = pfmax(ix, PV_i); \
+       PV_iyl = pfmax(iy, PV_j); \
+       PV_izl = pfmax(iz, PV_k); \
+       PV_ixu = pfmin((ix + nx), (PV_i + (int)PV_inc)); \
+       PV_iyu = pfmin((iy + ny), (PV_j + (int)PV_inc)); \
+       PV_izu = pfmin((iz + nz), (PV_k + (int)PV_inc)); \
+                  \
+       /* loop over indexes and execute the body */ \
+       for (k = PV_izl; k < PV_izu; k++) \
+         for (j = PV_iyl; j < PV_iyu; j++) \
+           for (i = PV_ixl; i < PV_ixu; i++) \
+           { \
+             body; \
+           } \
+     }) \
+   }
+
+/**
+* @brief Loop over the interior index space of an octree.
+*
+* General octree macro to loop over the index space (i,j,k values) in the octree.
+* Octree is traversed executing the code specified in body for
+* indices at the supplied level of interest or indices leaf nodes.
+* value_test is evaluated to determine if the body should be
+* executed.
+*
+* i,j,k should be initialized to the starting indices and will
+* modified as the tree is traversed to the starting offset of the
+* current octree node.
+*
+* ix,iy,iz and nx,ny,nz specify a bounding box to constrain the the iteration.
+*
+* The current level is maintained in the l parmeter.
+*
+* @note Level of interest doesn't seem to make sense.  The body will
+* be executed for the first point (i,j,k) in the octree nodes at the
+* level of interest.
+*
+* @param[in,out] i X index
+* @param[in,out] j Y index
+* @param[in,out] k k index
+* @param[out] node octree node
+* @param[in] octree octree to traverse
+* @param[in] level level to limit tree traversal
+* @param[in] ix x lower bound of index space to process
+* @param[in] iy y lower bound of index space to process
+* @param[in] iz z lower bound of index space to process
+* @param[in] nx x upper bound of index space to process
+* @param[in] ny y upper bound of index space to process
+* @param[in] nz z upper bound of index space to process
+* @param[in] value_test boolean if tests evaluated before body execution
+* @param[in] body code to execute
+*/
+
+#define EMPTY()
+#define DELAY(...) __VA_ARGS__ EMPTY()
+
+#define DELAYED_PRAGMA(args) _Pragma( STRINGIZE(args) )
+#define PRAGMA DELAY(DELAYED_PRAGMA)
+
+#define STRINGIZE(x) STRINGIZE_NO_PREPROCESS(x)
+#define STRINGIZE_NO_PREPROCESS(x) #x
+
+#define GrGeomOctreeInteriorNodeLoopParallel(i, j, k, node, octree, level, \
                                      ix, iy, iz, nx, ny, nz, value_test, \
                                      body) \
   { \
@@ -799,6 +885,7 @@ typedef struct grgeom_octree {
       PV_izu = pfmin((iz + nz), (PV_k + (int)PV_inc)); \
                  \
       /* loop over indexes and execute the body */ \
+      PRAGMA(omp parallel for private(i,j,k) ) \
       for (k = PV_izl; k < PV_izu; k++) \
         for (j = PV_iyl; j < PV_iyu; j++) \
           for (i = PV_ixl; i < PV_ixu; i++) \
@@ -807,99 +894,6 @@ typedef struct grgeom_octree {
           } \
     }) \
   }
-
-  /**
-   * @brief Loop over the interior index space of an octree.
-   *
-   * General octree macro to loop over the index space (i,j,k values) in the octree.
-   * Octree is traversed executing the code specified in body for
-   * indices at the supplied level of interest or indices leaf nodes.
-   * value_test is evaluated to determine if the body should be
-   * executed.
-   *
-   * i,j,k should be initialized to the starting indices and will
-   * modified as the tree is traversed to the starting offset of the
-   * current octree node.
-   *
-   * ix,iy,iz and nx,ny,nz specify a bounding box to constrain the the iteration.
-   *
-   * The current level is maintained in the l parmeter.
-   *
-   * @note Level of interest doesn't seem to make sense.  The body will
-   * be executed for the first point (i,j,k) in the octree nodes at the
-   * level of interest.
-   *
-   * @param[in,out] i X index
-   * @param[in,out] j Y index
-   * @param[in,out] k k index
-   * @param[out] node octree node
-   * @param[in] octree octree to traverse
-   * @param[in] level level to limit tree traversal
-   * @param[in] ix x lower bound of index space to process
-   * @param[in] iy y lower bound of index space to process
-   * @param[in] iz z lower bound of index space to process
-   * @param[in] nx x upper bound of index space to process
-   * @param[in] ny y upper bound of index space to process
-   * @param[in] nz z upper bound of index space to process
-   * @param[in] value_test boolean if tests evaluated before body execution
-   * @param[in] body code to execute
-   */
-typedef Kokkos::MDRangePolicy< Kokkos::OpenMP, Kokkos::Rank< 3 > > parallel_exec_type;
-
-  #define GrGeomOctreeInteriorNodeLoopParallel(i, j, k, node, octree, level, \
-                                       ix, iy, iz, nx, ny, nz, value_test, \
-                                       body) \
-    { \
-      int PV_i, PV_j, PV_k, PV_l; \
-      int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu; \
-  \
-  \
-      PV_i = i; \
-      PV_j = j; \
-      PV_k = k; \
-  \
-      GrGeomOctreeInteriorLoop(PV_i, PV_j, PV_k, PV_l, node, octree, level, value_test, \
-      { \
-        if ((PV_i >= ix) && (PV_i < (ix + nx)) && \
-            (PV_j >= iy) && (PV_j < (iy + ny)) && \
-            (PV_k >= iz) && (PV_k < (iz + nz))) \
-        { \
-          i = PV_i; \
-          j = PV_j; \
-          k = PV_k; \
-          body; \
-        } \
-      }, \
-      { \
-        /* find octree and region intersection */ \
-        PV_ixl = pfmax(ix, PV_i); \
-        PV_iyl = pfmax(iy, PV_j); \
-        PV_izl = pfmax(iz, PV_k); \
-        PV_ixu = pfmin((ix + nx), (PV_i + (int)PV_inc)); \
-        PV_iyu = pfmin((iy + ny), (PV_j + (int)PV_inc)); \
-        PV_izu = pfmin((iz + nz), (PV_k + (int)PV_inc)); \
-                   \
-        /* loop over indexes and execute the body */ \
-        parallel_exec_type exec_policy( {{PV_ixl, PV_iyl, PV_izl}}, {{PV_ixu, PV_iyu, PV_izu}} ); \
-        Kokkos::parallel_for( exec_policy, \
-            KOKKOS_LAMBDA ( const size_t i, const size_t j, const size_t k ){ \
-              body; \
-            } \
-        ); \
-      }) \
-    }
-/*
-
-Kokkos::MDRangePolicy< Kokkos::Cuda, Kokkos::Rank< 3 > > exec_policy( {{PV_ixl, PV_iyl, PV_izl}}, {{PV_ixu, PV_iyu, PV_izu}} ); \
-\
-Kokkos::parallel_for( exec_policy, \
-    KOKKOS_LAMBDA ( const size_t PV_i, const size_t PV_j, const size_t PV_k ){ \
-      body; \
-    } \
-); \
-}) \
-
-*/
 
 /**
  * @brief Loop over the exterior index space of an octree.
