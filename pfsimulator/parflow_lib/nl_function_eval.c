@@ -325,16 +325,16 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     pop = SubvectorData(po_sub);
     fp = SubvectorData(f_sub);
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
-      ip = SubvectorEltIndex(f_sub, i, j, k);
-      ipo = SubvectorEltIndex(po_sub, i, j, k);
-      io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+      int ip = SubvectorEltIndex(f_sub, i, j, k);
+      int ipo = SubvectorEltIndex(po_sub, i, j, k);
+      int io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
 
       /*     del_x_slope = (1.0/cos(atan(x_ssl_dat[io])));
        *   del_y_slope = (1.0/cos(atan(y_ssl_dat[io])));  */
-      del_x_slope = 1.0;
-      del_y_slope = 1.0;
+      double del_x_slope = 1.0;
+      double del_y_slope = 1.0;
 
       fp[ip] = (sp[ip] * dp[ip] - osp[ip] * odp[ip]) * pop[ipo] * vol * del_x_slope * del_y_slope * z_mult_dat[ip];
     });
@@ -401,15 +401,15 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     fp = SubvectorData(f_sub);
 
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
-      ip = SubvectorEltIndex(f_sub, i, j, k);
-      io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+      int ip = SubvectorEltIndex(f_sub, i, j, k);
+      int io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
 
       /*   del_x_slope = (1.0/cos(atan(x_ssl_dat[io])));
        * del_y_slope = (1.0/cos(atan(y_ssl_dat[io])));  */
-      del_x_slope = 1.0;
-      del_y_slope = 1.0;
+      double del_x_slope = 1.0;
+      double del_y_slope = 1.0;
       fp[ip] += ss[ip] * vol * del_x_slope * del_y_slope * z_mult_dat[ip] * (pp[ip] * sp[ip] * dp[ip] - opp[ip] * osp[ip] * odp[ip]);
     });
   }
@@ -466,15 +466,15 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     /* @RMM added to provide variable dz */
     z_mult_dat = SubvectorData(z_mult_sub);
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
-      ip = SubvectorEltIndex(f_sub, i, j, k);
-      io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+      int ip = SubvectorEltIndex(f_sub, i, j, k);
+      int io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
 
       /* del_x_slope = (1.0/cos(atan(x_ssl_dat[io])));
        * del_y_slope = (1.0/cos(atan(y_ssl_dat[io])));  */
-      del_x_slope = 1.0;
-      del_y_slope = 1.0;
+      double del_x_slope = 1.0;
+      double del_y_slope = 1.0;
       fp[ip] -= vol * del_x_slope * del_y_slope * z_mult_dat[ip] * dt * (sp[ip] + et[ip]);
     });
   }
@@ -639,10 +639,10 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
     qx_sub = VectorSubvector(qx, is);
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
-      ip = SubvectorEltIndex(p_sub, i, j, k);
-      io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+      int ip = SubvectorEltIndex(p_sub, i, j, k);
+      int io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
 
       /* @RMM: modified the terrain-following transform
        * to be swtichable in the UZ
@@ -653,26 +653,26 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
        * 4. change in delta-y due to slope: (1.0/cos(atan(y_ssl_dat[io]))) */
 
       /* velocity subvector indices jjb */
-      vxi = SubvectorEltIndex(vx_sub, i + 1, j, k);
-      vyi = SubvectorEltIndex(vy_sub, i, j + 1, k);
-      vzi = SubvectorEltIndex(vz_sub, i, j, k + 1);
+      int vxi = SubvectorEltIndex(vx_sub, i + 1, j, k);
+      int vyi = SubvectorEltIndex(vy_sub, i, j + 1, k);
+      int vzi = SubvectorEltIndex(vz_sub, i, j, k + 1);
 
 
-      x_dir_g = Mean(gravity * sin(atan(x_ssl_dat[io])), gravity * sin(atan(x_ssl_dat[io + 1])));
-      x_dir_g_c = Mean(gravity * cos(atan(x_ssl_dat[io])), gravity * cos(atan(x_ssl_dat[io + 1])));
-      y_dir_g = Mean(gravity * sin(atan(y_ssl_dat[io])), gravity * sin(atan(y_ssl_dat[io + sy_p])));
-      y_dir_g_c = Mean(gravity * cos(atan(y_ssl_dat[io])), gravity * cos(atan(y_ssl_dat[io + sy_p])));
+      double x_dir_g = Mean(gravity * sin(atan(x_ssl_dat[io])), gravity * sin(atan(x_ssl_dat[io + 1])));
+      double x_dir_g_c = Mean(gravity * cos(atan(x_ssl_dat[io])), gravity * cos(atan(x_ssl_dat[io + 1])));
+      double y_dir_g = Mean(gravity * sin(atan(y_ssl_dat[io])), gravity * sin(atan(y_ssl_dat[io + sy_p])));
+      double y_dir_g_c = Mean(gravity * cos(atan(y_ssl_dat[io])), gravity * cos(atan(y_ssl_dat[io + sy_p])));
 
-      z_dir_g = 1.0;
+      double z_dir_g = 1.0;
 
-      del_x_slope = 1.0;
-      del_y_slope = 1.0;
+      double del_x_slope = 1.0;
+      double del_y_slope = 1.0;
 
       /* Calculate right face velocity.
        * diff >= 0 implies flow goes left to right */
 
-      diff = pp[ip] - pp[ip + 1];
-      updir = (diff / dx) * x_dir_g_c - x_dir_g;
+      double diff = pp[ip] - pp[ip + 1];
+      double updir = (diff / dx) * x_dir_g_c - x_dir_g;
 
       u_right[ip] = z_mult_dat[ip] * ffx * del_y_slope * PMean(pp[ip], pp[ip + 1],
                                                            permxp[ip], permxp[ip + 1])
@@ -724,14 +724,14 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       /* Calculate upper face velocity.
        * diff >= 0 implies flow goes lower to upper
        */
-      sep = dz * (Mean(z_mult_dat[ip], z_mult_dat[ip + sz_p]));
+      double sep = dz * (Mean(z_mult_dat[ip], z_mult_dat[ip + sz_p]));
 
 
-      lower_cond = pp[ip] / sep
+      double lower_cond = pp[ip] / sep
                    - (z_mult_dat[ip] / (z_mult_dat[ip] + z_mult_dat[ip + sz_p]))
                    * dp[ip] * gravity * z_dir_g;
 
-      upper_cond = pp[ip + sz_p] / sep
+      double upper_cond = pp[ip + sz_p] / sep
                    + (z_mult_dat[ip + sz_p] / (z_mult_dat[ip] + z_mult_dat[ip + sz_p]))
                    * dp[ip + sz_p] * gravity * z_dir_g;
 
@@ -790,9 +790,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     u_front = SubvectorData(u_front_sub);
     u_upper = SubvectorData(u_upper_sub);
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx+1, ny+1, nz+1,
+    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx+1, ny+1, nz+1,
     {
-      ip = SubvectorEltIndex(p_sub, i, j, k);
+      int ip = SubvectorEltIndex(p_sub, i, j, k);
       fp[ip] += dt*( -u_right[ip - sx_p] + -u_front[ip - sy_p] + -u_upper[ip - sz_p] );
     });
   }
