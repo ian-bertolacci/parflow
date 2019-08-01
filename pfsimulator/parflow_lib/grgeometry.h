@@ -179,7 +179,7 @@ typedef struct {
 {                  \
   int *PV_visiting = NULL;            \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);      \
-  PRAGMA_IN_MACRO_BODY( STRINGIZE( omp parallel for private( i, j, k ) ) ) \
+  PRAGMA_IN_MACRO_BODY( omp parallel for private( i, j, k ) ) \
   for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)    \
   {                  \
     Box box = BoxArrayGetBox(boxes, PV_box);        \
