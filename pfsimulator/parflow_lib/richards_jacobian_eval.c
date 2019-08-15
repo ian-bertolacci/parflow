@@ -271,9 +271,9 @@ void    RichardsJacobianEval(
   int nx_v, ny_v, nz_v;
   int nx_m, ny_m, nz_m;
   int nx_po, ny_po, nz_po;
-  int sy_v, sz_v;
-  int sy_m, sz_m;
-  int ip, ipo, im, iv;
+  int sx_v, sy_v, sz_v;
+  int sx_m, sy_m, sz_m;
+  int ip, ipo, im, iv, it;
 
 
   int diffusive;             //@LEC
@@ -298,6 +298,31 @@ void    RichardsJacobianEval(
 
   //@RMM : terms for gravity/terrain
   double x_dir_g, y_dir_g, z_dir_g, del_x_slope, del_y_slope, x_dir_g_c, y_dir_g_c;
+
+
+  // Temporary vectors for split loop reduction (@IJB)
+  Vector* north_temp_vector;
+  Vector* south_temp_vector;
+  Vector* east_temp_vector;
+  Vector* west_temp_vector;
+  Vector* upper_temp_vector;
+  Vector* lower_temp_vector;
+
+  Subvector* north_temp_sub;
+  Subvector* south_temp_sub;
+  Subvector* east_temp_sub;
+  Subvector* west_temp_sub;
+  Subvector* upper_temp_sub;
+  Subvector* lower_temp_sub;
+
+  double *north_temp_array, *south_temp_array, *east_temp_array, *west_temp_array, *upper_temp_array, *lower_temp_array;
+
+  north_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
+  south_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
+  east_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
+  west_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
+  upper_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
+  lower_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
 
   BCStruct    *bc_struct;
   GrGeomSolid *gr_domain = ProblemDataGrDomain(problem_data);
@@ -521,6 +546,7 @@ void    RichardsJacobianEval(
                      (rel_perm_der, pressure, density, gravity, problem_data,
                       CALCDER));
 
+
   /* Calculate contributions from second order derivatives and gravity */
   ForSubgridI(is, GridSubgrids(grid))
   {
@@ -536,6 +562,14 @@ void    RichardsJacobianEval(
     permx_sub = VectorSubvector(permeability_x, is);
     permy_sub = VectorSubvector(permeability_y, is);
     permz_sub = VectorSubvector(permeability_z, is);
+
+    west_temp_sub = VectorSubvector( west_temp_vector, is );
+    east_temp_sub = VectorSubvector( east_temp_vector, is );
+    south_temp_sub = VectorSubvector( south_temp_vector, is );
+    north_temp_sub = VectorSubvector( north_temp_vector, is );
+    lower_temp_sub = VectorSubvector( lower_temp_vector, is );
+    upper_temp_sub = VectorSubvector( upper_temp_vector, is );
+
     J_sub = MatrixSubmatrix(J, is);
 
     /* @RMM added to provide access to x/y slopes */
@@ -577,6 +611,13 @@ void    RichardsJacobianEval(
     sz_v = ny_v * nx_v;
     sy_m = nx_m;
     sz_m = ny_m * nx_m;
+
+    west_temp_array = SubvectorData(west_temp_sub);
+    east_temp_array = SubvectorData(east_temp_sub);
+    south_temp_array = SubvectorData(south_temp_sub);
+    north_temp_array = SubvectorData(north_temp_sub);
+    lower_temp_array = SubvectorData(lower_temp_sub);
+    upper_temp_array = SubvectorData(upper_temp_sub);
 
     cp = SubmatrixStencilData(J_sub, 0);
     wp = SubmatrixStencilData(J_sub, 1);
@@ -633,20 +674,20 @@ void    RichardsJacobianEval(
                        * RPMean(updir, 0.0, prod, prod_rt)) * x_dir_g_c; //@RMM TFG contributions, sym
 
 
-      west_temp = (-x_coeff * diff
+      west_temp_array[ip] = (-x_coeff * diff
                    * RPMean(updir, 0.0, prod_der, 0.0)) * x_dir_g_c
                   + sym_west_temp;
 
-      west_temp += (x_coeff * dx * RPMean(updir, 0.0, prod_der, 0.0)) * x_dir_g; //@RMM TFG contributions, non sym
+      west_temp_array[ip] += (x_coeff * dx * RPMean(updir, 0.0, prod_der, 0.0)) * x_dir_g; //@RMM TFG contributions, non sym
 
       sym_east_temp = (-x_coeff
                        * RPMean(updir, 0.0, prod, prod_rt)) * x_dir_g_c; //@RMM added sym TFG contributions
 
-      east_temp = (x_coeff * diff
+      east_temp_array[ip] = (x_coeff * diff
                    * RPMean(updir, 0.0, 0.0, prod_rt_der)) * x_dir_g_c
                   + sym_east_temp;
 
-      east_temp += -(x_coeff * dx * RPMean(updir, 0.0, 0.0, prod_rt_der)) * x_dir_g; //@RMM  TFG contributions non sym
+      east_temp_array[ip] += -(x_coeff * dx * RPMean(updir, 0.0, 0.0, prod_rt_der)) * x_dir_g; //@RMM  TFG contributions non sym
 
       /* diff >= 0 implies flow goes south to north */
       diff = pp[ip] - pp[ip + sy_v];
@@ -659,22 +700,22 @@ void    RichardsJacobianEval(
       sym_south_temp = -y_coeff
                        * RPMean(updir, 0.0, prod, prod_no) * y_dir_g_c; //@RMM TFG contributions, SYMM
 
-      south_temp = -y_coeff * diff
+      south_temp_array[ip] = -y_coeff * diff
                    * RPMean(updir, 0.0, prod_der, 0.0) * y_dir_g_c
                    + sym_south_temp;
 
-      south_temp += (y_coeff * dy * RPMean(updir, 0.0, prod_der, 0.0)) * y_dir_g; //@RMM TFG contributions, non sym
+      south_temp_array[ip] += (y_coeff * dy * RPMean(updir, 0.0, prod_der, 0.0)) * y_dir_g; //@RMM TFG contributions, non sym
 
 
       sym_north_temp = y_coeff
                        * -RPMean(updir, 0.0, prod, prod_no) * y_dir_g_c; //@RMM  TFG contributions non SYMM
 
-      north_temp = y_coeff * diff
+      north_temp_array[ip] = y_coeff * diff
                    * RPMean(updir, 0.0, 0.0,
                             prod_no_der) * y_dir_g_c
                    + sym_north_temp;
 
-      north_temp += -(y_coeff * dy * RPMean(updir, 0.0, 0.0, prod_no_der)) * y_dir_g; //@RMM  TFG contributions non sym
+      north_temp_array[ip] += -(y_coeff * dy * RPMean(updir, 0.0, 0.0, prod_no_der)) * y_dir_g; //@RMM  TFG contributions non sym
 
       sep = (dz * Mean(z_mult_dat[ip], z_mult_dat[ip + sz_v]));
       /* diff >= 0 implies flow goes lower to upper */
@@ -695,7 +736,7 @@ void    RichardsJacobianEval(
                        * RPMean(lower_cond, upper_cond, prod,
                                 prod_up);
 
-      lower_temp = -z_coeff
+      lower_temp_array[ip] = -z_coeff
                    * (diff * RPMean(lower_cond, upper_cond, prod_der, 0.0)
                       + (-gravity * 0.5 * dz * (Mean(z_mult_dat[ip], z_mult_dat[ip + sz_v])) * ddp[ip]
                          * RPMean(lower_cond, upper_cond, prod,
@@ -706,7 +747,7 @@ void    RichardsJacobianEval(
                        * -RPMean(lower_cond, upper_cond, prod,
                                  prod_up);
 
-      upper_temp = z_coeff
+      upper_temp_array[ip] = z_coeff
                    * (diff * RPMean(lower_cond, upper_cond, 0.0,
                                     prod_up_der)
                       + (-gravity * 0.5 * dz * (Mean(z_mult_dat[ip], z_mult_dat[ip + sz_v])) * ddp[ip + sz_v]
@@ -716,20 +757,13 @@ void    RichardsJacobianEval(
 
 
 
-      cp[im] -= west_temp + south_temp + lower_temp;
-      cp[im + 1] -= east_temp;
-      cp[im + sy_m] -= north_temp;
-      cp[im + sz_m] -= upper_temp;
+      cp[im] -= west_temp_array[ip] + south_temp_array[ip] + lower_temp_array[ip];
 
       if (!symm_part)
       {
-        ep[im] += east_temp;
-        np[im] += north_temp;
-        up[im] += upper_temp;
-
-        wp[im + 1] += west_temp;
-        sop[im + sy_m] += south_temp;
-        lp[im + sz_m] += lower_temp;
+        ep[im] += east_temp_array[ip];
+        np[im] += north_temp_array[ip];
+        up[im] += upper_temp_array[ip];
       }
       else     /* Symmetric matrix: just update upper coeffs */
       {
@@ -738,10 +772,74 @@ void    RichardsJacobianEval(
         up[im] += sym_upper_temp;
       }
     });
-  }  //
+  }
+
+  // Reduction part
+  ForSubgridI(is, GridSubgrids(grid))
+  {
+    subgrid = GridSubgrid(grid, is);
+
+    west_temp_sub = VectorSubvector( west_temp_vector, is );
+    east_temp_sub = VectorSubvector( east_temp_vector, is );
+    south_temp_sub = VectorSubvector( south_temp_vector, is );
+    north_temp_sub = VectorSubvector( north_temp_vector, is );
+    lower_temp_sub = VectorSubvector( lower_temp_vector, is );
+    upper_temp_sub = VectorSubvector( upper_temp_vector, is );
+
+    J_sub = MatrixSubmatrix(J, is);
+
+    r = SubgridRX(subgrid);
+
+    ix = SubgridIX(subgrid) - 1;
+    iy = SubgridIY(subgrid) - 1;
+    iz = SubgridIZ(subgrid) - 1;
+
+    nx = SubgridNX(subgrid) + 1;
+    ny = SubgridNY(subgrid) + 1;
+    nz = SubgridNZ(subgrid) + 1;
+
+    nx_v = SubvectorNX(p_sub);
+    ny_v = SubvectorNY(p_sub);
+    nz_v = SubvectorNZ(p_sub);
+
+    sx_v = 1;
+    sy_v = nx_v;
+    sz_v = ny_v * nx_v;
+
+    west_temp_array = SubvectorData(west_temp_sub);
+    east_temp_array = SubvectorData(east_temp_sub);
+    south_temp_array = SubvectorData(south_temp_sub);
+    north_temp_array = SubvectorData(north_temp_sub);
+    lower_temp_array = SubvectorData(lower_temp_sub);
+    upper_temp_array = SubvectorData(upper_temp_sub);
+
+    cp = SubmatrixStencilData(J_sub, 0);
+    wp = SubmatrixStencilData(J_sub, 1);
+    ep = SubmatrixStencilData(J_sub, 2);
+    sop = SubmatrixStencilData(J_sub, 3);
+    np = SubmatrixStencilData(J_sub, 4);
+    lp = SubmatrixStencilData(J_sub, 5);
+    up = SubmatrixStencilData(J_sub, 6);
+
+    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    {
+      im = SubmatrixEltIndex(J_sub, i, j, k);
+      it = SubvectorEltIndex(west_temp_sub, i, j, k);
+
+      cp[im] -= east_temp_array[it - sx_v];
+      cp[im] -= north_temp_array[it - sy_v];
+      cp[im] -= upper_temp_array[it - sz_v];
+
+      if (!symm_part)
+      {
+        wp[im] += west_temp_array[it - sx_v];
+        sop[im] += south_temp_array[it - sy_v];
+        lp[im] += lower_temp_array[it - sz_v];
+      }
+    });
+  }
 
   /*  Calculate correction for boundary conditions */
-
   if (symm_part)
   {
     /*  For symmetric part only, we first adjust coefficients of normal */
@@ -1646,6 +1744,13 @@ void    RichardsJacobianEval(
   FreeVector(KNns);
   FreeVector(KSns);
 
+  FreeVector(north_temp_vector);
+  FreeVector(south_temp_vector);
+  FreeVector(east_temp_vector);
+  FreeVector(west_temp_vector);
+  FreeVector(upper_temp_vector);
+  FreeVector(lower_temp_vector);
+
   return;
 }
 
@@ -1861,4 +1966,3 @@ int  RichardsJacobianEvalSizeOfTempData()
 
   return sz;
 }
-

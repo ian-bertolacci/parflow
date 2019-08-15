@@ -790,7 +790,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     u_front = SubvectorData(u_front_sub);
     u_upper = SubvectorData(u_upper_sub);
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx+1, ny+1, nz+1,
+    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(p_sub, i, j, k);
       fp[ip] += dt*( -u_right[ip - sx_p] + -u_front[ip - sy_p] + -u_upper[ip - sz_p] );
