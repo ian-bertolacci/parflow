@@ -483,12 +483,12 @@ void    RichardsJacobianEval(
     pop = SubvectorData(po_sub);     // porosity
     ss = SubvectorData(ss_sub);     // sepcific storage
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
-      im = SubmatrixEltIndex(J_sub, i, j, k);
-      ipo = SubvectorEltIndex(po_sub, i, j, k);
-      iv = SubvectorEltIndex(d_sub, i, j, k);
-      vol2 = vol * z_mult_dat[ipo];
+      int im = SubmatrixEltIndex(J_sub, i, j, k);
+      int ipo = SubvectorEltIndex(po_sub, i, j, k);
+      int iv = SubvectorEltIndex(d_sub, i, j, k);
+      double vol2 = vol * z_mult_dat[ipo];
       cp[im] += (sdp[iv] * dp[iv] + sp[iv] * ddp[iv])
                 * pop[ipo] * vol2 + ss[iv] * vol2 * (sdp[iv] * dp[iv] * pp[iv] + sp[iv] * ddp[iv] * pp[iv] + sp[iv] * dp[iv]); //sk start
     });
@@ -636,41 +636,41 @@ void    RichardsJacobianEval(
     permyp = SubvectorData(permy_sub);
     permzp = SubvectorData(permz_sub);
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
-      ip = SubvectorEltIndex(p_sub, i, j, k);
-      im = SubmatrixEltIndex(J_sub, i, j, k);
-      ioo = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+      int ip = SubvectorEltIndex(p_sub, i, j, k);
+      int im = SubmatrixEltIndex(J_sub, i, j, k);
+      int ioo = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
 
-      prod = rpp[ip] * dp[ip];
-      prod_der = rpdp[ip] * dp[ip] + rpp[ip] * ddp[ip];
+      double prod = rpp[ip] * dp[ip];
+      double prod_der = rpdp[ip] * dp[ip] + rpp[ip] * ddp[ip];
 
-      prod_rt = rpp[ip + 1] * dp[ip + 1];
-      prod_rt_der = rpdp[ip + 1] * dp[ip + 1] + rpp[ip + 1] * ddp[ip + 1];
+      double prod_rt = rpp[ip + 1] * dp[ip + 1];
+      double prod_rt_der = rpdp[ip + 1] * dp[ip + 1] + rpp[ip + 1] * ddp[ip + 1];
 
-      prod_no = rpp[ip + sy_v] * dp[ip + sy_v];
-      prod_no_der = rpdp[ip + sy_v] * dp[ip + sy_v]
+      double prod_no = rpp[ip + sy_v] * dp[ip + sy_v];
+      double prod_no_der = rpdp[ip + sy_v] * dp[ip + sy_v]
                     + rpp[ip + sy_v] * ddp[ip + sy_v];
 
-      prod_up = rpp[ip + sz_v] * dp[ip + sz_v];
-      prod_up_der = rpdp[ip + sz_v] * dp[ip + sz_v]
+      double prod_up = rpp[ip + sz_v] * dp[ip + sz_v];
+      double prod_up_der = rpdp[ip + sz_v] * dp[ip + sz_v]
                     + rpp[ip + sz_v] * ddp[ip + sz_v];
 
       //@RMM
-      x_dir_g = Mean(gravity * sin(atan(x_ssl_dat[ioo])), gravity * sin(atan(x_ssl_dat[ioo + 1])));
-      x_dir_g_c = Mean(gravity * cos(atan(x_ssl_dat[ioo])), gravity * cos(atan(x_ssl_dat[ioo + 1])));
-      y_dir_g = Mean(gravity * sin(atan(y_ssl_dat[ioo])), gravity * sin(atan(y_ssl_dat[ioo + sy_v])));
-      y_dir_g_c = Mean(gravity * cos(atan(y_ssl_dat[ioo])), gravity * cos(atan(y_ssl_dat[ioo + sy_v])));
+      double x_dir_g = Mean(gravity * sin(atan(x_ssl_dat[ioo])), gravity * sin(atan(x_ssl_dat[ioo + 1])));
+      double x_dir_g_c = Mean(gravity * cos(atan(x_ssl_dat[ioo])), gravity * cos(atan(x_ssl_dat[ioo + 1])));
+      double y_dir_g = Mean(gravity * sin(atan(y_ssl_dat[ioo])), gravity * sin(atan(y_ssl_dat[ioo + sy_v])));
+      double y_dir_g_c = Mean(gravity * cos(atan(y_ssl_dat[ioo])), gravity * cos(atan(y_ssl_dat[ioo + sy_v])));
 
       /* diff >= 0 implies flow goes left to right */
-      diff = pp[ip] - pp[ip + 1];
-      updir = (diff / dx) * x_dir_g_c - x_dir_g;
+      double diff = pp[ip] - pp[ip + 1];
+      double updir = (diff / dx) * x_dir_g_c - x_dir_g;
 
-      x_coeff = dt * ffx * (1.0 / dx) * z_mult_dat[ip]
+      double x_coeff = dt * ffx * (1.0 / dx) * z_mult_dat[ip]
                 * PMean(pp[ip], pp[ip + 1], permxp[ip], permxp[ip + 1])
                 / viscosity;
 
-      sym_west_temp = (-x_coeff
+      double sym_west_temp = (-x_coeff
                        * RPMean(updir, 0.0, prod, prod_rt)) * x_dir_g_c; //@RMM TFG contributions, sym
 
 
@@ -680,7 +680,7 @@ void    RichardsJacobianEval(
 
       west_temp_array[ip] += (x_coeff * dx * RPMean(updir, 0.0, prod_der, 0.0)) * x_dir_g; //@RMM TFG contributions, non sym
 
-      sym_east_temp = (-x_coeff
+      double sym_east_temp = (-x_coeff
                        * RPMean(updir, 0.0, prod, prod_rt)) * x_dir_g_c; //@RMM added sym TFG contributions
 
       east_temp_array[ip] = (x_coeff * diff
@@ -693,11 +693,11 @@ void    RichardsJacobianEval(
       diff = pp[ip] - pp[ip + sy_v];
       updir = (diff / dy) * y_dir_g_c - y_dir_g;
 
-      y_coeff = dt * ffy * (1.0 / dy) * z_mult_dat[ip]
+      double y_coeff = dt * ffy * (1.0 / dy) * z_mult_dat[ip]
                 * PMean(pp[ip], pp[ip + sy_v], permyp[ip], permyp[ip + sy_v])
                 / viscosity;
 
-      sym_south_temp = -y_coeff
+      double sym_south_temp = -y_coeff
                        * RPMean(updir, 0.0, prod, prod_no) * y_dir_g_c; //@RMM TFG contributions, SYMM
 
       south_temp_array[ip] = -y_coeff * diff
@@ -707,7 +707,7 @@ void    RichardsJacobianEval(
       south_temp_array[ip] += (y_coeff * dy * RPMean(updir, 0.0, prod_der, 0.0)) * y_dir_g; //@RMM TFG contributions, non sym
 
 
-      sym_north_temp = y_coeff
+      double sym_north_temp = y_coeff
                        * -RPMean(updir, 0.0, prod, prod_no) * y_dir_g_c; //@RMM  TFG contributions non SYMM
 
       north_temp_array[ip] = y_coeff * diff
@@ -717,22 +717,22 @@ void    RichardsJacobianEval(
 
       north_temp_array[ip] += -(y_coeff * dy * RPMean(updir, 0.0, 0.0, prod_no_der)) * y_dir_g; //@RMM  TFG contributions non sym
 
-      sep = (dz * Mean(z_mult_dat[ip], z_mult_dat[ip + sz_v]));
+      double sep = (dz * Mean(z_mult_dat[ip], z_mult_dat[ip + sz_v]));
       /* diff >= 0 implies flow goes lower to upper */
 
 
-      lower_cond = pp[ip] / sep - (z_mult_dat[ip] / (z_mult_dat[ip] + z_mult_dat[ip + sz_v])) * dp[ip] * gravity;
+      double lower_cond = pp[ip] / sep - (z_mult_dat[ip] / (z_mult_dat[ip] + z_mult_dat[ip + sz_v])) * dp[ip] * gravity;
 
-      upper_cond = pp[ip + sz_v] / sep + (z_mult_dat[ip + sz_v] / (z_mult_dat[ip] + z_mult_dat[ip + sz_v])) * dp[ip + sz_v] * gravity;
+      double upper_cond = pp[ip + sz_v] / sep + (z_mult_dat[ip + sz_v] / (z_mult_dat[ip] + z_mult_dat[ip + sz_v])) * dp[ip + sz_v] * gravity;
 
 
       diff = lower_cond - upper_cond;
 
-      z_coeff = dt * ffz
+      double z_coeff = dt * ffz
                 * PMeanDZ(permzp[ip], permzp[ip + sz_v], z_mult_dat[ip], z_mult_dat[ip + sz_v])
                 / viscosity;
 
-      sym_lower_temp = -z_coeff * (1.0 / (dz * Mean(z_mult_dat[ip], z_mult_dat[ip + sz_v])))
+      double sym_lower_temp = -z_coeff * (1.0 / (dz * Mean(z_mult_dat[ip], z_mult_dat[ip + sz_v])))
                        * RPMean(lower_cond, upper_cond, prod,
                                 prod_up);
 
@@ -743,7 +743,7 @@ void    RichardsJacobianEval(
                                   prod_up)))
                    + sym_lower_temp;
 
-      sym_upper_temp = z_coeff * (1.0 / (dz * Mean(z_mult_dat[ip], z_mult_dat[ip + sz_v])))
+      double sym_upper_temp = z_coeff * (1.0 / (dz * Mean(z_mult_dat[ip], z_mult_dat[ip + sz_v])))
                        * -RPMean(lower_cond, upper_cond, prod,
                                  prod_up);
 
@@ -821,10 +821,10 @@ void    RichardsJacobianEval(
     lp = SubmatrixStencilData(J_sub, 5);
     up = SubmatrixStencilData(J_sub, 6);
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
-      im = SubmatrixEltIndex(J_sub, i, j, k);
-      it = SubvectorEltIndex(west_temp_sub, i, j, k);
+      int im = SubmatrixEltIndex(J_sub, i, j, k);
+      int it = SubvectorEltIndex(west_temp_sub, i, j, k);
 
       cp[im] -= east_temp_array[it - sx_v];
       cp[im] -= north_temp_array[it - sy_v];
