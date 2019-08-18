@@ -260,7 +260,10 @@ typedef struct {
 
 
 // Change for different versions
-#define GrGeomInLoopBoxesParallel GrGeomInLoopBoxes
+#ifndef GrGeomInLoopBoxesParallel
+  #define GrGeomInLoopBoxesParallel GrGeomInLoopBoxes
+#endif
+
 
 #define GrGeomInLoopParallel(i, j, k, grgeom, r, ix, iy, iz, nx, ny, nz, body)	\
   {                                                                           \
