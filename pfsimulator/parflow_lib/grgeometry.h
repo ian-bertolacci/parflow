@@ -194,7 +194,7 @@ typedef struct {
     int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
     int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
     int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
-    PRAGMA_IN_MACRO_BODY( omp parallel for private( k, j, i) )                \
+    PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) collapse(3) )       \
     for(k = PV_izl; k <= PV_izu; k++)                                         \
       for(j =PV_iyl; j <= PV_iyu; j++)                                        \
         for(i = PV_ixl; i <= PV_ixu; i++)                                     \
@@ -224,7 +224,7 @@ typedef struct {
     int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
     int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
     int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
-    PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) )                   \
+    PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) collapse(3) )       \
     for(k = PV_izl; k <= PV_izu; k++)                                         \
       for(j =PV_iyl; j <= PV_iyu; j++)                                        \
         for(i = PV_ixl; i <= PV_ixu; i++)                                     \
