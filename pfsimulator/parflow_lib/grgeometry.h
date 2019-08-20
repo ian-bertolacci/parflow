@@ -154,7 +154,7 @@ typedef struct {
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
-  PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) )                     \
+  PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) schedule(dynamic))    \
   for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
   {                                                                           \
     Box box = BoxArrayGetBox(boxes, PV_box);                                  \
@@ -213,7 +213,7 @@ typedef struct {
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
-  PRAGMA_IN_MACRO_BODY( omp parallel for schedule(dynamic))                   \
+  PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) schedule(dynamic))    \
   for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
   {                                                                           \
     Box box = BoxArrayGetBox(boxes, PV_box);                                  \
