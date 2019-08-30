@@ -42,6 +42,7 @@
 
 #include "amps.h"
 
+#include "macro_util.h"
 #include "info_header.h"
 #include "general.h"
 #include "file_versions.h"

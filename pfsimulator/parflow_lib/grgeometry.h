@@ -37,6 +37,7 @@
 #include "grgeom_octree.h"
 #include "grgeom_list.h"
 #include "index_space.h"
+#include <omp.h>
 
 /*--------------------------------------------------------------------------
  * Miscellaneous structures:
@@ -101,24 +102,10 @@ typedef struct {
 /*==========================================================================
  *==========================================================================*/
 
-#define EMPTY()
-#define DELAY(x) x EMPTY()
-#define STRINGIZE(x) STRINGIZE_NO_PREPROCESS(x)
-#define STRINGIZE_NO_PREPROCESS(x) #x
-
-#define PRAGMA(x) _Pragma( STRINGIZE(x) )
-#define DELAYED_PRAGMA_assist(x) PRAGMA(x)
-#define DELAYED_PRAGMA DELAY(DELAYED_PRAGMA_assist)
-
-#define PRAGMA_IN_MACRO_ARG(x) DELAYED_PRAGMA(x)
-#define PRAGMA_IN_MACRO_BODY(x) PRAGMA(x)
-#define PRAGMA_IN_CODE(x) PRAGMA(x)
-
-
-
 /*--------------------------------------------------------------------------
  * GrGeomSolid looping macro:
  *   Macro for looping over the inside of a solid.
+ *   Serial in all aspects.
  *--------------------------------------------------------------------------*/
 
 #define GrGeomInLoopBoxes(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
@@ -148,9 +135,41 @@ typedef struct {
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
  *   Macro for looping over the inside of a solid, in parallel over boxes
+ *   Parallelized over boxes using default schedule
  *--------------------------------------------------------------------------*/
 
 #define GrGeomInLoopBoxesParallelOverBoxes(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) )    \
+  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+                                                                              \
+    for(k = PV_izl; k <= PV_izu; k++)                                         \
+      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
+        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
+        {                                                                     \
+          body;                                                               \
+        }                                                                     \
+   }                                                                          \
+}
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid parallel looping macro:
+ *   Macro for looping over the inside of a solid, in parallel over boxes
+ *   Parallelized over boxes using schedule(dynamic) with default chunk size
+ *--------------------------------------------------------------------------*/
+
+#define GrGeomInLoopBoxesParallelOverBoxesDynamicDefault(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
@@ -177,10 +196,72 @@ typedef struct {
 
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
+ *   Macro for looping over the inside of a solid, in parallel over boxes
+ *   Parallelized over boxes using schedule(guided) with default chunk size
+ *--------------------------------------------------------------------------*/
+
+#define GrGeomInLoopBoxesParallelOverBoxesDynamicGuided(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) schedule(guided))     \
+  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+                                                                              \
+    for(k = PV_izl; k <= PV_izu; k++)                                         \
+      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
+        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
+        {                                                                     \
+          body;                                                               \
+        }                                                                     \
+   }                                                                          \
+}
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid parallel looping macro:
  *   Macro for looping over the inside of a solid, in parallel in boxes
+ *   Parallel in boxes
  *--------------------------------------------------------------------------*/
 
 #define GrGeomInLoopBoxesParallelInBoxes(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+    PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) )                   \
+    for(k = PV_izl; k <= PV_izu; k++)                                         \
+      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
+        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
+        {                                                                     \
+          body;                                                               \
+        }                                                                     \
+   }                                                                          \
+}
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid parallel looping macro:
+ *   Macro for looping over the inside of a solid, in parallel in boxes
+ *   Parallel in boxes using collapse(3)
+ *--------------------------------------------------------------------------*/
+
+#define GrGeomInLoopBoxesParallelInBoxesCollapsed(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
@@ -207,6 +288,8 @@ typedef struct {
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
  *   Macro for looping over the inside of a solid, in parallel over and in boxes
+ *   Parallel over boxes using schedule(dynamic) with default chunck size and
+ *   parallel within boxes
  *--------------------------------------------------------------------------*/
 
 #define GrGeomInLoopBoxesParallelOverAndInBoxes(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
@@ -232,6 +315,118 @@ typedef struct {
           body;                                                               \
         }                                                                     \
    }                                                                          \
+}
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid parallel looping macro:
+ *   Macro for looping over the inside of a solid, in parallel over and in boxes
+ *   Parallel over boxes using schedule(dynamic) with default chunck size and
+ *   parallel within boxes using collapse(3)
+ *--------------------------------------------------------------------------*/
+
+#define GrGeomInLoopBoxesParallelOverAndInCollapseBoxes(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) schedule(dynamic))    \
+  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+    PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) collapse(3) )       \
+    for(k = PV_izl; k <= PV_izu; k++)                                         \
+      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
+        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
+        {                                                                     \
+          body;                                                               \
+        }                                                                     \
+   }                                                                          \
+}
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid parallel looping macro:
+ *   Macro for looping over the inside of a solid, in parallel over and in boxes
+ *   Strategic parallelism grouping parallelism over small boxes
+ *   and within large boxes, doing one group as a whole, then the other group
+ *--------------------------------------------------------------------------*/
+
+#define GrGeomInLoopBoxesParallelSplitStrategyTwice(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+{                                                                                                 \
+  int *PV_visiting = NULL;                                                                        \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                                             \
+  int minimal_size = 10; /* smallets size of 'large' boxes */                                     \
+  int sum_of_small_box_sizes = 0;                                                                 \
+  int number_of_small_boxes = 0;                                                                  \
+  /* Do large boxes; collect small box size metrics */                                            \
+  {                                                                                               \
+    for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                                   \
+    {                                                                                             \
+      Box box = BoxArrayGetBox(boxes, PV_box);                                                    \
+      /* find octree and region intersection */                                                   \
+      int PV_ixl = pfmax(ix, box.lo[0]);                                                          \
+      int PV_iyl = pfmax(iy, box.lo[1]);                                                          \
+      int PV_izl = pfmax(iz, box.lo[2]);                                                          \
+      int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                                               \
+      int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                                               \
+      int PV_izu = pfmin((iz + nz - 1), box.up[2]);                                               \
+      int size = (PV_ixu-PV_ixl+1)*(PV_iyu-PV_iyl+1)*(PV_izu-PV_izl+1);                           \
+      if( size >= minimal_size ) {                                                                \
+        PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) schedule(static) )                  \
+        for(k = PV_izl; k <= PV_izu; k++)                                                         \
+          for(j = PV_iyl; j <= PV_iyu; j++)                                                       \
+            for(i = PV_ixl; i <= PV_ixu; i++)                                                     \
+            {                                                                                     \
+              body;                                                                               \
+            }                                                                                     \
+      } else if( size > 0 ){                                                                      \
+        sum_of_small_box_sizes += size;                                                           \
+        number_of_small_boxes += 1;                                                               \
+      } else {                                                                                    \
+        /* In case there are invalid boxes s.t. the stop point is behind the start point */       \
+        /* ideally, this should not happen */                                                     \
+      }                                                                                           \
+    }                                                                                             \
+  }                                                                                               \
+  /* Do small boxes */                                                                            \
+  if( number_of_small_boxes > 0 ){                                                                \
+    /* create an idealized average small-box size, use that to calculate an apprximation */       \
+    /* of how many of those boxes there are. ideally this would be the chunk size; */             \
+    /* however, we have to contend with the number of big boxes. Add those to the count */        \
+    /* Assume all are evenly distributed */                                                       \
+    int mean_small_box_size = sum_of_small_box_sizes / number_of_small_boxes;                     \
+    int number_of_mean_sized_boxes = sum_of_small_box_sizes / mean_small_box_size;                \
+    int number_of_large_boxes = BoxArraySize(boxes) - number_of_small_boxes;                      \
+    int ideal_chunk_size = (sum_of_small_box_sizes / mean_small_box_size) / omp_get_num_threads();\
+    {                                                                                             \
+      PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) schedule(dynamic, ideal_chunk_size))  \
+      for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                                 \
+      {                                                                                           \
+        Box box = BoxArrayGetBox(boxes, PV_box);                                                  \
+        /* find octree and region intersection */                                                 \
+        int PV_ixl = pfmax(ix, box.lo[0]);                                                        \
+        int PV_iyl = pfmax(iy, box.lo[1]);                                                        \
+        int PV_izl = pfmax(iz, box.lo[2]);                                                        \
+        int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                                             \
+        int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                                             \
+        int PV_izu = pfmin((iz + nz - 1), box.up[2]);                                             \
+        int size = (PV_ixu-PV_ixl+1)*(PV_iyu-PV_iyl+1)*(PV_izu-PV_izl+1);                         \
+        if( size < minimal_size ) {                                                               \
+          for(k = PV_izl; k <= PV_izu; k++)                                                       \
+            for(j = PV_iyl; j <= PV_iyu; j++)                                                     \
+              for(i = PV_ixl; i <= PV_ixu; i++)                                                   \
+              {                                                                                   \
+                body;                                                                             \
+              }                                                                                   \
+        }                                                                                         \
+      }                                                                                           \
+    }                                                                                             \
+  }                                                                                               \
 }
 
 #define GrGeomInLoop(i, j, k, grgeom, r, ix, iy, iz, nx, ny, nz, body)        \
