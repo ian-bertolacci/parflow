@@ -355,7 +355,9 @@ typedef struct {
  *   Strategic parallelism grouping parallelism over small boxes
  *   and within large boxes, doing one group as a whole, then the other group
  *--------------------------------------------------------------------------*/
+#ifndef GrGeomInLoopBoxesParallelSplitStrategyTwice_minimal_size_value
 #define GrGeomInLoopBoxesParallelSplitStrategyTwice_minimal_size_value 10
+#endif
 
 #define GrGeomInLoopBoxesParallelSplitStrategyTwice(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
 {                                                                                                 \
