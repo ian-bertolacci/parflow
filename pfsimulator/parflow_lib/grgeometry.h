@@ -355,12 +355,13 @@ typedef struct {
  *   Strategic parallelism grouping parallelism over small boxes
  *   and within large boxes, doing one group as a whole, then the other group
  *--------------------------------------------------------------------------*/
+#define GrGeomInLoopBoxesParallelSplitStrategyTwice_minimal_size_value 10
 
 #define GrGeomInLoopBoxesParallelSplitStrategyTwice(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
 {                                                                                                 \
   int *PV_visiting = NULL;                                                                        \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                                             \
-  int minimal_size = 10; /* smallets size of 'large' boxes */                                     \
+  const int minimal_size = (GrGeomInLoopBoxesParallelSplitStrategyTwice_minimal_size_value); /* smallets size of 'large' boxes */ \
   int sum_of_small_box_sizes = 0;                                                                 \
   int number_of_small_boxes = 0;                                                                  \
   /* Do large boxes; collect small box size metrics */                                            \
