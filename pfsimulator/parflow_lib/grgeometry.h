@@ -432,6 +432,113 @@ typedef struct {
   }                                                                                               \
 }
 
+/*--------------------------------------------------------------------------
+ * GrGeomSolid looping macro:
+ *   Macro for looping over the entire domain
+ *   Serial in every way
+ *--------------------------------------------------------------------------*/
+
+#define GrGeomInLoopBoxesTotalDomain(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body) \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  const int dom_start_x = ix;                                                 \
+  const int dom_start_y = iy;                                                 \
+  const int dom_start_z = iz;                                                 \
+  const int dom_end_x = (ix + nx - 1);                                        \
+  const int dom_end_y = (iy + ny - 1);                                        \
+  const int dom_end_z = (iz + nz - 1);                                        \
+  const int PV_ixl = dom_start_x;                                             \
+  const int PV_iyl = dom_start_y;                                             \
+  const int PV_izl = dom_start_z;                                             \
+  const int PV_ixu = dom_end_x;                                               \
+  const int PV_iyu = dom_end_y;                                               \
+  const int PV_izu = dom_end_z;                                               \
+  for(k = PV_izl; k <= PV_izu; ++k)                                           \
+    for(j =PV_iyl; j <= PV_iyu; ++j)                                          \
+      for(i = PV_ixl; i <= PV_ixu; ++i)                                       \
+      {                                                                       \
+        body;                                                                 \
+      }                                                                       \
+}
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid looping macro:
+ *   Macro for looping over the entire domain in a tiled manner
+ *   Parallel over tiles
+ *--------------------------------------------------------------------------*/
+
+/*
+ Note: this parameter is used in both GrGeomInLoopBoxesTotalDomainTiledParallelOverTiles and
+ GrGeomInLoopBoxesTotalDomainTiledParallelInTiles
+*/
+ #ifndef GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size
+ #define GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size (10)
+ #endif
+
+#define GrGeomInLoopBoxesTotalDomainTiledParallelOverTiles(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)   \
+{                                                                                     \
+  int *PV_visiting = NULL;                                                            \
+  const int dom_start_x = ix;                                                               \
+  const int dom_start_y = iy;                                                               \
+  const int dom_start_z = iz;                                                               \
+  const int dom_end_x = (ix + nx - 1);                                                      \
+  const int dom_end_y = (iy + ny - 1);                                                      \
+  const int dom_end_z = (iz + nz - 1);                                                      \
+  PRAGMA_IN_MACRO_BODY( omp parallel for collapse(3) schedule(static) )              \
+  for( int tz = 0; tz < dom_end_z; tz += GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size )     \
+    for( int ty = 0; ty < dom_end_z; ty += GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size )   \
+      for( int tx = 0; tx < dom_end_z; tx += GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size ) \
+      {                                                                               \
+        const int PV_ixl = tx;                                                              \
+        const int PV_iyl = ty;                                                              \
+        const int PV_izl = tz;                                                              \
+        const int PV_ixu = pfmin( tx + GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size - 1, dom_end_x ); \
+        const int PV_iyu = pfmin( ty + GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size - 1, dom_end_y ); \
+        const int PV_izu = pfmin( tz + GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size - 1, dom_end_z ); \
+        for(k = PV_izl; k <= PV_izu; ++k)                                             \
+          for(j =PV_iyl; j <= PV_iyu; ++j)                                            \
+            for(i = PV_ixl; i <= PV_ixu; ++i)                                         \
+            {                                                                         \
+              body;                                                                   \
+            }                                                                         \
+      }                                                                               \
+}
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid looping macro:
+ *   Macro for looping over the entire domain in a tiled manner
+ *   Parallel in tiles
+ *--------------------------------------------------------------------------*/
+
+#define GrGeomInLoopBoxesTotalDomainTiledParallelInTiles(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)   \
+{                                                                                     \
+  int *PV_visiting = NULL;                                                            \
+  const int dom_start_x = ix;                                                               \
+  const int dom_start_y = iy;                                                               \
+  const int dom_start_z = iz;                                                               \
+  const int dom_end_x = (ix + nx - 1);                                                      \
+  const int dom_end_y = (iy + ny - 1);                                                      \
+  const int dom_end_z = (iz + nz - 1);                                                      \
+  for( int tz = 0; tz < dom_end_z; tz += GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size )     \
+    for( int ty = 0; ty < dom_end_z; ty += GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size )   \
+      for( int tx = 0; tx < dom_end_z; tx += GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size ) \
+      {                                                                                     \
+        const int PV_ixl = tx;                                                              \
+        const int PV_iyl = ty;                                                              \
+        const int PV_izl = tz;                                                              \
+        const int PV_ixu = pfmin( tx + GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size - 1, dom_end_x ); \
+        const int PV_iyu = pfmin( ty + GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size - 1, dom_end_y ); \
+        const int PV_izu = pfmin( tz + GrGeomInLoopBoxesTotalDomainTiledParallel_tile_size - 1, dom_end_z ); \
+        PRAGMA_IN_MACRO_BODY( omp parallel for collapse(3) schedule(static) )               \
+        for(k = PV_izl; k <= PV_izu; ++k)                                             \
+          for(j =PV_iyl; j <= PV_iyu; ++j)                                            \
+            for(i = PV_ixl; i <= PV_ixu; ++i)                                         \
+            {                                                                         \
+              body;                                                                   \
+            }                                                                         \
+      }                                                                               \
+}
+
 #define GrGeomInLoop(i, j, k, grgeom, r, ix, iy, iz, nx, ny, nz, body)        \
   {                                                                           \
    if(r == 0 && GrGeomSolidInteriorBoxes(grgeom))                             \
