@@ -565,7 +565,7 @@ typedef struct {
         const int PV_ixu = pfmin( tx +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_x ); \
         const int PV_iyu = pfmin( ty +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_y ); \
         const int PV_izu = pfmin( tz +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_z ); \
-        PRAGMA_IN_MACRO_BODY( omp parallel for collapse(3) schedule(static) )               \
+        PRAGMA_IN_MACRO_BODY( omp parallel for collapse(3) schedule(static) private(i,j,k) )          \
         for(k = PV_izl; k <= PV_izu; ++k)                                             \
           for(j = PV_iyl; j <= PV_iyu; ++j)                                           \
             for(i = PV_ixl; i <= PV_ixu; ++i)                                         \
