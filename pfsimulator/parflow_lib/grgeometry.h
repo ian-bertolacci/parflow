@@ -443,24 +443,28 @@ typedef struct {
 #define GrGeomInLoopBoxesTotalDomain(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body) \
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
-  const int dom_start_x = ix;                                                 \
-  const int dom_start_y = iy;                                                 \
-  const int dom_start_z = iz;                                                 \
-  const int dom_end_x = (ix + nx - 1);                                        \
-  const int dom_end_y = (iy + ny - 1);                                        \
-  const int dom_end_z = (iz + nz - 1);                                        \
-  const int PV_ixl = dom_start_x;                                             \
-  const int PV_iyl = dom_start_y;                                             \
-  const int PV_izl = dom_start_z;                                             \
-  const int PV_ixu = dom_end_x;                                               \
-  const int PV_iyu = dom_end_y;                                               \
-  const int PV_izu = dom_end_z;                                               \
-  for(k = PV_izl; k <= PV_izu; ++k)                                           \
-    for(j =PV_iyl; j <= PV_iyu; ++j)                                          \
-      for(i = PV_ixl; i <= PV_ixu; ++i)                                       \
-      {                                                                       \
-        body;                                                                 \
-      }                                                                       \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  /* for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++) */           \
+  if( BoxArraySize(boxes) > 1 ){                                              \
+    printf("More than one box (%d)\n", BoxArraySize(boxes));                  \
+  }                                                                           \
+  int PV_box = 0;                                                             \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+    for(k = PV_izl; k <= PV_izu; k++)                                         \
+      for(j = PV_iyl; j <= PV_iyu; j++)                                       \
+        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
+        {                                                                     \
+          body;                                                               \
+        }                                                                     \
+   }                                                                          \
 }
 
 
@@ -477,33 +481,41 @@ typedef struct {
   *   Macro for looping over the entire domain in a tiled manner
   *   Serial
   *--------------------------------------------------------------------------*/
- #define GrGeomInLoopBoxesTotalDomainTiled(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)   \
- {                                                                                     \
-   int *PV_visiting = NULL;                                                            \
-   const int dom_start_x = ix;                                                               \
-   const int dom_start_y = iy;                                                               \
-   const int dom_start_z = iz;                                                               \
-   const int dom_end_x = (ix + nx - 1);                                                      \
-   const int dom_end_y = (iy + ny - 1);                                                      \
-   const int dom_end_z = (iz + nz - 1);                                                      \
-   for( int tz = dom_start_z; tz <= dom_end_z; tz +=  GrGeomInLoopBoxesTotalDomainTiled_tile_size )     \
-     for( int ty = dom_start_y; ty <= dom_end_y; ty +=  GrGeomInLoopBoxesTotalDomainTiled_tile_size )   \
-       for( int tx = dom_start_x; tx <= dom_end_x; tx +=  GrGeomInLoopBoxesTotalDomainTiled_tile_size ) \
-       {                                                                               \
-         const int PV_ixl = tx;                                                              \
-         const int PV_iyl = ty;                                                              \
-         const int PV_izl = tz;                                                              \
-         const int PV_ixu = pfmin( tx +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_x ); \
-         const int PV_iyu = pfmin( ty +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_y ); \
-         const int PV_izu = pfmin( tz +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_z ); \
-         for(k = PV_izl; k <= PV_izu; ++k)                                             \
-           for(j = PV_iyl; j <= PV_iyu; ++j)                                           \
-             for(i = PV_ixl; i <= PV_ixu; ++i)                                         \
-             {                                                                         \
-               body;                                                                   \
-             }                                                                         \
-       }                                                                               \
- }
+
+#define GrGeomInLoopBoxesTotalDomainTiled(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body) \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  /* for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++) */           \
+  if( BoxArraySize(boxes) > 1 ){                                              \
+    printf("More than one box (%d)\n", BoxArraySize(boxes));                  \
+  }                                                                           \
+  int PV_box = 0;                                                             \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+    for( int PV_tile_z = PV_izl; PV_tile_z <= PV_izu; PV_tile_z += GrGeomInLoopBoxesTotalDomainTiled_tile_size )     \
+      for( int PV_tile_y = PV_iyl; PV_tile_y <= PV_iyu; PV_tile_y += GrGeomInLoopBoxesTotalDomainTiled_tile_size )   \
+        for( int PV_tile_x = PV_ixl; PV_tile_x <= PV_ixu; PV_tile_x += GrGeomInLoopBoxesTotalDomainTiled_tile_size ) \
+        {                                                                               \
+          const int PV_tile_upper_x = pfmin( PV_tile_x +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_ixu ); \
+          const int PV_tile_upper_y = pfmin( PV_tile_y +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_iyu ); \
+          const int PV_tile_upper_z = pfmin( PV_tile_z +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_izu ); \
+          for(k = PV_izl; k <= PV_tile_upper_z; ++k)                                             \
+            for(j = PV_iyl; j <= PV_tile_upper_y; ++j)                                           \
+              for(i = PV_ixl; i <= PV_tile_upper_x; ++i)                                         \
+              {                                                                         \
+                body;                                                                   \
+              }                                                                         \
+        }                                                                               \
+    }                                                                                   \
+}
 
  /*--------------------------------------------------------------------------
   * GrGeomSolid looping macro:
@@ -511,33 +523,40 @@ typedef struct {
   *   Parallel over tiles
   *--------------------------------------------------------------------------*/
 
-#define GrGeomInLoopBoxesTotalDomainTiledParallelOverTiles(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)   \
-{                                                                                     \
-  int *PV_visiting = NULL;                                                            \
-  const int dom_start_x = ix;                                                               \
-  const int dom_start_y = iy;                                                               \
-  const int dom_start_z = iz;                                                               \
-  const int dom_end_x = (ix + nx - 1);                                                      \
-  const int dom_end_y = (iy + ny - 1);                                                      \
-  const int dom_end_z = (iz + nz - 1);                                                      \
-  PRAGMA_IN_MACRO_BODY( omp parallel for collapse(3) schedule(static) private(i, j, k) )               \
-  for( int tz = dom_start_z; tz <= dom_end_z; tz +=  GrGeomInLoopBoxesTotalDomainTiled_tile_size )     \
-    for( int ty = dom_start_y; ty <= dom_end_y; ty +=  GrGeomInLoopBoxesTotalDomainTiled_tile_size )   \
-      for( int tx = dom_start_x; tx <= dom_end_x; tx +=  GrGeomInLoopBoxesTotalDomainTiled_tile_size ) \
-      {                                                                                     \
-        const int PV_ixl = tx;                                                              \
-        const int PV_iyl = ty;                                                              \
-        const int PV_izl = tz;                                                              \
-        const int PV_ixu = pfmin( tx +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_x ); \
-        const int PV_iyu = pfmin( ty +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_y ); \
-        const int PV_izu = pfmin( tz +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_z ); \
-        for(k = PV_izl; k <= PV_izu; ++k)                                             \
-          for(j = PV_iyl; j <= PV_iyu; ++j)                                           \
-            for(i = PV_ixl; i <= PV_ixu; ++i)                                         \
-            {                                                                         \
-              body;                                                                   \
-            }                                                                         \
-      }                                                                               \
+#define GrGeomInLoopBoxesTotalDomainTiledParallelOverTiles(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body) \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  /* for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++) */           \
+  if( BoxArraySize(boxes) > 1 ){                                              \
+    printf("More than one box (%d)\n", BoxArraySize(boxes));                  \
+  }                                                                           \
+  int PV_box = 0;                                                             \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+    PRAGMA_IN_MACRO_BODY( omp parallel for collapse(3) schedule(static) private(i, j, k) )               \
+    for( int PV_tile_z = PV_izl; PV_tile_z <= PV_izu; PV_tile_z += GrGeomInLoopBoxesTotalDomainTiled_tile_size )     \
+      for( int PV_tile_y = PV_iyl; PV_tile_y <= PV_iyu; PV_tile_y += GrGeomInLoopBoxesTotalDomainTiled_tile_size )   \
+        for( int PV_tile_x = PV_ixl; PV_tile_x <= PV_ixu; PV_tile_x += GrGeomInLoopBoxesTotalDomainTiled_tile_size ) \
+        {                                                                               \
+          const int PV_tile_upper_x = pfmin( PV_tile_x +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_ixu ); \
+          const int PV_tile_upper_y = pfmin( PV_tile_y +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_iyu ); \
+          const int PV_tile_upper_z = pfmin( PV_tile_z +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_izu ); \
+          for(k = PV_izl; k <= PV_tile_upper_z; ++k)                                             \
+            for(j = PV_iyl; j <= PV_tile_upper_y; ++j)                                           \
+              for(i = PV_ixl; i <= PV_tile_upper_x; ++i)                                         \
+              {                                                                         \
+                body;                                                                   \
+              }                                                                         \
+        }                                                                               \
+    }                                                                                   \
 }
 
 /*--------------------------------------------------------------------------
@@ -547,32 +566,39 @@ typedef struct {
  *--------------------------------------------------------------------------*/
 
 #define GrGeomInLoopBoxesTotalDomainTiledParallelInTiles(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)   \
-{                                                                                     \
-  int *PV_visiting = NULL;                                                            \
-  const int dom_start_x = ix;                                                               \
-  const int dom_start_y = iy;                                                               \
-  const int dom_start_z = iz;                                                               \
-  const int dom_end_x = (ix + nx - 1);                                                      \
-  const int dom_end_y = (iy + ny - 1);                                                      \
-  const int dom_end_z = (iz + nz - 1);                                                      \
-  for( int tz = dom_start_z; tz <= dom_end_z; tz +=  GrGeomInLoopBoxesTotalDomainTiled_tile_size )     \
-    for( int ty = dom_start_y; ty <= dom_end_y; ty +=  GrGeomInLoopBoxesTotalDomainTiled_tile_size )   \
-      for( int tx = dom_start_x; tx <= dom_end_x; tx +=  GrGeomInLoopBoxesTotalDomainTiled_tile_size ) \
-      {                                                                                     \
-        const int PV_ixl = tx;                                                              \
-        const int PV_iyl = ty;                                                              \
-        const int PV_izl = tz;                                                              \
-        const int PV_ixu = pfmin( tx +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_x ); \
-        const int PV_iyu = pfmin( ty +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_y ); \
-        const int PV_izu = pfmin( tz +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, dom_end_z ); \
-        PRAGMA_IN_MACRO_BODY( omp parallel for collapse(3) schedule(static) private(i,j,k) )          \
-        for(k = PV_izl; k <= PV_izu; ++k)                                             \
-          for(j = PV_iyl; j <= PV_iyu; ++j)                                           \
-            for(i = PV_ixl; i <= PV_ixu; ++i)                                         \
-            {                                                                         \
-              body;                                                                   \
-            }                                                                         \
-      }                                                                               \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  /* for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++) */           \
+  if( BoxArraySize(boxes) > 1 ){                                              \
+    printf("More than one box (%d)\n", BoxArraySize(boxes));                  \
+  }                                                                           \
+  int PV_box = 0;                                                             \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+    for( int PV_tile_z = PV_izl; PV_tile_z <= PV_izu; PV_tile_z += GrGeomInLoopBoxesTotalDomainTiled_tile_size )     \
+      for( int PV_tile_y = PV_iyl; PV_tile_y <= PV_iyu; PV_tile_y += GrGeomInLoopBoxesTotalDomainTiled_tile_size )   \
+        for( int PV_tile_x = PV_ixl; PV_tile_x <= PV_ixu; PV_tile_x += GrGeomInLoopBoxesTotalDomainTiled_tile_size ) \
+        {                                                                               \
+          const int PV_tile_upper_x = pfmin( PV_tile_x +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_ixu ); \
+          const int PV_tile_upper_y = pfmin( PV_tile_y +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_iyu ); \
+          const int PV_tile_upper_z = pfmin( PV_tile_z +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_izu ); \
+          PRAGMA_IN_MACRO_BODY( omp parallel for collapse(3) schedule(static) private(i, j, k) )               \
+          for(k = PV_izl; k <= PV_tile_upper_z; ++k)                                             \
+            for(j = PV_iyl; j <= PV_tile_upper_y; ++j)                                           \
+              for(i = PV_ixl; i <= PV_tile_upper_x; ++i)                                         \
+              {                                                                         \
+                body;                                                                   \
+              }                                                                         \
+        }                                                                               \
+    }                                                                                   \
 }
 
 #define GrGeomInLoop(i, j, k, grgeom, r, ix, iy, iz, nx, ny, nz, body)        \
@@ -605,6 +631,26 @@ typedef struct {
   #define GrGeomInLoopBoxesParallel GrGeomInLoopBoxes
 #endif
 
+#define GrGeomInLoopBoxesCountBoxes(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+                                                                              \
+    int size = (PV_ixu - PV_ixl + 1)*(PV_iyu - PV_iyl + 1) * (PV_izu - PV_izl + 1); \
+    printf("box %d: (%d,%d,%d)..(%d,%d,%d) = %d\n", PV_box, PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu, size ); \
+   }                                                                          \
+   exit(-1);                                                                  \
+}
 
 #define GrGeomInLoopParallel(i, j, k, grgeom, r, ix, iy, iz, nx, ny, nz, body)	\
   {                                                                           \
