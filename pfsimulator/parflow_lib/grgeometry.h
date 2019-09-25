@@ -507,9 +507,9 @@ typedef struct {
           const int PV_tile_upper_x = pfmin( PV_tile_x +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_ixu ); \
           const int PV_tile_upper_y = pfmin( PV_tile_y +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_iyu ); \
           const int PV_tile_upper_z = pfmin( PV_tile_z +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_izu ); \
-          for(k = PV_izl; k <= PV_tile_upper_z; ++k)                                             \
-            for(j = PV_iyl; j <= PV_tile_upper_y; ++j)                                           \
-              for(i = PV_ixl; i <= PV_tile_upper_x; ++i)                                         \
+          for(k = PV_tile_z; k <= PV_tile_upper_z; ++k)                                             \
+            for(j = PV_tile_y; j <= PV_tile_upper_y; ++j)                                           \
+              for(i = PV_tile_x; i <= PV_tile_upper_x; ++i)                                         \
               {                                                                         \
                 body;                                                                   \
               }                                                                         \
@@ -549,9 +549,9 @@ typedef struct {
           const int PV_tile_upper_x = pfmin( PV_tile_x +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_ixu ); \
           const int PV_tile_upper_y = pfmin( PV_tile_y +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_iyu ); \
           const int PV_tile_upper_z = pfmin( PV_tile_z +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_izu ); \
-          for(k = PV_izl; k <= PV_tile_upper_z; ++k)                                             \
-            for(j = PV_iyl; j <= PV_tile_upper_y; ++j)                                           \
-              for(i = PV_ixl; i <= PV_tile_upper_x; ++i)                                         \
+          for(k = PV_tile_z; k <= PV_tile_upper_z; ++k)                                             \
+            for(j = PV_tile_y; j <= PV_tile_upper_y; ++j)                                           \
+              for(i = PV_tile_x; i <= PV_tile_upper_x; ++i)                                         \
               {                                                                         \
                 body;                                                                   \
               }                                                                         \
@@ -591,9 +591,9 @@ typedef struct {
           const int PV_tile_upper_y = pfmin( PV_tile_y +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_iyu ); \
           const int PV_tile_upper_z = pfmin( PV_tile_z +  GrGeomInLoopBoxesTotalDomainTiled_tile_size - 1, PV_izu ); \
           PRAGMA_IN_MACRO_BODY( omp parallel for collapse(3) schedule(static) private(i, j, k) )               \
-          for(k = PV_izl; k <= PV_tile_upper_z; ++k)                                             \
-            for(j = PV_iyl; j <= PV_tile_upper_y; ++j)                                           \
-              for(i = PV_ixl; i <= PV_tile_upper_x; ++i)                                         \
+          for(k = PV_tile_z; k <= PV_tile_upper_z; ++k)                                             \
+            for(j = PV_tile_y; j <= PV_tile_upper_y; ++j)                                           \
+              for(i = PV_tile_x; i <= PV_tile_upper_x; ++i)                                         \
               {                                                                         \
                 body;                                                                   \
               }                                                                         \
