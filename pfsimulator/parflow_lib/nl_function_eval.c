@@ -124,6 +124,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
                     Vector *     y_velocity,
                     Vector *     z_velocity)
 {
+  Loogie_probe_make_server( );
+  Loogie_timer_t timer;
+  Loogie_timer_ctr( &timer );
   PFModule      *this_module = ThisPFModule;
   InstanceXtra  *instance_xtra = (InstanceXtra*)PFModuleInstanceXtra(this_module);
   PublicXtra    *public_xtra = (PublicXtra*)PFModulePublicXtra(this_module);
@@ -259,19 +262,33 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
 
   /* Calculate pressure dependent properties: density and saturation */
-
+  Loogie_timer_start( &timer );
   PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density, &dtmp, &dtmp,
                                                           CALCFCN));
+  Loogie_timer_stop( &timer );
 
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+     Loogie_field_id_NAME, "nl_function_eval.c:PFMIT_266",
+     field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
+
+  Loogie_timer_start( &timer );
   PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation, pressure, density,
                                                            gravity, problem_data, CALCFCN));
                                                            int my_rank;
+   Loogie_timer_stop( &timer );
+
+   Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+      Loogie_field_id_NAME, "nl_function_eval.c:loop_277",
+      field_TIME, Loogie_timer_elapsed( &timer )
+   );
+   Loogie_timer_reset( &timer );
   /* Calculate accumulation terms for the function values */
 
-  Loogie_probe_make_server( );
-  Loogie_timer_t timer;
-  Loogie_timer_ctr( &timer );
-  // This is loop 261
+
+
+
   Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
@@ -360,7 +377,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   Loogie_timer_stop( &timer );
 
   Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
-     Loogie_field_id_NAME, "nl_function_eval.c:261",
+     Loogie_field_id_NAME, "nl_function_eval.c:loop_276",
      field_TIME, Loogie_timer_elapsed( &timer )
   );
   Loogie_timer_reset( &timer );
@@ -441,7 +458,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   Loogie_timer_stop( &timer );
 
   Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
-     Loogie_field_id_NAME, "nl_function_eval.c:338",
+     Loogie_field_id_NAME, "nl_function_eval.c:loop_370",
      field_TIME, Loogie_timer_elapsed( &timer )
   );
 
@@ -450,8 +467,17 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   /* Add in contributions from source terms - user specified sources and
    * flux wells.  Calculate phase source values overwriting current
    * saturation vector */
+   Loogie_timer_start( &timer );
   PFModuleInvokeType(PhaseSourceInvoke, phase_source, (source, 0, problem, problem_data,
                                                        time));
+  Loogie_timer_stop( &timer );
+
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+   Loogie_field_id_NAME, "nl_function_eval.c:PFMIT_454",
+   field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
+
   Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
@@ -525,14 +551,23 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   Loogie_timer_stop( &timer );
 
   Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
-     Loogie_field_id_NAME, "nl_function_eval.c:416",
+     Loogie_field_id_NAME, "nl_function_eval.c:loop_456",
      field_TIME, Loogie_timer_elapsed( &timer )
   );
 
   Loogie_timer_reset( &timer );
 
+  Loogie_timer_start( &timer );
   bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
                                  (problem_data, grid, gr_domain, time));
+  Loogie_timer_stop( &timer );
+
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "nl_function_eval.c:PFMIT_544",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+
+  Loogie_timer_reset( &timer );
 
   /*
    * Temporarily insert boundary pressure values for Dirichlet
@@ -561,6 +596,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
    * bc_patch_values[ival] in rel_perm_module code and remove this
    * loop.
    */
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -597,17 +633,28 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   }            /* End subgrid loop */
   /* Calculate relative permeability values overwriting current
    * phase source values */
+   Loogie_timer_stop( &timer );
+   Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+      Loogie_field_id_NAME, "nl_function_eval.c:loop_565",
+      field_TIME, Loogie_timer_elapsed( &timer )
+   );
+   Loogie_timer_reset( &timer );
 
+  Loogie_timer_start( &timer );
   PFModuleInvokeType(PhaseRelPermInvoke, rel_perm_module,
                      (rel_perm, pressure, density, gravity, problem_data,
                       CALCFCN));
+  Loogie_timer_stop( &timer );
+
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "nl_function_eval.c:PFMIT_626",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+
+  Loogie_timer_reset( &timer );
 
 
   /* Calculate contributions from second order derivatives and gravity */
-  int in_subgrid_iteration_count = 0;
-  int subgrid_count = 0;
-  // This is loop 551
-  // #pragma omp parallel for
   Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
@@ -682,19 +729,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     /* @RMM added to provide variable dz */
     z_mult_dat = SubvectorData(z_mult_sub);
     qx_sub = VectorSubvector(qx, is);
-
-    Loogie_timer_stop( &timer );
-
-    subgrid_count += 1;
-    Loogie_create_and_queue_report( server, parflow_loogie_field_table, 5
-      , Loogie_field_id_NAME, "nl_function_eval.c:551.individual"
-      , field_SUBGRID_NX, nx
-      , field_SUBGRID_NY, ny
-      , field_SUBGRID_NZ, nz
-      , field_SUBGRID_IDX, is
-    );
-
-    Loogie_timer_start( &timer );
 
     GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
@@ -854,10 +888,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   }
   Loogie_timer_stop( &timer );
 
-  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 3
-     , Loogie_field_id_NAME, "nl_function_eval.c:551"
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2
+     , Loogie_field_id_NAME, "nl_function_eval.c:loop_613"
      , field_TIME, Loogie_timer_elapsed( &timer )
-     , field_SUBGRID_COUNT, subgrid_count
   );
 
   Loogie_timer_reset( &timer );
@@ -2167,7 +2200,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   Loogie_timer_stop( &timer );
 
   Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
-     Loogie_field_id_NAME, "nl_function_eval.c:757",
+     Loogie_field_id_NAME, "nl_function_eval.c:loop_856",
      field_TIME, Loogie_timer_elapsed( &timer )
   );
 
@@ -2178,6 +2211,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
    *
    * See comments above on why this is needed.
    */
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -2217,11 +2251,27 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+     Loogie_field_id_NAME, "nl_function_eval.c:loop_2171",
+     field_TIME, Loogie_timer_elapsed( &timer )
+  );
+
+  Loogie_timer_reset( &timer );
 
   FreeBCStruct(bc_struct);
 
+  Loogie_timer_start( &timer );
   PFModuleInvokeType(RichardsBCInternalInvoke, bc_internal, (problem, problem_data, fval, NULL,
                                                              time, pressure, CALCFCN));
+  Loogie_timer_stop( &timer );
+
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+   Loogie_field_id_NAME, "nl_function_eval.c:PFMIT_2247",
+   field_TIME, Loogie_timer_elapsed( &timer )
+  );
+
+  Loogie_timer_reset( &timer );
 
   EndTiming(public_xtra->time_index);
 

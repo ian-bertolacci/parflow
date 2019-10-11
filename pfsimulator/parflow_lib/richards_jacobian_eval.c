@@ -200,6 +200,10 @@ void    RichardsJacobianEval(
                                                       * symmetric part of the Jacobian (1), or the
                                                       * full Jacobian */
 {
+  Loogie_probe_make_server( );
+  Loogie_timer_t timer;
+  Loogie_timer_ctr( &timer );
+
   PFModule      *this_module = ThisPFModule;
   InstanceXtra  *instance_xtra = (InstanceXtra*)PFModuleInstanceXtra(this_module);
   PublicXtra    *public_xtra = (PublicXtra*)PFModulePublicXtra(this_module);
@@ -403,18 +407,56 @@ void    RichardsJacobianEval(
   InitMatrix(JC, 0.0);
 
   /* Calculate time term contributions. */
-
+  Loogie_timer_start( &timer );
   PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density, &dtmp, &dtmp,
                                                           CALCFCN));
+
+  Loogie_timer_stop( &timer );
+
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:PFMIT_410",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
+
+  Loogie_timer_start( &timer );
   PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density_der, &dtmp,
                                                           &dtmp, CALCDER));
+
+  Loogie_timer_stop( &timer );
+
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:PFMIT_423",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
+
+  Loogie_timer_start( &timer );
   PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation, pressure,
                                                            density, gravity, problem_data,
                                                            CALCFCN));
+  Loogie_timer_stop( &timer );
+
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:PFMIT_434",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
+
+  Loogie_timer_start( &timer );
+
   PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation_der, pressure,
                                                            density, gravity, problem_data,
                                                            CALCDER));
+  Loogie_timer_stop( &timer );
 
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:PFMIT_448",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
+
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -488,14 +530,27 @@ void    RichardsJacobianEval(
                 * pop[ipo] * vol2 + ss[iv] * vol2 * (sdp[iv] * dp[iv] * pp[iv] + sp[iv] * ddp[iv] * pp[iv] + sp[iv] * dp[iv]); //sk start
     });
   }    /* End subgrid loop */
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:loop_460",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
 
+  Loogie_timer_start( &timer );
   bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
                                  (problem_data, grid, gr_domain, time));
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:PFMIT_541",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
 
   /* Get boundary pressure values for Dirichlet boundaries.   */
   /* These are needed for upstream weighting in mobilities - need boundary */
   /* values for rel perms and densities. */
-
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -530,18 +585,38 @@ void    RichardsJacobianEval(
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:loop_554",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
 
   /* Calculate rel_perm and rel_perm_der */
-
+  Loogie_timer_start( &timer );
   PFModuleInvokeType(PhaseRelPermInvoke, rel_perm_module,
                      (rel_perm, pressure, density, gravity, problem_data,
                       CALCFCN));
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:PFMIT_597",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
 
+  Loogie_timer_start( &timer );
   PFModuleInvokeType(PhaseRelPermInvoke, rel_perm_module,
                      (rel_perm_der, pressure, density, gravity, problem_data,
                       CALCDER));
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:PFMIT_608",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
 
   /* Calculate contributions from second order derivatives and gravity */
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -805,7 +880,12 @@ void    RichardsJacobianEval(
       }
     });
   }  //
-
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:loop_620",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
   /*  Calculate correction for boundary conditions */
 
   if (symm_part)
@@ -817,7 +897,7 @@ void    RichardsJacobianEval(
     /*  of BC is involved.  Without this correction, only the symmetric */
     /*  part would be removed, incorrectly leaving the nonsymmetric     */
     /*  contribution on the diagonal.                                   */
-
+    Loogie_timer_start( &timer );
     ForSubgridI(is, GridSubgrids(grid))
     {
       subgrid = GridSubgrid(grid, is);
@@ -997,8 +1077,15 @@ void    RichardsJacobianEval(
         });       /* End Patch Loop */
       }           /* End ipatch loop */
     }             /* End subgrid loop */
+    Loogie_timer_stop( &timer );
+    Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+      Loogie_field_id_NAME, "richards_jacobian_eval.c:loop_901",
+      field_TIME, Loogie_timer_elapsed( &timer )
+    );
+    Loogie_timer_reset( &timer );
   }                  /* End if symm_part */
 
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -1489,9 +1576,22 @@ void    RichardsJacobianEval(
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:loop_1089",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
 
+  Loogie_timer_start( &timer );
   PFModuleInvokeType(RichardsBCInternalInvoke, bc_internal, (problem, problem_data, NULL, J, time,
                                                              pressure, CALCDER));
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:PFMIT_1587",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
 
 
 
@@ -1536,6 +1636,7 @@ void    RichardsJacobianEval(
   if (ovlnd_flag && public_xtra->type == overland_flow)
   {
     /* begin loop to build JC */
+    Loogie_timer_start( &timer );
     ForSubgridI(is, GridSubgrids(grid))
     {
       subgrid = GridSubgrid(grid, is);
@@ -1894,6 +1995,12 @@ void    RichardsJacobianEval(
         }         /* End switch BCtype */
       }           /* End ipatch loop */
     }             /* End subgrid loop */
+    Loogie_timer_stop( &timer );
+    Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+      Loogie_field_id_NAME, "richards_jacobian_eval.c:loop_1640",
+      field_TIME, Loogie_timer_elapsed( &timer )
+    );
+    Loogie_timer_reset( &timer );
   }
 
 
@@ -1904,7 +2011,7 @@ void    RichardsJacobianEval(
    *
    * Should change this to set pressures to scaling value.
    * CSW: Should I set this to pressure * vol * dt ??? */
-
+  Loogie_timer_start( &timer );
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -1959,6 +2066,12 @@ void    RichardsJacobianEval(
 //#endif */
     });
   }
+  Loogie_timer_stop( &timer );
+  Loogie_create_and_queue_report( server, parflow_loogie_field_table, 2,
+    Loogie_field_id_NAME, "richards_jacobian_eval.c:loop_2015",
+    field_TIME, Loogie_timer_elapsed( &timer )
+  );
+  Loogie_timer_reset( &timer );
 
 
   /*-----------------------------------------------------------------------
@@ -2010,6 +2123,8 @@ void    RichardsJacobianEval(
   FreeVector(KEns);
   FreeVector(KNns);
   FreeVector(KSns);
+
+  Loogie_server_send_queue( server );
 
   return;
 }
