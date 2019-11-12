@@ -34,7 +34,16 @@ TESTS += \
 	var_dz_1D.tcl \
 	pfmg.tcl \
 	smg.tcl \
-	pfmg_octree.tcl
+	pfmg_octree.tcl \
+	overland_slopingslab_KWE.tcl \
+	overland_tiltedV_KWE.tcl \
+	overland_slopingslab_DWE.tcl \
+	overland_tiltedV_DWE.tcl\
+	overland_FlatICP.tcl \
+	richards_FBx.tcl \
+	richards_FBy.tcl  \
+	richards_box_proctest.tcl \
+        richards_box_proctest.vardz.tcl
 endif
 
 ifeq (${PARFLOW_HAVE_SILO},yes)
@@ -79,14 +88,19 @@ PARALLEL_3DTOPO_TESTS += \
 ifeq (${PARFLOW_HAVE_HYPRE},yes)
 
 PARALLEL_3DTOPO_TESTS += \
-	default_richards.tcl 
+	default_richards.tcl
 
 PARALLEL_2DTOPO_TESTS += \
 	default_overland.tcl \
 	default_overland.pfmg.jac.tcl \
 	default_overland.pfmg_octree.jac.tcl \
 	LW_var_dz.tcl \
-	LW_var_dz_spinup.tcl
+	LW_var_dz_spinup.tcl \
+	richards_FBx.tcl \
+	richards_FBy.tcl  \
+	richards_box_proctest.tcl \
+       richards_box_proctest.vardz.tcl \
+       overland_slopingslab_KWE.tcl
 
 ifeq (${PARFLOW_HAVE_SILO},yes)
 TESTS += \
@@ -153,7 +167,7 @@ check_sequential:
 	@-for i in $(SUBDIRS); \
 	do \
 	        (cd $$i; make check_sequential); \
-	done 
+	done
 
 check_parallel:
 	@-for i in $(PARALLEL_3DTOPO_TESTS); \
@@ -179,7 +193,7 @@ check_parallel:
 	@-for i in $(SUBDIRS); \
 	do \
 	        (cd $$i; make check_parallel); \
-	done 
+	done
 
 
 check_samrai:
@@ -213,14 +227,14 @@ check_samrai:
 	@-for i in $(SUBDIRS); \
 	do \
 	        (cd $$i; make check_samrai); \
-	done 
+	done
 
 
 clean: testclean
 	@-for i in $(SUBDIRS); \
 	do \
 	        (cd $$i; make --no-print-directory clean); \
-	done 
+	done
 
 testclean:
 	@rm -f *.pfb*
@@ -233,7 +247,7 @@ testclean:
 	@rm -f *.out.pftcl
 	@rm -f *.pfidb
 	@rm -f *.out.txt
-	@rm -fr default_richards.out 
+	@rm -fr default_richards.out
 	@rm -fr *.out.wells
 	@rm -fr indicator_field.out
 	@rm -fr water_balance.out
@@ -246,3 +260,5 @@ testclean:
 	@rm -fr LW_var_dz_spinup.out
 	@rm -fr default_single.out
 	@rm -f *.nc
+	@rm -f *.pfmetadata
+	@rm -f *.etrace
