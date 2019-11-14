@@ -26,11 +26,22 @@
  *  USA
  **********************************************************************EHEADER*/
 
-#include "parflow.h"
-#include "llnlmath.h"
-#include "llnltyps.h"
-//#include "math.h"
-#include "float.h"
+ #include "parflow_config.h"
+
+ #ifdef HAVE_CUDA
+ extern "C"{
+ #endif
+
+ #include "parflow.h"
+ #include "llnlmath.h"
+ #include "llnltyps.h"
+ //#include "math.h"
+ #include "float.h"
+
+ #ifdef HAVE_CUDA
+ #include "pfcudaloops.h"
+ #include "pfcudamalloc.h"
+ #endif
 
 /*---------------------------------------------------------------------
  * Define module structures
@@ -346,11 +357,12 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     pop = SubvectorData(po_sub);
     fp = SubvectorData(f_sub);
 
-    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    // GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       int ip = SubvectorEltIndex(f_sub, i, j, k);
       int ipo = SubvectorEltIndex(po_sub, i, j, k);
-      int io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+      // int io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
 
       /*     del_x_slope = (1.0/cos(atan(x_ssl_dat[io])));
        *   del_y_slope = (1.0/cos(atan(y_ssl_dat[io])));  */
@@ -422,10 +434,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     fp = SubvectorData(f_sub);
 
 
-    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    // GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       int ip = SubvectorEltIndex(f_sub, i, j, k);
-      int io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+      // int io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
 
       /*   del_x_slope = (1.0/cos(atan(x_ssl_dat[io])));
        * del_y_slope = (1.0/cos(atan(y_ssl_dat[io])));  */
@@ -497,10 +510,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     FBz_dat = SubvectorData(FBz_sub);
 
 
-    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    // GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       int ip = SubvectorEltIndex(f_sub, i, j, k);
-      int io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+      // int io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
 
       /* del_x_slope = (1.0/cos(atan(x_ssl_dat[io])));
        * del_y_slope = (1.0/cos(atan(y_ssl_dat[io])));  */
@@ -670,7 +684,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
     qx_sub = VectorSubvector(qx, is);
 
-    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    // GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       int ip = SubvectorEltIndex(p_sub, i, j, k);
       int io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
@@ -691,10 +706,10 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       int vyi = SubvectorEltIndex(vy_sub, i, j + 1, k);
       int vzi = SubvectorEltIndex(vz_sub, i, j, k + 1);
 
-      double x_dir_g = Mean(gravity * sin(atan(x_ssl_dat[io])), gravity * sin(atan(x_ssl_dat[io + 1])));
-      double x_dir_g_c = Mean(gravity * cos(atan(x_ssl_dat[io])), gravity * cos(atan(x_ssl_dat[io + 1])));
-      double y_dir_g = Mean(gravity * sin(atan(y_ssl_dat[io])), gravity * sin(atan(y_ssl_dat[io + sy_p])));
-      double y_dir_g_c = Mean(gravity * cos(atan(y_ssl_dat[io])), gravity * cos(atan(y_ssl_dat[io + sy_p])));
+      double x_dir_g;
+      double x_dir_g_c;
+      double y_dir_g;
+      double y_dir_g_;
 
       double z_dir_g = 1.0;
       double del_x_slope = 1.0;
@@ -864,7 +879,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     u_front = SubvectorData(u_front_sub);
     u_upper = SubvectorData(u_upper_sub);
 
-    GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    // GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       int ip = SubvectorEltIndex(p_sub, i, j, k);
       fp[ip] += dt*( -u_right[ip - sx_p] + -u_front[ip - sy_p] + -u_upper[ip - sz_p] );
@@ -873,11 +889,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
   /*  Calculate correction for boundary conditions */
 
+  /*  Calculate correction for boundary conditions */
+
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
-    Subgrid       *grid2d_subgrid = GridSubgrid(grid2d, is);
-    int grid2d_iz = SubgridIZ(grid2d_subgrid);
 
     d_sub = VectorSubvector(density, is);
     rp_sub = VectorSubvector(rel_perm, is);
@@ -933,7 +949,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     ny_p = SubvectorNY(p_sub);
     nz_p = SubvectorNZ(p_sub);
 
-    sx_p = 1;
     sy_p = nx_p;
     sz_p = ny_p * nx_p;
 
@@ -979,19 +994,24 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         {
           BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
-            ip = SubvectorEltIndex(p_sub, i, j, k);
-            io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+            int ip = SubvectorEltIndex(p_sub, i, j, k);
+
+            double diff = 0.0e0;
+            double sep;
+
+            double lower_cond;
+            double upper_cond;
 
             value = bc_patch_values[ival];
-            x_dir_g = 0.0;
-            y_dir_g = 0.0;
-            z_dir_g = 1.0;
+            double x_dir_g = 0.0;
+            double y_dir_g = 0.0;
+            double z_dir_g = 1.0;
 
-            del_x_slope = (1.0 / cos(atan(x_ssl_dat[io])));
-            del_y_slope = (1.0 / cos(atan(y_ssl_dat[io])));
+            // del_x_slope = (1.0 / cos(atan(x_ssl_dat[io])));
+            // del_y_slope = (1.0 / cos(atan(y_ssl_dat[io])));
 
-            del_x_slope = 1.0;
-            del_y_slope = 1.0;
+            double del_x_slope = 1.0;
+            double del_y_slope = 1.0;
 
 
             /* Don't currently do upstream weighting on boundaries */
@@ -1201,15 +1221,20 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         {
           BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
-            ip = SubvectorEltIndex(p_sub, i, j, k);
-            io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+            int ip = SubvectorEltIndex(p_sub, i, j, k);
 
-            x_dir_g = 0.0;
-            y_dir_g = 0.0;
-            z_dir_g = 1.0;
+            double diff = 0.0e0;
+            double sep;
 
-            del_x_slope = 1.0;
-            del_y_slope = 1.0;
+            double lower_cond;
+            double upper_cond;
+
+            double x_dir_g = 0.0;
+            double y_dir_g = 0.0;
+            double z_dir_g = 1.0;
+
+            double del_x_slope = 1.0;
+            double del_y_slope = 1.0;
 
             if (fdir[0])
             {
@@ -1375,15 +1400,20 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         {
           BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
-            ip = SubvectorEltIndex(p_sub, i, j, k);
-            io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+            int ip = SubvectorEltIndex(p_sub, i, j, k);
 
-            x_dir_g = 0.0;
-            y_dir_g = 0.0;
-            z_dir_g = 1.0;
+            double diff = 0.0e0;
+            double sep;
 
-            del_x_slope = 1.0;
-            del_y_slope = 1.0;
+            double lower_cond;
+            double upper_cond;
+
+            double x_dir_g = 0.0;
+            double y_dir_g = 0.0;
+            double z_dir_g = 1.0;
+
+            double del_x_slope = 1.0;
+            double del_y_slope = 1.0;
 
             if (fdir[0])
             {
@@ -1548,7 +1578,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
           {
             /*  @RMM this is modified to be kinematic wave routing, with a new module for diffusive wave
              * routing added */
-            double *dummy1, *dummy2, *dummy3, *dummy4;
+            double *dummy1=NULL, *dummy2=NULL, *dummy3=NULL, *dummy4=NULL;
             PFModuleInvokeType(OverlandFlowEvalDiffInvoke, overlandflow_module_diff, (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
                                                                                       ke_, kw_, kn_, ks_,
                                                                                       dummy1, dummy2, dummy3, dummy4,
@@ -1563,9 +1593,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
               switch (fdir[2])
               {
                 case 1:
-                  io = SubvectorEltIndex(qx_sub, i, j, 0);
-                  ip = SubvectorEltIndex(p_sub, i, j, k);
-
+                  int io = SubvectorEltIndex(qx_sub, i, j, 0);
+                  int ip = SubvectorEltIndex(p_sub, i, j, k);
                   double dir_x = 0.0;
                   double dir_y = 0.0;
                   if (x_sl_dat[io] > 0.0)
@@ -1576,16 +1605,12 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
                     dir_x = 1.0;
                   if (y_sl_dat[io] < 0.0)
                     dir_y = 1.0;
-
                   qx_[io] = dir_x * (RPowerR(fabs(x_sl_dat[io]), 0.5) / mann_dat[io]) * RPowerR(pfmax((pp[ip]), 0.0), (5.0 / 3.0));
-
                   qy_[io] = dir_y * (RPowerR(fabs(y_sl_dat[io]), 0.5) / mann_dat[io]) * RPowerR(pfmax((pp[ip]), 0.0), (5.0 / 3.0));
-
                   break;
               }
             }
           });
-
           BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2])
@@ -1593,14 +1618,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
               switch (fdir[2])
               {
                 case 1:
-                  io = SubvectorEltIndex(ke_sub, i, j, 0);
-
+                  int io = SubvectorEltIndex(ke_sub, i, j, 0);
                   ke_[io] = pfmax(qx_[io], 0.0) - pfmax(-qx_[io + 1], 0.0);
                   kw_[io] = pfmax(qx_[io - 1], 0.0) - pfmax(-qx_[io], 0.0);
-
                   kn_[io] = pfmax(qy_[io], 0.0) - pfmax(-qy_[io + sy_p], 0.0);
                   ks_[io] = pfmax(qy_[io - sy_p], 0.0) - pfmax(-qy_[io], 0.0);
-
                   break;
               }
             }
@@ -1617,8 +1639,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
               {
                 case 1:
                   dir = 1;
-                  ip = SubvectorEltIndex(p_sub, i, j, k);
-                  io = SubvectorEltIndex(x_sl_sub, i, j, 0);
+                  int ip = SubvectorEltIndex(p_sub, i, j, k);
+                  int io = SubvectorEltIndex(x_sl_sub, i, j, 0);
 
                   q_overlnd = 0.0;
 
@@ -1653,15 +1675,10 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         {
           BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
-            ip = SubvectorEltIndex(p_sub, i, j, k);
-            io = SubmatrixEltIndex(x_ssl_sub, i, j, grid2d_iz);
+            int ip = SubvectorEltIndex(p_sub, i, j, k);
 
-            x_dir_g = 0.0;
-            y_dir_g = 0.0;
-            z_dir_g = 1.0;
-
-            del_x_slope = 1.0;
-            del_y_slope = 1.0;
+            double del_x_slope = 1.0;
+            double del_y_slope = 1.0;
 
             if (fdir[0])
             {
@@ -1741,8 +1758,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
                   {
                     dir = 1;
 
-                    ip = SubvectorEltIndex(p_sub, i, j, k);
-                    io = SubmatrixEltIndex(x_sl_sub, i, j, 0);
+                    int ip = SubvectorEltIndex(p_sub, i, j, k);
 
                     /* add flux loss equal to excess head that overwrites the prior overland flux */
                     q_overlnd = (vol / dz) * dt * (pfmax(pp[ip], 0.0) - 0.0); //@RMM
@@ -1763,15 +1779,20 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         {
           BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
-            ip = SubvectorEltIndex(p_sub, i, j, k);
-            io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+            int ip = SubvectorEltIndex(p_sub, i, j, k);
 
-            x_dir_g = 0.0;
-            y_dir_g = 0.0;
-            z_dir_g = 1.0;
+            double diff = 0.0e0;
+            double sep;
 
-            del_x_slope = 1.0;
-            del_y_slope = 1.0;
+            double lower_cond;
+            double upper_cond;
+
+            double x_dir_g = 0.0;
+            double y_dir_g = 0.0;
+            double z_dir_g = 1.0;
+
+            double del_x_slope = 1.0;
+            double del_y_slope = 1.0;
 
             if (fdir[0])
             {
@@ -1927,7 +1948,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
           //printf("Case overland_flow \n");
           /*  @RMM this is modified to be kinematic wave routing, with a new module for diffusive wave
            * routing added */
-          double *dummy1, *dummy2, *dummy3, *dummy4;
+          double *dummy1=NULL, *dummy2=NULL, *dummy3=NULL, *dummy4=NULL;
           PFModuleInvokeType(OverlandFlowEvalKinInvoke, overlandflow_module_kin,
                              (grid, is, bc_struct, ipatch, problem_data, pressure,
                               ke_, kw_, kn_, ks_,
@@ -1942,8 +1963,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
               {
                 case 1:
                   dir = 1;
-                  ip = SubvectorEltIndex(p_sub, i, j, k);
-                  io = SubvectorEltIndex(x_sl_sub, i, j, 0);
+                  int ip = SubvectorEltIndex(p_sub, i, j, k);
+                  int io = SubvectorEltIndex(x_sl_sub, i, j, 0);
 
                   q_overlnd = 0.0;
 
@@ -1970,15 +1991,20 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         {
           BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
-            ip = SubvectorEltIndex(p_sub, i, j, k);
-            io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
+            int ip = SubvectorEltIndex(p_sub, i, j, k);
 
-            x_dir_g = 0.0;
-            y_dir_g = 0.0;
-            z_dir_g = 1.0;
+            double diff = 0.0e0;
+            double sep;
 
-            del_x_slope = 1.0;
-            del_y_slope = 1.0;
+            double lower_cond;
+            double upper_cond;
+
+            double x_dir_g = 0.0;
+            double y_dir_g = 0.0;
+            double z_dir_g = 1.0;
+
+            double del_x_slope = 1.0;
+            double del_y_slope = 1.0;
 
             if (fdir[0])
             {
@@ -2136,7 +2162,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
           /*  @RMM this is a new module for diffusive wave
            */
 
-          double *dummy1, *dummy2, *dummy3, *dummy4;
+          double *dummy1=NULL, *dummy2=NULL, *dummy3=NULL, *dummy4=NULL;
           PFModuleInvokeType(OverlandFlowEvalDiffInvoke, overlandflow_module_diff, (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
                                                                                     ke_, kw_, kn_, ks_,
                                                                                     dummy1, dummy2, dummy3, dummy4,
@@ -2151,8 +2177,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
               {
                 case 1:
                   dir = 1;
-                  ip = SubvectorEltIndex(p_sub, i, j, k);
-                  io = SubvectorEltIndex(x_sl_sub, i, j, 0);
+                  int ip = SubvectorEltIndex(p_sub, i, j, k);
+                  int io = SubvectorEltIndex(x_sl_sub, i, j, 0);
 
                   q_overlnd = 0.0;
 
@@ -2208,7 +2234,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         {
           BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
-            ip = SubvectorEltIndex(p_sub, i, j, k);
+            int ip = SubvectorEltIndex(p_sub, i, j, k);
             value = bc_patch_values[ival];
 // SGS FIXME why is this needed?
 //#undef max
@@ -2431,3 +2457,7 @@ int  NlFunctionEvalSizeOfTempData()
 {
   return 0;
 }
+
+#ifdef HAVE_CUDA
+}
+#endif
