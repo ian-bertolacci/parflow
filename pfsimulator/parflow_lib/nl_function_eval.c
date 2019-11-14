@@ -709,7 +709,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       double x_dir_g;
       double x_dir_g_c;
       double y_dir_g;
-      double y_dir_g_;
+      double y_dir_g_c;
 
       double z_dir_g = 1.0;
       double del_x_slope = 1.0;
