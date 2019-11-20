@@ -1,0 +1,12 @@
+#define EMPTY()
+#define DELAY(x) x EMPTY()
+#define STRINGIZE(x) STRINGIZE_NO_PREPROCESS(x)
+#define STRINGIZE_NO_PREPROCESS(x) #x
+
+#define PRAGMA(x) _Pragma( STRINGIZE(x) )
+#define DELAYED_PRAGMA_assist(x) PRAGMA(x)
+#define DELAYED_PRAGMA DELAY(DELAYED_PRAGMA_assist)
+
+#define PRAGMA_IN_MACRO_ARG(x) DELAYED_PRAGMA(x)
+#define PRAGMA_IN_MACRO_BODY(x) PRAGMA(x)
+#define PRAGMA_IN_CODE(x) PRAGMA(x)

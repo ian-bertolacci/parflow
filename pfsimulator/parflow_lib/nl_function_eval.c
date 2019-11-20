@@ -158,12 +158,17 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
   /* Overland flow variables */  //sk
   Vector      *KW, *KE, *KN, *KS;
+  Vector      *u_right_vec, *u_front_vec, *u_upper_vec; // @IJB
   Vector      *qx, *qy;
   Subvector   *kw_sub, *ke_sub, *kn_sub, *ks_sub, *qx_sub, *qy_sub;
+  Subvector   *u_right_sub, *u_front_sub, *u_upper_sub;
   Subvector   *x_sl_sub, *y_sl_sub, *mann_sub;
   Subvector   *obf_sub;
   double      *kw_, *ke_, *kn_, *ks_, *qx_, *qy_;
+  double      *u_right, *u_front, *u_upper; // @IJB
   double      *x_sl_dat, *y_sl_dat, *mann_dat, *obf_dat;
+  double q_overlnd;
+  double sep;          // scaling difference temp var @RMM
 
   Vector      *porosity = ProblemDataPorosity(problem_data);
   Vector      *permeability_x = ProblemDataPermeabilityX(problem_data);
@@ -216,10 +221,16 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   int nx_f, ny_f, nz_f;
   int nx_p, ny_p, nz_p;
   int nx_po, ny_po, nz_po;
-  int sy_p, sz_p;
+  int sx_p, sy_p, sz_p;
   int diffusive;             //@RMM
 
   double dtmp, dx, dy, dz, vol, ffx, ffy, ffz;
+  // @IJB TODO: Make sure these can be removed
+    // double diff = 0.0e0;
+    // double updir = 0.0e0;
+    // double lower_cond, upper_cond;
+    // //@RMM : terms for gravity/terrain
+    // double x_dir_g, y_dir_g, z_dir_g, del_x_slope, del_y_slope, x_dir_g_c, y_dir_g_c;
 
   BCStruct    *bc_struct;
   GrGeomSolid *gr_domain = ProblemDataGrDomain(problem_data);
@@ -253,6 +264,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   KS = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
   qx = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
   qy = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
+
+  // @IJB
+  u_right_vec = NewVectorType(grid, 1, 1, fval->type);
+  u_front_vec = NewVectorType(grid, 1, 1, fval->type);
+  u_upper_vec = NewVectorType(grid, 1, 1, fval->type);
 
 
   /* Calculate pressure dependent properties: density and saturation */
@@ -414,6 +430,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
        *   del_y_slope = (1.0/cos(atan(y_ssl_dat[io])));  */
       double del_x_slope = 1.0;
       double del_y_slope = 1.0;
+
 
       fp[ip] += ss[ip] * vol * del_x_slope * del_y_slope * z_mult_dat[ip] * (pp[ip] * sp[ip] * dp[ip] - opp[ip] * osp[ip] * odp[ip]);
     });
@@ -589,6 +606,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     x_ssl_sub = VectorSubvector(x_ssl, is);
     y_ssl_sub = VectorSubvector(y_ssl, is);
 
+    /* @IJB added to enable parallelism */
+    u_right_sub = VectorSubvector(u_right_vec, is);
+    u_front_sub = VectorSubvector(u_front_vec, is);
+    u_upper_sub = VectorSubvector(u_upper_vec, is);
+
     /* @RMM added to provide access to zmult */
     z_mult_sub = VectorSubvector(z_mult, is);
 
@@ -615,6 +637,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     ny_p = SubvectorNY(p_sub);
     nz_p = SubvectorNZ(p_sub);
 
+    sx_p = 1;
     sy_p = nx_p;
     sz_p = ny_p * nx_p;
 
@@ -634,6 +657,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     /* @RMM  added to provide slopes to terrain fns */
     x_ssl_dat = SubvectorData(x_ssl_sub);
     y_ssl_dat = SubvectorData(y_ssl_sub);
+
+    /* @IJB added to enable parallelism */
+    u_right = SubvectorData(u_right_sub);
+    u_front = SubvectorData(u_front_sub);
+    u_upper = SubvectorData(u_upper_sub);
 
     /* @RMM added to provide variable dz */
     z_mult_dat = SubvectorData(z_mult_sub);
@@ -711,7 +739,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       double diff_l = pp[ip] - pp[ip + 1];
       double updir = (diff_l / dx) * x_dir_g_c - x_dir_g;
 
-      double u_right = z_mult_dat[ip] * ffx * del_y_slope * PMean(pp[ip], pp[ip + 1],
+      u_right[ip] = z_mult_dat[ip] * ffx * del_y_slope * PMean(pp[ip], pp[ip + 1],
                                                            permxp[ip], permxp[ip + 1])
                 * (diff_l / (dx * del_x_slope)) * x_dir_g_c
                 * RPMean(updir, 0.0,
@@ -724,7 +752,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
        * upwind on pressure is currently implemented
        * Sx < 0 implies flow goes left to right */
 
-      u_right += z_mult_dat[ip] * ffx * del_y_slope * PMean(pp[ip], pp[ip + 1],
+       u_right[ip] += z_mult_dat[ip] * ffx * del_y_slope * PMean(pp[ip], pp[ip + 1],
                                                             permxp[ip], permxp[ip + 1])
                  * (-x_dir_g)
                  * RPMean(updir, 0.0, rpp[ip] * dp[ip],
@@ -737,7 +765,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       diff_l = pp[ip] - pp[ip + sy_p];
       updir = (diff_l / dy) * y_dir_g_c - y_dir_g;
 
-      double u_front = z_mult_dat[ip] * ffy * del_x_slope
+      u_front[ip] = z_mult_dat[ip] * ffy * del_x_slope
                 * PMean(pp[ip], pp[ip + sy_p], permyp[ip], permyp[ip + sy_p])
                 * (diff_l / (dy * del_y_slope)) * y_dir_g_c
                 * RPMean(updir, 0.0,
@@ -751,7 +779,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
        * Sy < 0 implies flow goes from left to right
        */
 
-      u_front += z_mult_dat[ip] * ffy * del_x_slope
+      u_front[ip] += z_mult_dat[ip] * ffy * del_x_slope
                  * PMean(pp[ip], pp[ip + sy_p], permyp[ip], permyp[ip + sy_p])
                  * (-y_dir_g)
                  * RPMean(updir, 0.0, rpp[ip] * dp[ip],
@@ -775,7 +803,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
       diff_l = (lower_cond_l - upper_cond_l);
 
-      double u_upper = ffz * del_x_slope * del_y_slope
+      u_upper[ip] = ffz * del_x_slope * del_y_slope
                 * PMeanDZ(permzp[ip], permzp[ip + sz_p], z_mult_dat[ip], z_mult_dat[ip + sz_p])
                 * diff_l
                 * RPMean(lower_cond_l, upper_cond_l, rpp[ip] * dp[ip],
@@ -785,19 +813,59 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 /*  add in flow barrier values
  * assumes that ip is the cell face between ip and ip+1
  * ip and ip+sy_p and ip and ip+sz_p in x, y, z directions */
-      u_right = u_right * FBx_dat[ip];
-      u_front = u_front * FBy_dat[ip];
-      u_upper = u_upper * FBz_dat[ip];
+      u_right[ip] = u_right[ip] * FBx_dat[ip];
+      u_front[ip] = u_front[ip] * FBy_dat[ip];
+      u_upper[ip] = u_upper[ip] * FBz_dat[ip];
 
       /* velocity data jjb */
-      vx[vxi] = u_right / ffx;
-      vy[vyi] = u_front / ffy;
-      vz[vzi] = u_upper / ffz;
+      vx[vxi] = u_right[ip] / ffx;
+      vy[vyi] = u_front[ip] / ffy;
+      vz[vzi] = u_upper[ip] / ffz;
 
-      PlusEquals(fp[ip], dt * (u_right + u_front + u_upper));
-      PlusEquals(fp[ip + 1], -dt * u_right);
-      PlusEquals(fp[ip + sy_p], -dt * u_front);
-      PlusEquals(fp[ip + sz_p], -dt * u_upper);
+      fp[ip] += dt * (u_right[ip] + u_front[ip] + u_upper[ip]);
+    });
+  }
+
+  // Gather portion
+  ForSubgridI(is, GridSubgrids(grid))
+  {
+    subgrid = GridSubgrid(grid, is);
+
+    p_sub = VectorSubvector(pressure, is);
+    f_sub = VectorSubvector(fval, is);
+
+    /* @IJB added to enable parallelism */
+    u_right_sub = VectorSubvector(u_right_vec, is);
+    u_front_sub = VectorSubvector(u_front_vec, is);
+    u_upper_sub = VectorSubvector(u_upper_vec, is);
+
+    ix = SubgridIX(subgrid) - 1;
+    iy = SubgridIY(subgrid) - 1;
+    iz = SubgridIZ(subgrid) - 1;
+
+    nx = SubgridNX(subgrid) + 1;
+    ny = SubgridNY(subgrid) + 1;
+    nz = SubgridNZ(subgrid) + 1;
+
+    nx_p = SubvectorNX(p_sub);
+    ny_p = SubvectorNY(p_sub);
+    nz_p = SubvectorNZ(p_sub);
+
+    sx_p = 1;
+    sy_p = nx_p;
+    sz_p = ny_p * nx_p;
+
+    fp = SubvectorData(f_sub);
+
+    /* @IJB added to enable parallelism */
+    u_right = SubvectorData(u_right_sub);
+    u_front = SubvectorData(u_front_sub);
+    u_upper = SubvectorData(u_upper_sub);
+
+    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    {
+      int ip = SubvectorEltIndex(p_sub, i, j, k);
+      fp[ip] += dt*( -u_right[ip - sx_p] + -u_front[ip - sy_p] + -u_upper[ip - sz_p] );
     });
   }
 
@@ -861,6 +929,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     ny_p = SubvectorNY(p_sub);
     nz_p = SubvectorNZ(p_sub);
 
+    sx_p = 1;
     sy_p = nx_p;
     sz_p = ny_p * nx_p;
 
@@ -913,7 +982,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
             double sep;
             double u_new = 0.0e0;
             double u_old = 0.0e0;
-            
+
             double lower_cond;
             double upper_cond;
 
@@ -1142,7 +1211,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
             double sep;
             double u_new = 0.0e0;
             double u_old = 0.0e0;
-            
+
             double lower_cond;
             double upper_cond;
 
@@ -1324,7 +1393,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
             double sep;
             double u_new = 0.0e0;
             double u_old = 0.0e0;
-            
+
             double lower_cond;
             double upper_cond;
 
@@ -1709,7 +1778,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
             double sep;
             double u_new = 0.0e0;
             double u_old = 0.0e0;
-            
+
             double lower_cond;
             double upper_cond;
 
@@ -1925,7 +1994,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
             double sep;
             double u_new = 0.0e0;
             double u_old = 0.0e0;
-            
+
             double lower_cond;
             double upper_cond;
 
@@ -2189,6 +2258,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   FreeVector(KS);
   FreeVector(qx);
   FreeVector(qy);
+  FreeVector(u_right_vec);
+  FreeVector(u_front_vec);
+  FreeVector(u_upper_vec);
 
   POP_RANGE
 
