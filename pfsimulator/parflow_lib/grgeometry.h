@@ -230,10 +230,10 @@ typedef struct {
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
  *   Macro for looping over the inside of a solid, in parallel in boxes
- *   Parallel in boxes
+ *   Parallel in boxes, parallel on the Z loop (outermost loop)
  *--------------------------------------------------------------------------*/
 
-#define GrGeomInLoopBoxesParallelInBoxes(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+#define GrGeomInLoopBoxesParallelInBoxesOnZ(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
@@ -260,10 +260,42 @@ typedef struct {
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
  *   Macro for looping over the inside of a solid, in parallel in boxes
- *   Parallel in boxes using collapse(3)
+ *   Parallel in boxes, parallel on the Z loop (outermost loop),
+ *  collapsing the Z and Y loops.
  *--------------------------------------------------------------------------*/
 
-#define GrGeomInLoopBoxesParallelInBoxesCollapsed(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+#define GrGeomInLoopBoxesParallelInBoxesOnZCollapseZY(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+    PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) collapse(2) )       \
+    for(k = PV_izl; k <= PV_izu; k++)                                         \
+      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
+        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
+        {                                                                     \
+          body;                                                               \
+        }                                                                     \
+   }                                                                          \
+}
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid parallel looping macro:
+ *   Macro for looping over the inside of a solid, in parallel in boxes
+ *   Parallel in boxes, parallel on the Z loop (outermost loop),
+ *  collapsing the Z, Y, and X loops.
+ *--------------------------------------------------------------------------*/
+
+#define GrGeomInLoopBoxesParallelInBoxesOnZCollapseZYX(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
@@ -286,6 +318,151 @@ typedef struct {
         }                                                                     \
    }                                                                          \
 }
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid parallel looping macro:
+ *   Macro for looping over the inside of a solid, in parallel in boxes
+ *   Parallel in boxes, parallel on the Y loop (middleist loop)
+ *--------------------------------------------------------------------------*/
+
+#define GrGeomInLoopBoxesParallelInBoxesOnY(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+    for(k = PV_izl; k <= PV_izu; k++)                                         \
+      PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) )                 \
+      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
+        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
+        {                                                                     \
+          body;                                                               \
+        }                                                                     \
+   }                                                                          \
+}
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid parallel looping macro:
+ *   Macro for looping over the inside of a solid, in parallel in boxes
+ *   Parallel in boxes, parallel on the Y loop (middleist loop),
+ *   collapsing the Y and X loops
+ *--------------------------------------------------------------------------*/
+
+#define GrGeomInLoopBoxesParallelInBoxesOnYCollapseYX(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+    for(k = PV_izl; k <= PV_izu; k++)                                         \
+      PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) collapse(2) )    \
+      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
+        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
+        {                                                                     \
+          body;                                                               \
+        }                                                                     \
+   }                                                                          \
+}
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid parallel looping macro:
+ *   Macro for looping over the inside of a solid, in parallel in boxes
+ *   Parallel in boxes, parallel on the X loop (interior-most loop)
+ *--------------------------------------------------------------------------*/
+
+#define GrGeomInLoopBoxesParallelInBoxesOnX(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)      \
+{                                                                             \
+  int *PV_visiting = NULL;                                                    \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
+  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  {                                                                           \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
+    /* find octree and region intersection */                                 \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
+    int PV_izl = pfmax(iz, box.lo[2]);                                        \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
+    for(k = PV_izl; k <= PV_izu; k++)                                         \
+      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
+        PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) )               \
+        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
+        {                                                                     \
+          body;                                                               \
+        }                                                                     \
+   }                                                                          \
+}
+
+/*--------------------------------------------------------------------------
+ * GrGeomSolid parallel looping macro:
+ *   Macro for looping over the inside of a solid, in parallel in boxes
+ *   Parallel in boxes, using a tiling method to partition work
+ *--------------------------------------------------------------------------*/
+
+#ifndef GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_min
+#define GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_min 16
+#endif
+
+#ifndef GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_x
+#define GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_x 100
+#endif
+
+#ifndef GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_y
+#define GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_y 100
+#endif
+
+#ifndef GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_z
+#define GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_z 100
+#endif
+
+#define GrGeomInLoopBoxesParallelInBoxesTiled(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body)                               \
+{                                                                                                                          \
+  int *PV_visiting = NULL;                                                                                                 \
+  BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                                                                      \
+  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                                                              \
+  {                                                                                                                        \
+    Box box = BoxArrayGetBox(boxes, PV_box);                                                                               \
+    /* find octree and region intersection */                                                                              \
+    int PV_ixl = pfmax(ix, box.lo[0]);                                                                                     \
+    int PV_iyl = pfmax(iy, box.lo[1]);                                                                                     \
+    int PV_izl = pfmax(iz, box.lo[2]);                                                                                     \
+    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                                                                          \
+    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                                                                          \
+    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                                                                          \
+    PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) )                                                                \
+    for( int PV_tile_z = PV_izl; PV_tile_z <= PV_izu; PV_tile_z += GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_z )     \
+      for( int PV_tile_y = PV_iyl; PV_tile_y <= PV_iyu; PV_tile_y += GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_y )   \
+        for( int PV_tile_x = PV_ixl; PV_tile_x <= PV_ixu; PV_tile_x += GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_x ) \
+        {                                                                                                                  \
+          const int PV_tile_upper_x = pfmin( PV_tile_x +  GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_x - 1, PV_ixu ); \
+          const int PV_tile_upper_y = pfmin( PV_tile_y +  GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_z - 1, PV_iyu ); \
+          const int PV_tile_upper_z = pfmin( PV_tile_z +  GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_y - 1, PV_izu ); \
+          for(k = PV_tile_z; k <= PV_tile_upper_z; ++k)                                                                    \
+            for(j = PV_tile_y; j <= PV_tile_upper_y; ++j)                                                                  \
+              for(i = PV_tile_x; i <= PV_tile_upper_x; ++i)                                                                \
+              {                                                                                                            \
+                body;                                                                                                      \
+              } /* for i */                                                                                                \
+        } /* for PV_tile_x */                                                                                              \
+   } /* for PV_box */                                                                                                      \
+} /* close macro block */
 
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
