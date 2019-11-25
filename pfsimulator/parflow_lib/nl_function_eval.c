@@ -32,7 +32,7 @@ extern "C"{
 #endif
 
 #include "parflow.h"
-  //#include "pf_parallel.h"
+#include "pf_parallel.h"
 #include "llnlmath.h"
 #include "llnltyps.h"
 //#include "math.h"
@@ -345,7 +345,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     pop = SubvectorData(po_sub);
     fp = SubvectorData(f_sub);
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    _GrGeomInLoop(LOCALS(ip, ipo, io, del_x_slope, del_y_slope),
+                  i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
       ipo = SubvectorEltIndex(po_sub, i, j, k);
@@ -420,8 +421,10 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     osp = SubvectorData(os_sub);
     fp = SubvectorData(f_sub);
 
-
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+/* @MCB: TODO: This breaks in parallel for some reason? */
+    /* _GrGeomInLoop(LOCALS(ip, io, del_x_slope, del_y_slope), */
+    GrGeomInLoop(
+                  i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
       io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
@@ -496,7 +499,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     FBz_dat = SubvectorData(FBz_sub);
 
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    /* _GrGeomInLoop(LOCALS(ip, io, del_x_slope, del_y_slope), */
+    GrGeomInLoop(
+                  i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
       io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
@@ -658,7 +663,12 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
     qx_sub = VectorSubvector(qx, is);
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    /* _GrGeomInLoop(LOCALS(ip, io, vxi, vyi, vzi, del_x_slope, del_y_slope, */
+    /*                      x_dir_g, x_dir_g_c, y_dir_g, y_dir_g_c, z_dir_g, */
+    /*                      diff, updir, u_right, u_front, u_upper, */
+    /*                      sep, lower_cond, upper_cond), */
+    GrGeomInLoop(
+                  i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(p_sub, i, j, k);
       io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);

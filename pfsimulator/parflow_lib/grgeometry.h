@@ -131,6 +131,9 @@ typedef struct {
     }                                                                    \
   }
 
+#define _GrGeomInLoop(locals, ...)\
+  GrGeomInLoop( __VA_ARGS__ )
+
 #define GrGeomInLoop(i, j, k, grgeom,                                    \
                      r, ix, iy, iz, nx, ny, nz, body)                    \
   {                                                                      \

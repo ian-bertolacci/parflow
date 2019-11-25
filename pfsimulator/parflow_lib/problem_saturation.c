@@ -207,7 +207,8 @@ void     Saturation(
 
           if (fcn == CALCFCN)
           {
-            GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips),
+                          i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               psdat[ips] = values[ir];
@@ -215,7 +216,8 @@ void     Saturation(
           }
           else   /* fcn = CALCDER */
           {
-            GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips),
+                          i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               psdat[ips] = 0.0;
@@ -273,7 +275,8 @@ void     Saturation(
 
             if (fcn == CALCFCN)
             {
-              GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+              _GrGeomInLoop(LOCALS(ips, ipp, ipd, alpha, n, m, s_res, s_dif, head),
+                            i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
               {
                 ips = SubvectorEltIndex(ps_sub, i, j, k);
                 ipp = SubvectorEltIndex(pp_sub, i, j, k);
@@ -297,7 +300,8 @@ void     Saturation(
             }    /* End if clause */
             else /* fcn = CALCDER */
             {
-              GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+              _GrGeomInLoop(LOCALS(ips, ipp, ipd, alpha, n, m, s_res, s_dif, head),
+                            i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
               {
                 ips = SubvectorEltIndex(ps_sub, i, j, k);
                 ipp = SubvectorEltIndex(pp_sub, i, j, k);
@@ -363,7 +367,9 @@ void     Saturation(
 
           if (fcn == CALCFCN)
           {
-            GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, ipp, ipd, n_index, alpha_index, s_res_index, s_sat_index,
+                                 alpha, n, m, s_res, s_sat, s_dif, head),
+                          i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               ipp = SubvectorEltIndex(pp_sub, i, j, k);
@@ -393,7 +399,9 @@ void     Saturation(
           }      /* End if clause */
           else   /* fcn = CALCDER */
           {
-            GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, ipp, ipd, n_index, alpha_index, s_res_index, s_sat_index,
+                                 alpha, n, m, s_res, s_sat, s_dif, head),
+                          i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               ipp = SubvectorEltIndex(pp_sub, i, j, k);
@@ -467,7 +475,8 @@ void     Saturation(
 
           if (fcn == CALCFCN)
           {
-            GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, ipp, ipd, alpha, beta, s_res, s_dif, head),
+                          i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               ipp = SubvectorEltIndex(pp_sub, i, j, k);
@@ -490,7 +499,8 @@ void     Saturation(
           }      /* End if clause */
           else   /* fcn = CALCDER */
           {
-            GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, ipp, ipd, alpha, beta, s_res, s_dif, head),
+                          i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               ipp = SubvectorEltIndex(pp_sub, i, j, k);
@@ -569,7 +579,8 @@ void     Saturation(
 
           if (fcn == CALCFCN)
           {
-            GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, ipp, dg),
+                          i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               ipp = SubvectorEltIndex(pp_sub, i, j, k);
@@ -588,7 +599,8 @@ void     Saturation(
           }      /* End if clause */
           else   /* fcn = CALCDER */
           {
-            GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, ipp, dg),
+                          i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               ipp = SubvectorEltIndex(pp_sub, i, j, k);
@@ -643,7 +655,8 @@ void     Saturation(
 
         if (fcn == CALCFCN)
         {
-          GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+          _GrGeomInLoop(LOCALS(ips, ipRF),
+                        i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
           {
             ips = SubvectorEltIndex(ps_sub, i, j, k);
             ipRF = SubvectorEltIndex(satRF_sub, i, j, k);
@@ -653,7 +666,8 @@ void     Saturation(
         }     /* End if clause */
         else  /* fcn = CALCDER */
         {
-          GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+          _GrGeomInLoop(LOCALS(ips, ipRF),
+                        i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
           {
             ips = SubvectorEltIndex(ps_sub, i, j, k);
             ipRF = SubvectorEltIndex(satRF_sub, i, j, k);

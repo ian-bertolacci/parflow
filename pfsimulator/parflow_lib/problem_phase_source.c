@@ -148,7 +148,8 @@ void         PhaseSource(
           r = SubgridRX(subgrid);
 
           data = SubvectorData(ps_sub);
-          GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+          _GrGeomInLoop(LOCALS(ips),
+                        i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
           {
             ips = SubvectorEltIndex(ps_sub, i, j, k);
 
@@ -194,7 +195,8 @@ void         PhaseSource(
         {
           case 1: /* p= x */
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, x),
+                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -206,7 +208,8 @@ void         PhaseSource(
 
           case 2: /* p= x+y+z */
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips),
+                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               /* nonlinear case -div(p grad p) = f */
@@ -217,7 +220,8 @@ void         PhaseSource(
 
           case 3: /* p= x^3y^2 + sinxy + 1 */
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, x, y),
+                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -230,7 +234,8 @@ void         PhaseSource(
 
           case 4: /* f for p = x^3y^4 + x^2 + sinxy cosy + 1 */
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, x, y, z),
+                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -244,7 +249,8 @@ void         PhaseSource(
 
           case 5: /* f = xyz-y^2z^2t^2-x^2z^2t^2-x^2y^2t^2 (p=xyzt+1)*/
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, x, y, z),
+                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -259,7 +265,8 @@ void         PhaseSource(
           case 6: /* f = xyz-y^2z^2t^2-2x^2z^2t^2-3x^2y^2t^2 (p=xyzt+1,
                    *                                          K=(1; 2; 3) )*/
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, x, y, z),
+                         i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
               x = RealSpaceX(i, SubgridRX(subgrid));

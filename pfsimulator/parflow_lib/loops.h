@@ -36,7 +36,8 @@
 #define _LOOPS_HEADER
 
 /* Do not use commas when declaring local variables */
-#define LOCALS(...) ,__VA_ARGS__
+#define LOCALS(...) DEFER(_LOCALS)(__VA_ARGS__)
+#define _LOCALS(...) ,__VA_ARGS__
 #define NO_LOCALS
 
 /* Wrapper for BoxLoops without USING_PARALLEL

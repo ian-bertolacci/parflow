@@ -38,23 +38,23 @@ INC_IDX(int i, int j, int k,
 
 
 #undef _BoxLoopI0
-#define _BoxLoopI0(locals,                                \
-                  i, j, k,                                \
-                  ix, iy, iz,															\
-                  nx, ny, nz,															\
-                  body)																		\
-  {																												\
-    PRAGMA(omp parallel for collapse(3) private(i, j, k locals)) \
-			for (k = iz; k < iz + nz; k++)											\
-				{																									\
-					for (j = iy; j < iy + ny; j++)									\
-						{																							\
-							for (i = ix; i < ix + nx; i++)							\
-								{																					\
-									body;																		\
-								}																					\
-						}																							\
-				}																									\
+#define _BoxLoopI0(locals,																				\
+									 i, j, k,																				\
+									 ix, iy, iz,																		\
+									 nx, ny, nz,																		\
+									 body)																					\
+  {																																\
+    PRAGMA(omp parallel for collapse(3) private(i, j, k locals))	\
+			for (k = iz; k < iz + nz; k++)															\
+			{																														\
+				for (j = iy; j < iy + ny; j++)														\
+				{																													\
+					for (i = ix; i < ix + nx; i++)													\
+					{																												\
+						body;																									\
+					}																												\
+				}																													\
+			}																														\
   }
 
 #undef _BoxLoopI1
@@ -72,7 +72,7 @@ INC_IDX(int i, int j, int k,
         {                                                               \
           for (i = ix; i < ix + nx; i++)                                \
           {                                                             \
-            i1 = INC_IDX(i, j, k, nx, ny, sx1, PV_kinc_1, PV_jinc_1);   \
+            i1 = INC_IDX(i, j, k, nx, ny, sx1, PV_jinc_1, PV_kinc_1);   \
             body;                                                       \
           }                                                             \
         }                                                               \
@@ -80,6 +80,45 @@ INC_IDX(int i, int j, int k,
 	}
 
 #if 0
+#undef _BoxLoopI2
+#define _BoxLoopI2(locals,                                              \
+                   i, j, k,                                             \
+                  ix, iy, iz, nx, ny, nz,                               \
+                  i1, nx1, ny1, nz1, sx1, sy1, sz1,                     \
+                  i2, nx2, ny2, nz2, sx2, sy2, sz2,                     \
+                  body)                                                 \
+  {                                                                     \
+		int temp1 = i1;																											\
+		int temp2 = i2;																											\
+		DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
+		DeclareInc(PV_jinc_2, PV_kinc_2, nx, ny, nz, nx2, ny2, nz2, sx2, sy2, sz2); \
+		for (k = iz; k < iz + nz; k++)																			\
+		{																																		\
+			for (j = iy; j < iy + ny; j++)																		\
+			{																																	\
+				for (i = ix; i < ix + nx; i++)																	\
+				{																																\
+					temp1 = INC_IDX(i, j, k, ny, nx, sx1, PV_jinc_1, PV_kinc_1);	\
+					temp2 = INC_IDX(i, j, k, ny, nx, sx2, PV_jinc_2, PV_kinc_2);	\
+					fprintf(stderr, "%d %d | %d %d | %d %d %d\n", temp1, temp2, i1, i2, i, j, k);\
+					if (temp1 != i1 || temp2 != i2) {															\
+						fprintf(stderr, "Error: %d - %d and %d - %d at %d %d %d\n",	\
+										temp1, i1, temp2, i2, i, j, k);											\
+						exit(0);																										\
+					}																															\
+					body;																													\
+					i1 += sx1;																										\
+					i2 += sx2;																										\
+				}																																\
+				i1 += PV_jinc_1;																								\
+				i2 += PV_jinc_2;																								\
+			}																																	\
+			i1 += PV_kinc_1;																									\
+			i2 += PV_kinc_2;																									\
+		}																																		\
+  }
+#endif
+
 #undef _BoxLoopI2
 #define _BoxLoopI2(locals,                                              \
                    i, j, k,                                             \
@@ -97,13 +136,14 @@ INC_IDX(int i, int j, int k,
         {                                                               \
           for (i = ix; i < ix + nx; i++)                                \
           {                                                             \
-            i1 = INC_IDX(i, j, k, ny, nx, sx1, PV_kinc_1, PV_jinc_1);   \
-            i2 = INC_IDX(i, j, k, ny, nx, sx2, PV_kinc_2, PV_jinc_2);   \
+            i1 = INC_IDX(i, j, k, ny, nx, sx1, PV_jinc_1, PV_kinc_1);   \
+            i2 = INC_IDX(i, j, k, ny, nx, sx2, PV_jinc_2, PV_kinc_2);   \
             body;                                                       \
           }                                                             \
         }                                                               \
       }                                                                 \
   }
+
 
 #undef _BoxLoopI3
 #define _BoxLoopI3(locals,                                              \
@@ -124,14 +164,15 @@ INC_IDX(int i, int j, int k,
       {                                                                 \
         for (i = ix; i < ix + nx; i++)                                  \
         {                                                               \
-          i1 = INC_IDX(i, j, k, ny, nx, sx1, PV_kinc_1, PV_jinc_1);			\
-          i2 = INC_IDX(i, j, k, ny, nx, sx2, PV_kinc_2, PV_jinc_2);			\
-          i3 = INC_IDX(i, j, k, ny, nx, sx3, PV_kinc_3, PV_jinc_3);			\
+          i1 = INC_IDX(i, j, k, ny, nx, sx1, PV_jinc_1, PV_kinc_1);			\
+          i2 = INC_IDX(i, j, k, ny, nx, sx2, PV_jinc_2, PV_kinc_2);			\
+          i3 = INC_IDX(i, j, k, ny, nx, sx3, PV_jinc_3, PV_kinc_3);			\
           body;                                                         \
         }                                                               \
       }                                                                 \
     }                                                                   \
   }
+
 
 #undef BoxLoopReduceI1
 #define BoxLoopReduceI1(sum,                                            \
@@ -148,7 +189,7 @@ INC_IDX(int i, int j, int k,
       {                                                                 \
         for (i = ix; i < ix + nx; i++)                                  \
         {                                                               \
-          i1 = INC_IDX(i, j, k, nx, ny, sx1, PV_kinc_1, PV_jinc_1);     \
+          i1 = INC_IDX(i, j, k, nx, ny, sx1, PV_jinc_1, PV_kinc_1);     \
           body;                                                         \
         }                                                               \
       }                                                                 \
@@ -158,33 +199,62 @@ INC_IDX(int i, int j, int k,
 /*------------------------------------------------------------------------------
   Clustering Box Loop Redefinitions
   ----------------------------------------------------------------------------*/
+#undef _GrGeomInLoop
+#define _GrGeomInLoop(locals, i, j, k, grgeom, r, ix, iy, iz, nx, ny, nz, body) \
+	{																																			\
+		if (r == 0 && GrGeomSolidInteriorBoxes(grgeom))											\
+		{																																		\
+			_GrGeomInLoopBoxes(locals,																				\
+												i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body);	\
+		}																																		\
+		else																																\
+		{																																		\
+			GrGeomOctree  *PV_node;																						\
+			double PV_ref = pow(2.0, r);																			\
+																																				\
+			i = GrGeomSolidOctreeIX(grgeom) * (int)PV_ref;										\
+			j = GrGeomSolidOctreeIY(grgeom) * (int)PV_ref;										\
+			k = GrGeomSolidOctreeIZ(grgeom) * (int)PV_ref;										\
+			GrGeomOctreeInteriorNodeLoop(i, j, k, PV_node,										\
+																	 GrGeomSolidData(grgeom),							\
+																	 GrGeomSolidOctreeBGLevel(grgeom) + r, \
+																	 ix, iy, iz, nx, ny, nz,							\
+																	 TRUE,																\
+																	 body);																\
+		}																																		\
+	}
+
 /* Not yet implemented (Need to deal with locals) */
-#undef GrGeomInLoopBoxes
-#define GrGeomInLoopBoxes(i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body) \
-  {                                                                      \
-    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;                  \
-    int *PV_visiting = NULL;                                             \
-    BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                  \
-    for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)         \
-    {                                                                    \
-      Box box = BoxArrayGetBox(boxes, PV_box);                           \
-      /* find octree and region intersection */                          \
-      PV_ixl = pfmax(ix, box.lo[0]);                                     \
-      PV_iyl = pfmax(iy, box.lo[1]);                                     \
-      PV_izl = pfmax(iz, box.lo[2]);                                     \
-      PV_ixu = pfmin((ix + nx - 1), box.up[0]);                          \
-      PV_iyu = pfmin((iy + ny - 1), box.up[1]);                          \
-      PV_izu = pfmin((iz + nz - 1), box.up[2]);                          \
-                                                                         \
-      PRAGMA(omp parallel for collapse(3) private(i, j, k))              \
-      for (k = PV_izl; k <= PV_izu; k++)                                 \
-        for (j = PV_iyl; j <= PV_iyu; j++)                               \
-          for (i = PV_ixl; i <= PV_ixu; i++)                             \
-          {                                                              \
-            body;                                                        \
-          }                                                              \
-    }                                                                    \
-  }
+//#undef GrGeomInLoopBoxes
+#define _GrGeomInLoopBoxes(locals, i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body) \
+  {																																			\
+    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;									\
+    int *PV_visiting = NULL;																						\
+    BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);									\
+		PRAGMA(omp parallel)																								\
+		{																																		\
+			for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)			\
+			{																																	\
+				Box box = BoxArrayGetBox(boxes, PV_box);												\
+				/* find octree and region intersection */												\
+				PV_ixl = pfmax(ix, box.lo[0]);																	\
+				PV_iyl = pfmax(iy, box.lo[1]);																	\
+				PV_izl = pfmax(iz, box.lo[2]);																	\
+				PV_ixu = pfmin((ix + nx - 1), box.up[0]);												\
+				PV_iyu = pfmin((iy + ny - 1), box.up[1]);												\
+				PV_izu = pfmin((iz + nz - 1), box.up[2]);												\
+																																				\
+				PRAGMA(omp parallel for collapse(3) private(i, j, k locals))		\
+					for (k = PV_izl; k <= PV_izu; k++)														\
+						for (j = PV_iyl; j <= PV_iyu; j++)													\
+							for (i = PV_ixl; i <= PV_ixu; i++)												\
+							{																													\
+								body;																										\
+							}																													\
+			}																																	\
+		}																																		\
+	}
+#if 0
 #endif
 
 #endif // _PF_OMPLOOPS_H

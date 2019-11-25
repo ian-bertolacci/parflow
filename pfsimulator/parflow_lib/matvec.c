@@ -39,8 +39,6 @@ extern "C"{
 #endif
 
 #include "parflow.h"
-
-  /* TODO: This file breaks on _BoxLoopI1 for some reason? */
 #include "pf_parallel.h"
 
 

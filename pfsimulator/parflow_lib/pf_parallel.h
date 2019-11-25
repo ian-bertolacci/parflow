@@ -3,6 +3,7 @@
 #ifndef _PF_PARALLEL_H
 #define _PF_PARALLEL_H
 
+
 #ifdef HAVE_OMP
 
 /* Utility macros for inserting OMP pragmas in macros */
