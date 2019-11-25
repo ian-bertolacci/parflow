@@ -30,7 +30,14 @@
 *
 *****************************************************************************/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
+#include "pf_parallel.h"
 
 
 double   InnerProd(
@@ -81,8 +88,8 @@ double   InnerProd(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     iv = 0;
-    BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-              iv, nx_v, ny_v, nz_v, 1, 1, 1,
+    BoxLoopReduceI1(result, i, j, k, ix, iy, iz, nx, ny, nz,
+                    iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
       result += yp[iv] * xp[iv];
     });
@@ -96,3 +103,7 @@ double   InnerProd(
 
   return result;
 }
+
+#ifdef USING_PARALLEL
+} // Extern C
+#endif

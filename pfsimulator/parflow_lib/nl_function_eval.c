@@ -25,8 +25,14 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
  *  USA
  **********************************************************************EHEADER*/
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
 
 #include "parflow.h"
+  //#include "pf_parallel.h"
 #include "llnlmath.h"
 #include "llnltyps.h"
 //#include "math.h"
@@ -2364,3 +2370,7 @@ int  NlFunctionEvalSizeOfTempData()
 {
   return 0;
 }
+
+#ifdef USING_PARALLEL
+} // Extern C
+#endif

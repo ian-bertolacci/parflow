@@ -35,6 +35,24 @@
 #ifndef _LOOPS_HEADER
 #define _LOOPS_HEADER
 
+/* Do not use commas when declaring local variables */
+#define LOCALS(...) ,__VA_ARGS__
+#define NO_LOCALS
+
+/* Wrapper for BoxLoops without USING_PARALLEL
+   TODO: Come up with a better name for this variant of BoxLoop */
+#define _BoxLoopI0(locals, ...) BoxLoopI0(__VA_ARGS__)
+#define _BoxLoopI1(locals, ...) BoxLoopI1(__VA_ARGS__)
+#define _BoxLoopI2(locals, ...) BoxLoopI2(__VA_ARGS__)
+#define _BoxLoopI3(locals, ...) BoxLoopI3(__VA_ARGS__)
+
+/* Wrapper for Reduction loops without USING_PARALLEL
+   Useful for OpenMP to allow the use of the reduction clause */
+#define BoxLoopReduceI0(sum, ...) BoxLoopI0(__VA_ARGS__)
+#define BoxLoopReduceI1(sum, ...) BoxLoopI1(__VA_ARGS__)
+#define BoxLoopReduceI2(sum, ...) BoxLoopI2(__VA_ARGS__)
+#define BoxLoopReduceI3(sum, ...) BoxLoopI3(__VA_ARGS__)
+
 #define DeclareInc(jinc, kinc, nx, ny, nz, nxd, nyd, nzd, sx, sy, sz) \
   int jinc = (sy) * (nxd) - (nx) * (sx);                              \
   int kinc = (sz) * (nxd) * (nyd) - (ny) * (sy) * (nxd)

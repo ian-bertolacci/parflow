@@ -32,7 +32,14 @@
 *
 *****************************************************************************/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
+#include "pf_parallel.h"
 
 
 void     Copy(
@@ -83,11 +90,16 @@ void     Copy(
 
     i_x = 0;
     i_y = 0;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+    _BoxLoopI2(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_y, nx_y, ny_y, nz_y, 1, 1, 1,
     {
       yp[i_y] = xp[i_x];
     });
   }
 }
+
+#ifdef USING_PARALLEL
+} // End extern C
+#endif

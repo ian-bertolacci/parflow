@@ -7,7 +7,14 @@
 * $Revision: 1.23 $
 *********************************************************************EHEADER*/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
+#include "pf_parallel.h"
 
 #include <float.h>
 
@@ -356,9 +363,14 @@ void         PhaseSource(
 
           ip = 0;
           ips = 0;
-          BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-                    ip, nx_p, ny_p, nz_p, 1, 1, 1,
-                    ips, nx_ps, ny_ps, nz_ps, 1, 1, 1,
+          _BoxLoopI2(LOCALS(weight),
+                     i, j, k,
+                     ix, iy, iz,
+                     nx, ny, nz,
+                     ip, nx_p, ny_p, nz_p,
+                     1, 1, 1,
+                     ips, nx_ps, ny_ps, nz_ps,
+                     1, 1, 1,
           {
             if (WellDataPhysicalMethod(well_data_physical)
                 == FLUX_STANDARD)
@@ -603,3 +615,7 @@ int  PhaseSourceSizeOfTempData()
 {
   return 0;
 }
+
+#ifdef USING_PARALLEL
+} // Extern C
+#endif

@@ -22,7 +22,7 @@ git_describe(PARFLOW_VERSION --tags)
 if (NOT PARFLOW_VERSION)
   file (STRINGS "VERSION" PARFLOW_VERSION)
 endif ()
- 
+
 message("Configuring version : ${PARFLOW_VERSION}")
 version_create_variables (PARFLOW)
 
@@ -106,6 +106,23 @@ else (${TCL_FOUND})
     message(FATAL_ERROR "TCL is required for building pftools")
   endif (${PARFLOW_ENABLE_TOOLS})
 endif (${TCL_FOUND})
+
+set (PARFLOW_USING_PARALLEL False CACHE BOOL "OpenMP or CUDA Parallelism Flag")
+
+#-----------------------------------------------------------------------------
+# OMP
+#-----------------------------------------------------------------------------
+set (PARFLOW_ENABLE_OMP False CACHE BOOL "Enable OpenMP")
+if ( ${PARFLOW_ENABLE_OMP} )
+# TODO: Check for versioning requirements?
+   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
+   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+   set (PARFLOW_HAVE_OMP "yes")
+   set (HAVE_OMP ${PARFLOW_HAVE_OMP})
+   set (PARFLOW_USING_PARALLEL "yes")
+   set (USING_PARALLEL ${PARFLOW_USING_PARALLEL})
+
+endif( ${PARFLOW_ENABLE_OMP} )
 
 #-----------------------------------------------------------------------------
 # SILO
@@ -223,7 +240,7 @@ endif (${PARFLOW_ENABLE_SLURM} OR DEFINED SLURM_ROOT)
 #-----------------------------------------------------------------------------
 if (NOT DEFINED PARFLOW_LIBM)
   find_library(PARFLOW_LIBM m)
-endif (NOT DEFINED PARFLOW_LIBM)		    
+endif (NOT DEFINED PARFLOW_LIBM)
 
 #-----------------------------------------------------------------------------
 # Valgrind
@@ -243,7 +260,7 @@ endif (${PARFLOW_ENABLE_VALGRIND})
 set (PARFLOW_ENABLE_ETRACE False CACHE BOOL "Build with etrace")
 if (${PARFLOW_ENABLE_ETRACE})
   set(PARFLOW_HAVE_ETRACE "yes")
-  
+
   set(PARFLOW_ETRACE_COMPILE_FLAGS "-finstrument-functions")
   set(PARFLOW_ETRACE_LIBRARY "etrace")
 else (${PARFLOW_ENABLE_ETRACE})
@@ -388,6 +405,9 @@ else( ${PARFLOW_ENABLE_PROFILING} )
   set (PARFLOW_PROFILE_OPTS "")
 endif( ${PARFLOW_ENABLE_PROFILING} )
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -P -save-temps")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -P -save-temps")
+
 include_directories ("${CMAKE_SOURCE_DIR}/pfsimulator/parflow_lib")
 
 include_directories ("${PROJECT_SOURCE_DIR}/pfsimulator/amps/${PARFLOW_AMPS_LAYER}")
@@ -445,7 +465,7 @@ endif()
 install (DIRECTORY ${CMAKE_BINARY_DIR}/config/ DESTINATION config)
 
 #-----------------------------------------------------------------------------
-# Doxygen 
+# Doxygen
 #-----------------------------------------------------------------------------
 set (PARFLOW_ENABLE_DOXYGEN False CACHE BOOL "Enable Doxygen and building of code documentation")
 
@@ -454,7 +474,7 @@ if ( ${PARFLOW_ENABLE_DOXYGEN} )
   if (DOXYGEN_FOUND)
     set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/docs/doxygen)
     set(DOXYGEN_IMAGE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/docs/doxygen/images)
-    
+
     message("Doxygen build started")
 
     doxygen_add_docs(doxygen

@@ -31,7 +31,14 @@
 *
 *****************************************************************************/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
+#include "pf_parallel.h"
 
 
 /*--------------------------------------------------------------------------
@@ -118,9 +125,10 @@ void             MGSemiProlong(
 
       i_c = 0;
       i_f = 0;
-      BoxLoopI2(ii, jj, kk, ix, iy, iz, nx, ny, nz,
-                i_c, nx_c, ny_c, nz_c, 1, 1, 1,
-                i_f, nx_f, ny_f, nz_f, sx, sy, sz,
+      _BoxLoopI2(NO_LOCALS,
+                 ii, jj, kk, ix, iy, iz, nx, ny, nz,
+                 i_c, nx_c, ny_c, nz_c, 1, 1, 1,
+                 i_f, nx_f, ny_f, nz_f, sx, sy, sz,
       {
         e_fp[i_f] = e_cp[i_c];
       });
@@ -190,9 +198,10 @@ void             MGSemiProlong(
 
         i_c = 0;
         i_f = 0;
-        BoxLoopI2(ii, jj, kk, ix, iy, iz, nx, ny, nz,
-                  i_c, nx_c, ny_c, nz_c, 1, 1, 1,
-                  i_f, nx_f, ny_f, nz_f, sx, sy, sz,
+        _BoxLoopI2(NO_LOCALS,
+                   ii, jj, kk, ix, iy, iz, nx, ny, nz,
+                   i_c, nx_c, ny_c, nz_c, 1, 1, 1,
+                   i_f, nx_f, ny_f, nz_f, sx, sy, sz,
         {
           e_fp[i_f] = (p1[i_c] * e_fp[i_f - stride] +
                        p2[i_c] * e_fp[i_f + stride]);
@@ -246,3 +255,6 @@ ComputePkg   *NewMGSemiProlongComputePkg(
   return compute_pkg;
 }
 
+#ifdef USING_PARALLEL
+} // Extern C
+#endif

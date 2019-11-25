@@ -153,6 +153,25 @@ set (SRC_FILES advect.F
   write_parflow_silo_pmpio.c
   )
 
+
+# Note: For compatibility with atomic PlusEquals macro, OpenMP enabled files
+# need to be run through the CXX compiler for templating.
+if( ${PARFLOW_HAVE_OMP} )
+  set_source_files_properties(axpy.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(copy.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(innerprod.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(matvec.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(mg_semi_restrict.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(mg_semi_prolong.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(nl_function_eval.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(problem_phase_rel_perm.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(problem_phase_source.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(problem_saturation.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(rb_GS_point.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(richards_jacobian_eval.c PROPERTIES LANGUAGE CXX)
+endif( ${PARFLOW_HAVE_OMP} )
+
+
 add_library(pfsimulator ${SRC_FILES})
 
 target_link_libraries(pfsimulator pfkinsol amps cjson ${PARFLOW_ETRACE_LIBRARY})

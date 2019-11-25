@@ -62,6 +62,8 @@
 
 #cmakedefine PARFLOW_HAVE_ETRACE
 
+#cmakedefine PARFLOW_HAVE_OMP
+#cmakedefine HAVE_OMP
 
-
-
+#cmakedefine PARFLOW_USING_PARALLEL
+#cmakedefine USING_PARALLEL

@@ -26,7 +26,14 @@
  *  USA
  **********************************************************************EHEADER*/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
+#include "pf_parallel.h"
 
 #include <assert.h>
 
@@ -2183,3 +2190,7 @@ int  PhaseRelPermSizeOfTempData()
 
   return sz;
 }
+
+#ifdef USING_PARALLEL
+} // Extern C
+#endif

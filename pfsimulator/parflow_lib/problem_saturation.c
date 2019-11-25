@@ -26,7 +26,14 @@
  *  USA
  **********************************************************************EHEADER*/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
+#include "pf_parallel.h"
 
 #include <float.h>
 
@@ -1202,3 +1209,7 @@ int  SaturationSizeOfTempData()
 
   return sz;
 }
+
+#ifdef USING_PARALLEL
+} // Extern C
+#endif

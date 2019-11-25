@@ -31,7 +31,14 @@
 *
 *****************************************************************************/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
+#include "pf_parallel.h"
 
 
 /*--------------------------------------------------------------------------
@@ -205,9 +212,10 @@ void     RedBlackGSPoint(
           bp = SubvectorElt(b_sub, ix, iy, iz);
 
           iv = im = 0;
-          BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-                    iv, nx_v, ny_v, nz_v, sx, sy, sz,
-                    im, nx_m, ny_m, nz_m, sx, sy, sz,
+          _BoxLoopI2(NO_LOCALS,
+                     i, j, k, ix, iy, iz, nx, ny, nz,
+                     iv, nx_v, ny_v, nz_v, sx, sy, sz,
+                     im, nx_m, ny_m, nz_m, sx, sy, sz,
           {
             x0[iv] = bp[iv] / a0[im];
           });
@@ -333,9 +341,10 @@ void     RedBlackGSPoint(
           bp = SubvectorElt(b_sub, ix, iy, iz);
 
           iv = im = 0;
-          BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-                    iv, nx_v, ny_v, nz_v, sx, sy, sz,
-                    im, nx_m, ny_m, nz_m, sx, sy, sz,
+          _BoxLoopI2(NO_LOCALS,
+                     i, j, k, ix, iy, iz, nx, ny, nz,
+                     iv, nx_v, ny_v, nz_v, sx, sy, sz,
+                     im, nx_m, ny_m, nz_m, sx, sy, sz,
           {
             x0[iv] = (bp[iv] - (a1[im] * x1[iv] +
                                 a2[im] * x2[iv] +
@@ -498,3 +507,7 @@ int  RedBlackGSPointSizeOfTempData()
 {
   return 0;
 }
+
+#ifdef USING_PARALLEL
+} // Extern C
+#endif

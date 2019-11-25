@@ -26,10 +26,17 @@
  *  USA
  **********************************************************************EHEADER*/
 /*****************************************************************************
-*
-*****************************************************************************/
+ *
+ *****************************************************************************/
+
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
 
 #include "parflow.h"
+#include "pf_parallel.h"
 
 void     Axpy(
               double  alpha,
@@ -74,8 +81,9 @@ void     Axpy(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     iv = 0;
-    BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-              iv, nx_v, ny_v, nz_v, 1, 1, 1,
+    _BoxLoopI1(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
       yp[iv] += alpha * xp[iv];
     });
@@ -83,3 +91,7 @@ void     Axpy(
 
   IncFLOPCount(2 * VectorSize(x));
 }
+
+#ifdef USING_PARALLEL
+} // Extern C
+#endif

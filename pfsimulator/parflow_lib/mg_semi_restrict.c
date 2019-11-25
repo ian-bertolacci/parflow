@@ -31,7 +31,14 @@
 *
 *****************************************************************************/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
+#include "pf_parallel.h"
 
 
 /*--------------------------------------------------------------------------
@@ -159,14 +166,14 @@ void             MGSemiRestrict(
         i_p = 0;
         i_c = 0;
         i_f = 0;
-        BoxLoopI3(ii, jj, kk, ix, iy, iz, nx, ny, nz,
-                  i_p, nx_p, ny_p, nz_p, 1, 1, 1,
-                  i_c, nx_c, ny_c, nz_c, 1, 1, 1,
-                  i_f, nx_f, ny_f, nz_f, sx, sy, sz,
+        _BoxLoopI3(NO_LOCALS,
+                   ii, jj, kk, ix, iy, iz, nx, ny, nz,
+                   i_p, nx_p, ny_p, nz_p, 1, 1, 1,
+                   i_c, nx_c, ny_c, nz_c, 1, 1, 1,
+                   i_f, nx_f, ny_f, nz_f, sx, sy, sz,
         {
-          r_cp[i_c] =
-            r_fp[i_f] + (p1[i_p] * r_fp[i_f - stride] +
-                         p2[i_p] * r_fp[i_f + stride]);
+          r_cp[i_c] = r_fp[i_f] + (p1[i_p] * r_fp[i_f - stride] +
+                                   p2[i_p] * r_fp[i_f + stride]);
         });
       }
     }
@@ -217,3 +224,6 @@ ComputePkg   *NewMGSemiRestrictComputePkg(
   return compute_pkg;
 }
 
+#ifdef USING_PARALLEL
+} // Extern C
+#endif
