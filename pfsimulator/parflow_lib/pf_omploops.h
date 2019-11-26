@@ -3,6 +3,8 @@
 #ifndef _PF_OMPLOOPS_H
 #define _PF_OMPLOOPS_H
 
+#include <omp.h>
+
 #undef PlusEquals
 #define PlusEquals(a, b) OMP_PlusEquals(&(a), b)
 
@@ -17,8 +19,8 @@ extern "C++"{
 
 /*------------------------------------------------------------------------------
   BoxLoop Macro Redefinitions
-  NOTE: The private pragmas will look odd.  This is because the NO_LOCALS pragma
-  expands to nothing, and the LOCALS(...) pragma expands to ,__VA_ARGS__
+  NOTE: The private pragmas will look odd.  This is because the NO_LOCALS macro
+  expands to nothing, and the LOCALS(...) macro expands to ,__VA_ARGS__
   and so will insert the necessary comma itself.
   TODO: Come up with something that doesn't look like a crazy person wrote it
   -----------------------------------------------------------------------------*/
@@ -224,9 +226,10 @@ INC_IDX(int i, int j, int k,
 		}																																		\
 	}
 
-/* Not yet implemented (Need to deal with locals) */
 //#undef GrGeomInLoopBoxes
-#define _GrGeomInLoopBoxes(locals, i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body) \
+#define _GrGeomInLoopBoxes(locals, i, j, k,															\
+													 grgeom, ix, iy, iz,													\
+													 nx, ny, nz, body)														\
   {																																			\
     int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;									\
     int *PV_visiting = NULL;																						\
@@ -244,17 +247,19 @@ INC_IDX(int i, int j, int k,
 				PV_iyu = pfmin((iy + ny - 1), box.up[1]);												\
 				PV_izu = pfmin((iz + nz - 1), box.up[2]);												\
 																																				\
-				PRAGMA(omp parallel for collapse(3) private(i, j, k locals))		\
+				PRAGMA(omp for collapse(3) private(i, j, k locals))							\
 					for (k = PV_izl; k <= PV_izu; k++)														\
+					{																															\
 						for (j = PV_iyl; j <= PV_iyu; j++)													\
+						{																														\
 							for (i = PV_ixl; i <= PV_ixu; i++)												\
 							{																													\
 								body;																										\
 							}																													\
+						}																														\
+					}																															\
 			}																																	\
 		}																																		\
 	}
-#if 0
-#endif
 
 #endif // _PF_OMPLOOPS_H

@@ -421,9 +421,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     osp = SubvectorData(os_sub);
     fp = SubvectorData(f_sub);
 
-/* @MCB: TODO: This breaks in parallel for some reason? */
-    /* _GrGeomInLoop(LOCALS(ip, io, del_x_slope, del_y_slope), */
-    GrGeomInLoop(
+    _GrGeomInLoop(LOCALS(ip, io, del_x_slope, del_y_slope),
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
@@ -433,7 +431,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
        * del_y_slope = (1.0/cos(atan(y_ssl_dat[io])));  */
       del_x_slope = 1.0;
       del_y_slope = 1.0;
-      fp[ip] += ss[ip] * vol * del_x_slope * del_y_slope * z_mult_dat[ip] * (pp[ip] * sp[ip] * dp[ip] - opp[ip] * osp[ip] * odp[ip]);
+      fp[ip] += ss[ip] * vol * del_x_slope * del_y_slope * z_mult_dat[ip] *
+                (pp[ip] * sp[ip] * dp[ip] - opp[ip] * osp[ip] * odp[ip]);
     });
   }
 
@@ -499,8 +498,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     FBz_dat = SubvectorData(FBz_sub);
 
 
-    /* _GrGeomInLoop(LOCALS(ip, io, del_x_slope, del_y_slope), */
-    GrGeomInLoop(
+    _GrGeomInLoop(LOCALS(ip, io, del_x_slope, del_y_slope),
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
@@ -663,11 +661,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
     qx_sub = VectorSubvector(qx, is);
 
-    /* _GrGeomInLoop(LOCALS(ip, io, vxi, vyi, vzi, del_x_slope, del_y_slope, */
-    /*                      x_dir_g, x_dir_g_c, y_dir_g, y_dir_g_c, z_dir_g, */
-    /*                      diff, updir, u_right, u_front, u_upper, */
-    /*                      sep, lower_cond, upper_cond), */
-    GrGeomInLoop(
+    _GrGeomInLoop(LOCALS(ip, io, vxi, vyi, vzi, del_x_slope, del_y_slope,
+                         x_dir_g, x_dir_g_c, y_dir_g, y_dir_g_c, z_dir_g,
+                         diff, updir, u_right, u_front, u_upper,
+                         sep, lower_cond, upper_cond),
+    /* GrGeomInLoop( */
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -817,10 +815,14 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       vy[vyi] = u_front / ffy;
       vz[vzi] = u_upper / ffz;
 
-      fp[ip] += dt * (u_right + u_front + u_upper);
-      fp[ip + 1] -= dt * u_right;
-      fp[ip + sy_p] -= dt * u_front;
-      fp[ip + sz_p] -= dt * u_upper;
+      /* fp[ip] += dt * (u_right + u_front + u_upper); */
+      /* fp[ip + 1] -= dt * u_right; */
+      /* fp[ip + sy_p] -= dt * u_front; */
+      /* fp[ip + sz_p] -= dt * u_upper; */
+      PlusEquals(fp[ip], (dt * (u_right + u_front + u_upper)));
+      PlusEquals(fp[ip + 1], -(dt * u_right));
+      PlusEquals(fp[ip + sy_p], -(dt * u_front));
+      PlusEquals(fp[ip + sz_p], -(dt * u_upper));
     });
   }
 
@@ -1614,7 +1616,23 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
             del_x_slope = 1.0;
             del_y_slope = 1.0;
-
+#if 0
+/* @MCB: This BC type can be greatly simplified like so */
+            double bc_val = bc_patch_values[ival];
+            /* Set dir to -1 or 1 */
+            dir = fdir[0] + fdir[1] + fdir[2];
+            /* u_old = 0.0; */
+            if (fdir[0]) {
+              u_new = z_mult_dat[ip] * ffx * del_y_slope * bc_val;
+            } else if (fdir[1]) {
+              u_new = z_mult_dat[ip] * ffy * del_x_slope * bc_val;
+            } else {
+              u_new = ffz * del_x_slope * del_y_slope * bc_val;
+            }
+            /* u_old is always 0, remove unnecessary fp[ip] -= 0.0
+            /* fp[ip] -= dt * dir * u_old; */
+            fp[ip] += dt * dir * u_new;
+#endif
             if (fdir[0])
             {
               switch (fdir[0])
