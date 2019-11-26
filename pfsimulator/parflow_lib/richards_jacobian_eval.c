@@ -1123,7 +1123,11 @@ void    RichardsJacobianEval(
                                 &phase_ref,
                                 &phase_comp);
 
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(ip, im, value, den_d, dend_d,
+                                    prod, prod_der, prod_val,
+                                    coeff, diff, o_temp,
+                                    lower_cond, upper_cond, op),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             /* PFModuleInvokeType(PhaseDensityInvoke, density_module, */
             /*                    (0, NULL, NULL, &value, &den_d, CALCFCN)); */
@@ -1293,7 +1297,8 @@ void    RichardsJacobianEval(
 
         case OverlandBC:     //sk
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(im, ip, op),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
 
@@ -1336,7 +1341,8 @@ void    RichardsJacobianEval(
 
             case simple:
             {
-              BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+              _BCStructPatchLoop(LOCALS(ip, io, im),
+                                 i, j, k, fdir, ival, bc_struct, ipatch, is,
               {
                 if (fdir[2] == 1)
                 {
@@ -1363,15 +1369,16 @@ void    RichardsJacobianEval(
 
               if (overlandspinup == 1)
               {
+                vol = dx * dy * dz;
                 /* add flux loss equal to excess head  that overwrites the prior overland flux */
-                BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+                _BCStructPatchLoop(LOCALS(ip, io, im),
+                                   i, j, k, fdir, ival, bc_struct, ipatch, is,
                 {
                   if (fdir[2] == 1)
                   {
                     ip = SubvectorEltIndex(p_sub, i, j, k);
                     io = SubvectorEltIndex(p_sub, i, j, 0);
                     im = SubmatrixEltIndex(J_sub, i, j, k);
-                    vol = dx * dy * dz;
 
                     if ((pp[ip]) >= 0.0)
                     {
@@ -1421,15 +1428,16 @@ void    RichardsJacobianEval(
 
         case SeepageFaceBC:
         {
+          vol = dx * dy * dz;
           /* add flux loss equal to excess head  that overwrites the prior overland flux */
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(ip, io, im),
+                            i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2] == 1)
             {
               ip = SubvectorEltIndex(p_sub, i, j, k);
               io = SubvectorEltIndex(p_sub, i, j, 0);
               im = SubmatrixEltIndex(J_sub, i, j, k);
-              vol = dx * dy * dz;
 
               if ((pp[ip]) >= 0.0)
               {
@@ -1448,7 +1456,8 @@ void    RichardsJacobianEval(
         /*  OverlandBC for KWE with upwinding, call module */
         case OverlandKinematicBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(im, ip, op),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
             //remove contributions to this row corresponding to boundary
@@ -1490,7 +1499,8 @@ void    RichardsJacobianEval(
         /* OverlandDiffusiveBC */
         case OverlandDiffusiveBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(im, ip, op),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
 
@@ -1659,7 +1669,8 @@ void    RichardsJacobianEval(
           /* Fall through cases for new Overland types */
           case OverlandKinematicBC:
           {
-            BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+            _BCStructPatchLoop(LOCALS(io, io1, itop, ip, im, k1),
+                               i, j, k, fdir, ival, bc_struct, ipatch, is,
             {
               if (fdir[2] == 1)
               {
@@ -1745,7 +1756,8 @@ void    RichardsJacobianEval(
 
           case OverlandDiffusiveBC:
           {
-            BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+            _BCStructPatchLoop(LOCALS(io, io1, itop, ip, im, k1),
+                               i, j, k, fdir, ival, bc_struct, ipatch, is,
             {
               if (fdir[2] == 1)
               {
@@ -1830,7 +1842,8 @@ void    RichardsJacobianEval(
 
           case OverlandBC:
           {
-            BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+            _BCStructPatchLoop(LOCALS(io, io1, itop, ip, im, k1),
+                               i, j, k, fdir, ival, bc_struct, ipatch, is,
             {
               if (fdir[2] == 1)
               {
