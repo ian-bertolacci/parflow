@@ -3,6 +3,7 @@
 #ifndef _PF_PARALLEL_H
 #define _PF_PARALLEL_H
 
+#define PlusEquals(a, b) a += b
 
 #ifdef HAVE_OMP
 

@@ -524,7 +524,8 @@ void    RichardsJacobianEval(
       {
         case DirichletBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(ip, value),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
             value = bc_patch_values[ival];
@@ -1197,8 +1198,8 @@ void    RichardsJacobianEval(
                   }
 
                 case 1:
-                  {
-                    op = np;
+                {
+                  op = np;
                     prod_val = rpp[ip + sy_v] * den_d;
                     diff = pp[ip] - value;
                     o_temp = -coeff

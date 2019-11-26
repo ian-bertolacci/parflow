@@ -1153,7 +1153,10 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
         case FluxBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          BCStructPatchLoop(
+          /* _BCStructPatchLoop(LOCALS(ip, io, x_dir_g, y_dir_g, z_dir_g, del_x_slope, del_y_slope, */
+          /*                           dir, diff, u_old, u_new, sep, upper_cond, lower_cond), */
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
             io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);

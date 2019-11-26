@@ -5,15 +5,46 @@
 
 #include <omp.h>
 
+#if 1
 #undef PlusEquals
 #define PlusEquals(a, b) OMP_PlusEquals(&(a), b)
 
 extern "C++"{
+
+#pragma omp declare simd
   template<typename T>
   static inline void OMP_PlusEquals(T *arr_loc, T value)
   {
 #pragma omp atomic
     *arr_loc += value;
+  }
+
+#pragma omp declare simd
+  template<typename T>
+  static inline T _HarmonicMean(T a, T b)
+  {
+    return (a + b) ? (2.0 * a * b) / (a + b) : 0;
+  }
+
+#pragma omp declare simd
+  template<typename T>
+  static inline T _HarmonicMeanDZ(T a, T b, T c, T d)
+  {
+    return ((c * b) + (a * d)) ? ((c + d) * a * b) / ((b * c) + (a * d)) : 0;
+  }
+
+#pragma omp declare simd
+  template<typename T>
+  static inline T _UpstreamMean(T a, T b, T c, T d)
+  {
+    return (a - b) >= 0 ? c : d;
+  }
+
+#pragma omp delcare simd
+  template<typename T>
+  static inline T _ArithmeticMean(T a, T b)
+  {
+    return (0.5 * (a + b));
   }
 }
 
@@ -38,6 +69,21 @@ INC_IDX(int i, int j, int k,
           (k * ny * nx + j * nx + i) * sx);
 }
 
+
+#if 0
+
+#undef _BoxLoopI1
+#define _BoxLoopI1(...) DEBUG_BoxLoopI1( __VA_ARGS__ )
+
+#undef _BoxLoopI2
+#define _BoxLoopI2(...) DEBUG_BoxLoopI2( __VA_ARGS__ )
+
+#undef _BoxLoopI3
+#define _BoxLoopI3(...) DEBUG_BoxLoopI3( __VA_ARGS__ )
+
+#include "pf_omploops_debug.h"
+
+#else
 
 #undef _BoxLoopI0
 #define _BoxLoopI0(locals,																				\
@@ -67,59 +113,20 @@ INC_IDX(int i, int j, int k,
                    body)                                                \
 	{                                                                     \
 		DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
-		PRAGMA(omp parallel for num_threads(1) collapse(3) private(i, j, k, i1 locals)) \
+		PRAGMA(omp parallel for collapse(3) private(i, j, k, i1 locals))    \
 			for (k = iz; k < iz + nz; k++)																		\
       {                                                                 \
         for (j = iy; j < iy + ny; j++)                                  \
         {                                                               \
           for (i = ix; i < ix + nx; i++)                                \
           {                                                             \
-            i1 = INC_IDX(i, j, k, nx, ny, sx1, PV_jinc_1, PV_kinc_1);   \
+            i1 = INC_IDX((i - ix), (j - iy), (k - iz),                  \
+                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
             body;                                                       \
           }                                                             \
         }                                                               \
       }                                                                 \
 	}
-
-#if 0
-#undef _BoxLoopI2
-#define _BoxLoopI2(locals,                                              \
-                   i, j, k,                                             \
-                   ix, iy, iz, nx, ny, nz,                              \
-                   i1, nx1, ny1, nz1, sx1, sy1, sz1,                    \
-                   i2, nx2, ny2, nz2, sx2, sy2, sz2,                    \
-                   body)                                                \
-  {                                                                     \
-		int temp1 = i1;																											\
-		int temp2 = i2;																											\
-		DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
-		DeclareInc(PV_jinc_2, PV_kinc_2, nx, ny, nz, nx2, ny2, nz2, sx2, sy2, sz2); \
-		for (k = iz; k < iz + nz; k++)																			\
-		{																																		\
-			for (j = iy; j < iy + ny; j++)																		\
-			{																																	\
-				for (i = ix; i < ix + nx; i++)																	\
-				{																																\
-					temp1 = INC_IDX(i, j, k, ny, nx, sx1, PV_jinc_1, PV_kinc_1);	\
-					temp2 = INC_IDX(i, j, k, ny, nx, sx2, PV_jinc_2, PV_kinc_2);	\
-					fprintf(stderr, "%d %d | %d %d | %d %d %d\n", temp1, temp2, i1, i2, i, j, k); \
-					if (temp1 != i1 || temp2 != i2) {															\
-						fprintf(stderr, "Error: %d - %d and %d - %d at %d %d %d\n",	\
-										temp1, i1, temp2, i2, i, j, k);											\
-						exit(0);																										\
-					}																															\
-					body;																													\
-					i1 += sx1;																										\
-					i2 += sx2;																										\
-				}																																\
-				i1 += PV_jinc_1;																								\
-				i2 += PV_jinc_2;																								\
-			}																																	\
-			i1 += PV_kinc_1;																									\
-			i2 += PV_kinc_2;																									\
-		}																																		\
-  }
-#endif
 
 #undef _BoxLoopI2
 #define _BoxLoopI2(locals,                                              \
@@ -138,8 +145,10 @@ INC_IDX(int i, int j, int k,
         {                                                               \
           for (i = ix; i < ix + nx; i++)                                \
           {                                                             \
-            i1 = INC_IDX(i, j, k, ny, nx, sx1, PV_jinc_1, PV_kinc_1);   \
-            i2 = INC_IDX(i, j, k, ny, nx, sx2, PV_jinc_2, PV_kinc_2);   \
+            i1 = INC_IDX((i - ix), (j - iy), (k - iz),                  \
+                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
+            i2 = INC_IDX((i - ix), (j - iy), (k - iz),                  \
+                         nx, ny, sx2, PV_jinc_2, PV_kinc_2);            \
             body;                                                       \
           }                                                             \
         }                                                               \
@@ -166,9 +175,12 @@ INC_IDX(int i, int j, int k,
         {                                                               \
           for (i = ix; i < ix + nx; i++)                                \
           {                                                             \
-            i1 = INC_IDX(i, j, k, ny, nx, sx1, PV_jinc_1, PV_kinc_1);   \
-            i2 = INC_IDX(i, j, k, ny, nx, sx2, PV_jinc_2, PV_kinc_2);   \
-            i3 = INC_IDX(i, j, k, ny, nx, sx3, PV_jinc_3, PV_kinc_3);   \
+            i1 = INC_IDX((i - ix), (j - iy), (k - iz),                  \
+                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
+            i2 = INC_IDX((i - ix), (j - iy), (k - iz),                  \
+                         nx, ny, sx2, PV_jinc_2, PV_kinc_2);            \
+            i3 = INC_IDX((i - ix), (j - iy), (k - iz),                  \
+                         nx, ny, sx3, PV_jinc_3, PV_kinc_3);            \
             body;                                                       \
           }                                                             \
         }                                                               \
@@ -191,17 +203,21 @@ INC_IDX(int i, int j, int k,
         {                                                               \
           for (i = ix; i < ix + nx; i++)                                \
           {                                                             \
-            i1 = INC_IDX(i, j, k, nx, ny, sx1, PV_jinc_1, PV_kinc_1);   \
+            i1 = INC_IDX((i - ix), (j - iy), (k - iz),                  \
+                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
             body;                                                       \
           }                                                             \
         }                                                               \
       }                                                                 \
   }
 
+#endif // BoxLoop #if
+
 /*------------------------------------------------------------------------
  * Clustering Box Loop Redefinitions
  *------------------------------------------------------------------------*/
 
+#if 1
 /*------------------------------------------------------------------------
  * GrGeomInLoop Redefinitions
  *------------------------------------------------------------------------*/
@@ -266,9 +282,14 @@ INC_IDX(int i, int j, int k,
 		}                                                               \
 	}
 
+#endif
 
+#if 0
 /*------------------------------------------------------------------------
  * BCPatchLoop Redefinitions
+ * TODO: Something about these is unstable, one PF run will succeed in nominal time
+ *  while a second iteration of that exact same run could take 3 minutes or crash
+ *  immediately.  There's a race condition happening somewhere, but I'm unsure where.
  *------------------------------------------------------------------------*/
 #undef _BCStructPatchLoop
 #define _BCStructPatchLoop(locals,																			\
@@ -362,6 +383,10 @@ INC_IDX(int i, int j, int k,
           int x_scale = !!PV_diff_x;                                    \
           int y_scale = !!PV_diff_y;                                    \
           int z_scale = !!PV_diff_z;                                    \
+          if (PV_diff_x * PV_diff_y * PV_diff_z != 0) {                 \
+            fprintf(stderr, "ERROR: Diff not 0 at %s %d\n", __FILE__, __LINE__);\
+            exit(-1);                                                   \
+          }                                                             \
           PRAGMA(omp for collapse(3) private(i, j, k, ival locals))     \
             for (k = PV_izl; k <= PV_izu; k++)                          \
             {                                                           \
@@ -384,19 +409,8 @@ INC_IDX(int i, int j, int k,
       }                                                                 \
     }                                                                   \
   }
+#endif
 
-/*
-  int k1 = k * z_scale;
-  int j1 = j * y_scale;
-  int i1 = i * x_scale;
-  if (z_scale == 0) {
-  ival = (PV_diff_x * j + j + i);
-} else if (y_scale == 0) {
-ival = (PV_diff_x * k + k + i);
-} else {
-ival = (PV_diff_y * k + k + j)
-}
-((k * PV_diff_y + k + j) * z_scale) + ((k * PV_diff_x + k + i) * z_scale)
-  PV_diff_y * k + k + j
- */
+#endif // #if 0 for debug switch
+
 #endif // _PF_OMPLOOPS_H
