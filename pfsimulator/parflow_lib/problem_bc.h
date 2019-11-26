@@ -80,6 +80,9 @@ typedef struct {
  * Looping macro:
  *--------------------------------------------------------------------------*/
 
+#define _BCStructPatchLoop(locals, ...) BCStructPatchLoop( __VA_ARGS__ )
+#define _BCStructPatchLoopOvrlnd(locals, ...) BCStructPatchLoopOvrlnd( __VA_ARGS__ )
+
 #define BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is, body) \
   {                                                                         \
     GrGeomSolid  *PV_gr_domain = BCStructGrDomain(bc_struct);               \

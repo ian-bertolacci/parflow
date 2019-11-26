@@ -47,7 +47,8 @@ extern "C"{
 #endif
 
 #include "parflow.h"
-//#include "pf_parallel.h"
+#include "problem_phase_density.h"
+#include "pf_parallel.h"
 
 #include "llnlmath.h"
 #include "llnltyps.h"
@@ -347,17 +348,9 @@ void    RichardsJacobianEval(
         int type = BCPressureDataType(bc_pressure_data, i);
         switch (type)
         {
-          case 7:
-          {
-            public_xtra->type = overland_flow;
-          }
-          break;
-          case 10:
-          {
-            public_xtra->type = overland_flow;
-          }
-          break;
-          case 11:
+          case OverlandFlow:
+          case OverlandKinematic:
+          case OverlandDiffusive:
           {
             public_xtra->type = overland_flow;
           }
@@ -487,14 +480,17 @@ void    RichardsJacobianEval(
     pop = SubvectorData(po_sub);     // porosity
     ss = SubvectorData(ss_sub);     // sepcific storage
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    _GrGeomInLoop(LOCALS(im, ipo, iv, vol2),
+                  i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       im = SubmatrixEltIndex(J_sub, i, j, k);
       ipo = SubvectorEltIndex(po_sub, i, j, k);
       iv = SubvectorEltIndex(d_sub, i, j, k);
       vol2 = vol * z_mult_dat[ipo];
-      cp[im] += (sdp[iv] * dp[iv] + sp[iv] * ddp[iv])
-                * pop[ipo] * vol2 + ss[iv] * vol2 * (sdp[iv] * dp[iv] * pp[iv] + sp[iv] * ddp[iv] * pp[iv] + sp[iv] * dp[iv]); //sk start
+      cp[im] += (sdp[iv] * dp[iv] + sp[iv] * ddp[iv]) *
+                pop[ipo] * vol2 + ss[iv] * vol2 *
+                (sdp[iv] * dp[iv] * pp[iv] + sp[iv] *
+                 ddp[iv] * pp[iv] + sp[iv] * dp[iv]); //sk start
     });
   }    /* End subgrid loop */
 
@@ -634,7 +630,19 @@ void    RichardsJacobianEval(
     FBy_dat = SubvectorData(FBy_sub);
     FBz_dat = SubvectorData(FBz_sub);
 
-    GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    _GrGeomInLoop(LOCALS(ip, im, ioo,
+                         prod, prod_der, prod_rt, prod_rt_der,
+                         prod_no, prod_no_der, prod_up, prod_up_der,
+                         x_dir_g, x_dir_g_c, y_dir_g, y_dir_g_c,
+                         diff, updir, x_coeff, y_coeff, z_coeff, sep,
+                         sym_west_temp, west_temp,
+                         sym_east_temp, east_temp,
+                         sym_south_temp, south_temp,
+                         sym_north_temp, north_temp,
+                         sym_lower_temp, lower_temp,
+                         sym_upper_temp, upper_temp,
+                         lower_cond, upper_cond),
+                  i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(p_sub, i, j, k);
       im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -791,10 +799,15 @@ void    RichardsJacobianEval(
 
 
 
-      cp[im] -= west_temp + south_temp + lower_temp;
-      cp[im + 1] -= east_temp;
-      cp[im + sy_m] -= north_temp;
-      cp[im + sz_m] -= upper_temp;
+      /* cp[im] -= west_temp + south_temp + lower_temp; */
+      /* cp[im + 1] -= east_temp; */
+      /* cp[im + sy_m] -= north_temp; */
+      /* cp[im + sz_m] -= upper_temp; */
+
+      PlusEquals(cp[im], -(west_temp + south_temp + lower_temp));
+      PlusEquals(cp[im + 1], -east_temp);
+      PlusEquals(cp[im + sy_m], -north_temp);
+      PlusEquals(cp[im + sz_m], -upper_temp);
 
       if (!symm_part)
       {
@@ -1094,19 +1107,40 @@ void    RichardsJacobianEval(
       {
         case DirichletBC:
         {
+          double fcn_phase_const = 0.0;
+          double der_phase_const = 0.0;
+          double phase_ref = 0.0;
+          double phase_comp =0.0;
+          int phase_type = 0;
+
+          ThisPFModule = density_module;
+          PhaseDensityConstants(0, CALCFCN, &phase_type,
+                                &fcn_phase_const,
+                                &phase_ref,
+                                &phase_comp);
+          PhaseDensityConstants(0, CALCDER, &phase_type,
+                                &der_phase_const,
+                                &phase_ref,
+                                &phase_comp);
+
           BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
-            ip = SubvectorEltIndex(p_sub, i, j, k);
-
-            value = bc_patch_values[ival];
-
-            PFModuleInvokeType(PhaseDensityInvoke, density_module,
-                               (0, NULL, NULL, &value, &den_d, CALCFCN));
-            PFModuleInvokeType(PhaseDensityInvoke, density_module,
-                               (0, NULL, NULL, &value, &dend_d, CALCDER));
+            /* PFModuleInvokeType(PhaseDensityInvoke, density_module, */
+            /*                    (0, NULL, NULL, &value, &den_d, CALCFCN)); */
+            /* PFModuleInvokeType(PhaseDensityInvoke, density_module, */
+            /*                    (0, NULL, NULL, &value, &dend_d, CALCDER)); */
 
             ip = SubvectorEltIndex(p_sub, i, j, k);
             im = SubmatrixEltIndex(J_sub, i, j, k);
+            value = bc_patch_values[ival];
+
+            if (phase_type == 0) {
+              den_d = fcn_phase_const;
+              dend_d = der_phase_const;
+            } else {
+              den_d = phase_ref * exp(value * phase_comp);
+              dend_d = phase_comp * phase_ref * exp(value * phase_comp);
+            }
 
             prod = rpp[ip] * dp[ip];
             prod_der = rpdp[ip] * dp[ip] + rpp[ip] * ddp[ip];
@@ -1232,7 +1266,8 @@ void    RichardsJacobianEval(
 
         case FluxBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(im, op),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
 
