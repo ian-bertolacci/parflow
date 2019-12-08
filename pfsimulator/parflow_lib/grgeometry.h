@@ -237,25 +237,28 @@ typedef struct {
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
-  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  PRAGMA_IN_MACRO_BODY( omp parallel )                                        \
   {                                                                           \
-    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
-    /* find octree and region intersection */                                 \
-    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
-    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
-    int PV_izl = pfmax(iz, box.lo[2]);                                        \
-    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
-    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
-    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
-    PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) )                   \
-    for(k = PV_izl; k <= PV_izu; k++)                                         \
-      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
-        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
-        {                                                                     \
-          body;                                                               \
-        }                                                                     \
-   }                                                                          \
-}
+    for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)               \
+    {                                                                         \
+      Box box = BoxArrayGetBox(boxes, PV_box);                                \
+      /* find octree and region intersection */                               \
+      int PV_ixl = pfmax(ix, box.lo[0]);                                      \
+      int PV_iyl = pfmax(iy, box.lo[1]);                                      \
+      int PV_izl = pfmax(iz, box.lo[2]);                                      \
+      int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
+      int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
+      int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
+      PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) )                          \
+      for(k = PV_izl; k <= PV_izu; k++)                                       \
+        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
+          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
+          {                                                                   \
+            body;                                                             \
+          }                                                                   \
+    } /* close for box */                                                     \
+  } /* close parallel section */                                              \
+} /* close macro block */
 
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
@@ -268,25 +271,28 @@ typedef struct {
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
-  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  PRAGMA_IN_MACRO_BODY( omp parallel )                                        \
   {                                                                           \
-    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
-    /* find octree and region intersection */                                 \
-    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
-    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
-    int PV_izl = pfmax(iz, box.lo[2]);                                        \
-    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
-    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
-    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
-    PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) collapse(2) )       \
-    for(k = PV_izl; k <= PV_izu; k++)                                         \
-      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
-        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
-        {                                                                     \
-          body;                                                               \
-        }                                                                     \
-   }                                                                          \
-}
+    for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)               \
+    {                                                                         \
+      Box box = BoxArrayGetBox(boxes, PV_box);                                \
+      /* find octree and region intersection */                               \
+      int PV_ixl = pfmax(ix, box.lo[0]);                                      \
+      int PV_iyl = pfmax(iy, box.lo[1]);                                      \
+      int PV_izl = pfmax(iz, box.lo[2]);                                      \
+      int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
+      int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
+      int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
+      PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) collapse(2))               \
+      for(k = PV_izl; k <= PV_izu; k++)                                       \
+        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
+          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
+          {                                                                   \
+            body;                                                             \
+          }                                                                   \
+    } /* close for box */                                                     \
+  } /* close parallel section */                                              \
+} /* close macro block */
 
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
@@ -299,25 +305,28 @@ typedef struct {
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
-  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  PRAGMA_IN_MACRO_BODY( omp parallel )                                        \
   {                                                                           \
-    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
-    /* find octree and region intersection */                                 \
-    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
-    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
-    int PV_izl = pfmax(iz, box.lo[2]);                                        \
-    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
-    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
-    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
-    PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) collapse(3) )       \
-    for(k = PV_izl; k <= PV_izu; k++)                                         \
-      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
-        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
-        {                                                                     \
-          body;                                                               \
-        }                                                                     \
-   }                                                                          \
-}
+    for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)               \
+    {                                                                         \
+      Box box = BoxArrayGetBox(boxes, PV_box);                                \
+      /* find octree and region intersection */                               \
+      int PV_ixl = pfmax(ix, box.lo[0]);                                      \
+      int PV_iyl = pfmax(iy, box.lo[1]);                                      \
+      int PV_izl = pfmax(iz, box.lo[2]);                                      \
+      int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
+      int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
+      int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
+      PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) collapse(3) )              \
+      for(k = PV_izl; k <= PV_izu; k++)                                       \
+        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
+          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
+          {                                                                   \
+            body;                                                             \
+          }                                                                   \
+    } /* close for box */                                                     \
+  } /* close parallel section */                                              \
+} /* close macro block */
 
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
@@ -329,25 +338,28 @@ typedef struct {
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
-  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  PRAGMA_IN_MACRO_BODY( omp parallel )                                        \
   {                                                                           \
-    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
-    /* find octree and region intersection */                                 \
-    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
-    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
-    int PV_izl = pfmax(iz, box.lo[2]);                                        \
-    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
-    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
-    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
-    for(k = PV_izl; k <= PV_izu; k++)                                         \
-      PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) )                 \
-      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
-        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
-        {                                                                     \
-          body;                                                               \
-        }                                                                     \
-   }                                                                          \
-}
+    for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)               \
+    {                                                                         \
+      Box box = BoxArrayGetBox(boxes, PV_box);                                \
+      /* find octree and region intersection */                               \
+      int PV_ixl = pfmax(ix, box.lo[0]);                                      \
+      int PV_iyl = pfmax(iy, box.lo[1]);                                      \
+      int PV_izl = pfmax(iz, box.lo[2]);                                      \
+      int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
+      int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
+      int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
+      for(k = PV_izl; k <= PV_izu; k++)                                       \
+        PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) )                        \
+        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
+          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
+          {                                                                   \
+            body;                                                             \
+          }                                                                   \
+    } /* close for box */                                                     \
+  } /* close parallel section */                                              \
+} /* close macro block */
 
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
@@ -360,25 +372,28 @@ typedef struct {
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
-  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  PRAGMA_IN_MACRO_BODY( omp parallel )                                        \
   {                                                                           \
-    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
-    /* find octree and region intersection */                                 \
-    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
-    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
-    int PV_izl = pfmax(iz, box.lo[2]);                                        \
-    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
-    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
-    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
-    for(k = PV_izl; k <= PV_izu; k++)                                         \
-      PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) collapse(2) )    \
-      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
-        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
-        {                                                                     \
-          body;                                                               \
-        }                                                                     \
-   }                                                                          \
-}
+    for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)               \
+    {                                                                         \
+      Box box = BoxArrayGetBox(boxes, PV_box);                                \
+      /* find octree and region intersection */                               \
+      int PV_ixl = pfmax(ix, box.lo[0]);                                      \
+      int PV_iyl = pfmax(iy, box.lo[1]);                                      \
+      int PV_izl = pfmax(iz, box.lo[2]);                                      \
+      int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
+      int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
+      int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
+      for(k = PV_izl; k <= PV_izu; k++)                                       \
+        PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) collapse(2) )            \
+        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
+          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
+          {                                                                   \
+            body;                                                             \
+          }                                                                   \
+    } /* close for box */                                                     \
+  } /* close parallel section */                                              \
+} /* close macro block */
 
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
@@ -390,25 +405,28 @@ typedef struct {
 {                                                                             \
   int *PV_visiting = NULL;                                                    \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                         \
-  for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                 \
+  PRAGMA_IN_MACRO_BODY( omp parallel )                                        \
   {                                                                           \
-    Box box = BoxArrayGetBox(boxes, PV_box);                                  \
-    /* find octree and region intersection */                                 \
-    int PV_ixl = pfmax(ix, box.lo[0]);                                        \
-    int PV_iyl = pfmax(iy, box.lo[1]);                                        \
-    int PV_izl = pfmax(iz, box.lo[2]);                                        \
-    int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                             \
-    int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                             \
-    int PV_izu = pfmin((iz + nz - 1), box.up[2]);                             \
-    for(k = PV_izl; k <= PV_izu; k++)                                         \
-      for(j =PV_iyl; j <= PV_iyu; j++)                                        \
-        PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) )               \
-        for(i = PV_ixl; i <= PV_ixu; i++)                                     \
-        {                                                                     \
-          body;                                                               \
-        }                                                                     \
-   }                                                                          \
-}
+    for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)               \
+    {                                                                         \
+      Box box = BoxArrayGetBox(boxes, PV_box);                                \
+      /* find octree and region intersection */                               \
+      int PV_ixl = pfmax(ix, box.lo[0]);                                      \
+      int PV_iyl = pfmax(iy, box.lo[1]);                                      \
+      int PV_izl = pfmax(iz, box.lo[2]);                                      \
+      int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
+      int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
+      int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
+      for(k = PV_izl; k <= PV_izu; k++)                                       \
+        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
+          PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) )                      \
+          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
+          {                                                                   \
+            body;                                                             \
+          }                                                                   \
+    } /* close for box */                                                     \
+  } /* close parallel section */                                              \
+} /* close macro block */
 
 /*--------------------------------------------------------------------------
  * GrGeomSolid parallel looping macro:
@@ -436,6 +454,8 @@ typedef struct {
 {                                                                                                                          \
   int *PV_visiting = NULL;                                                                                                 \
   BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);                                                                      \
+  PRAGMA_IN_MACRO_BODY( omp parallel )                                                                                     \
+  {
   for(int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)                                                              \
   {                                                                                                                        \
     Box box = BoxArrayGetBox(boxes, PV_box);                                                                               \
@@ -446,7 +466,7 @@ typedef struct {
     int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                                                                          \
     int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                                                                          \
     int PV_izu = pfmin((iz + nz - 1), box.up[2]);                                                                          \
-    PRAGMA_IN_MACRO_BODY( omp parallel for private(i,j,k) )                                                                \
+    PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) collapse(3))                                                              \
     for( int PV_tile_z = PV_izl; PV_tile_z <= PV_izu; PV_tile_z += GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_z )     \
       for( int PV_tile_y = PV_iyl; PV_tile_y <= PV_iyu; PV_tile_y += GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_y )   \
         for( int PV_tile_x = PV_ixl; PV_tile_x <= PV_ixu; PV_tile_x += GrGeomInLoopBoxesParallelInBoxesTiled_tile_size_x ) \
@@ -460,8 +480,9 @@ typedef struct {
               {                                                                                                            \
                 body;                                                                                                      \
               } /* for i */                                                                                                \
-        } /* for PV_tile_x */                                                                                              \
-   } /* for PV_box */                                                                                                      \
+        } /* close for PV_tile_x */                                                                                        \
+    } /* close for PV_box */                                                                                               \
+  } /* close parallel section */                                                                                           \
 } /* close macro block */
 
 /*--------------------------------------------------------------------------
