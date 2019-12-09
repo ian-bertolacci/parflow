@@ -931,7 +931,12 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       {
         case DirichletBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(ip, io, value,
+                                    x_dir_g, y_dir_g,
+                                    del_x_slope, del_y_slope,
+                                    dir, diff, u_old, u_new,
+                                    sep, lower_cond, upper_cond),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
             io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
@@ -1153,9 +1158,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
         case FluxBC:
         {
-          BCStructPatchLoop(
-          /* _BCStructPatchLoop(LOCALS(ip, io, x_dir_g, y_dir_g, z_dir_g, del_x_slope, del_y_slope, */
-          /*                           dir, diff, u_old, u_new, sep, upper_cond, lower_cond), */
+          _BCStructPatchLoop(LOCALS(ip, io,
+                                    x_dir_g, y_dir_g, z_dir_g,
+                                    del_x_slope, del_y_slope,
+                                    dir, diff, u_old, u_new,
+                                    sep, upper_cond, lower_cond),
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -1330,7 +1337,12 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
         case OverlandBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(ip, io,
+                                    x_dir_g, y_dir_g, z_dir_g,
+                                    del_x_slope, del_y_slope,
+                                    dir, diff, u_old, u_new,
+                                    sep, lower_cond, upper_cond),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
             io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
@@ -1566,7 +1578,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
 
 
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(ip, io, dir, q_overlnd),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2])
             {
@@ -1608,7 +1621,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
         case SeepageFaceBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(ip, io,
+                                    x_dir_g, y_dir_g, z_dir_g,
+                                    del_x_slope, del_y_slope,
+                                    dir, u_old, u_new),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
             io = SubmatrixEltIndex(x_ssl_sub, i, j, grid2d_iz);
@@ -1704,7 +1721,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
             fp[ip] += dt * dir * u_new;
           }); /* End BCStructPatchLoop */
 
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(dir, ip, io, q_overlnd),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2])
             {
@@ -1734,7 +1752,12 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         /*  OverlandBC for KWE upwind */
         case OverlandKinematicBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(ip, io,
+                                    x_dir_g, y_dir_g, z_dir_g,
+                                    del_x_slope, del_y_slope,
+                                    dir, diff, u_old, u_new,
+                                    sep, lower_cond, upper_cond),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
             io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
@@ -1907,7 +1930,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
                               dummy1, dummy2, dummy3, dummy4,
                               qx_, qy_, CALCFCN));
 
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(dir, ip, io, q_overlnd),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2])
             {
@@ -1941,7 +1965,12 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         /* Duplicate of OverlandBC computations to be worked on */
         case OverlandDiffusiveBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(ip, io,
+                                    x_dir_g, y_dir_g, z_dir_g,
+                                    del_x_slope, del_y_slope,
+                                    dir, diff, u_old, u_new,
+                                    sep, lower_cond, upper_cond),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
             io = SubvectorEltIndex(x_ssl_sub, i, j, grid2d_iz);
@@ -2116,7 +2145,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
                                                                                     qx_, qy_, CALCFCN));
 
 
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          _BCStructPatchLoop(LOCALS(dir, ip, io, q_overlnd),
+                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2])
             {

@@ -281,12 +281,14 @@ INC_IDX(int i, int j, int k,
     }                                                               \
 	}
 
-#if 0
+
+
+
+
+
+#if 1
 /*------------------------------------------------------------------------
  * BCPatchLoop Redefinitions
- * TODO: Something about these is unstable, one PF run will succeed in nominal time
- *  while a second iteration of that exact same run could take 3 minutes or crash
- *  immediately.  There's a race condition happening somewhere, but I'm unsure where.
  *------------------------------------------------------------------------*/
 #undef _BCStructPatchLoop
 #define _BCStructPatchLoop(locals,																			\
@@ -323,18 +325,19 @@ INC_IDX(int i, int j, int k,
     }                                                                   \
 	}
 
+
 //#undef _GrGeomPatchLoopBoxes
 #define _GrGeomPatchLoopBoxes(locals,                                   \
                               i, j, k, fdir, grgeom, patch_num,         \
                               r, ix, iy, iz, nx, ny, nz, body)          \
 	{																																			\
-    int PV_fdir[3];																											\
     																																		\
-    fdir = PV_fdir;																											\
-    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;									\
-    int *PV_visiting = NULL;																						\
-    PRAGMA(omp parallel)                                                \
+    PRAGMA(omp parallel private(fdir))																	\
     {                                                                   \
+			int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;								\
+			int *PV_visiting = NULL;																					\
+			int PV_fdir[3];																										\
+			fdir = PV_fdir;																										\
       for (int PV_f = 0; PV_f < GrGeomOctreeNumFaces; PV_f++)           \
       {                                                                 \
         switch (PV_f)                                                   \
@@ -406,6 +409,6 @@ INC_IDX(int i, int j, int k,
       }                                                                 \
     }                                                                   \
   }
-#endif // #if 0 for PatchLoops
+#endif // BCStruct #if
 
 #endif // _PF_OMPLOOPS_H
