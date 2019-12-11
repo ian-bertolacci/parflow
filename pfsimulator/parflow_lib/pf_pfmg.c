@@ -26,6 +26,12 @@
  *  USA
  **********************************************************************EHEADER*/
 
+#include "parflow_config.h"
+
+#ifdef HAVE_CUDA
+extern "C"{
+#endif
+
 #include "parflow.h"
 
 /*--------------------------------------------------------------------------
@@ -804,3 +810,7 @@ int  PFMGSizeOfTempData()
   return 0;
 }
 
+#ifdef HAVE_CUDA
+}
+// end extern "C"
+#endif

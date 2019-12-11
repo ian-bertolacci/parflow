@@ -400,13 +400,13 @@ typedef struct {
  * BCPressurePackage Actions
  *----------------------------------------------------------------*/
 /**
- * @name InputType Accessor
+ * @name GetInputType Accessor
  * @brief Gets the input type at the specified index from BCPressurePackage public_xtra
  *
  * @param public_xtra public_xtra for module
  * @param i Index for input type
  */
-#define InputType(public_xtra, i) \
+#define GetInputType(public_xtra, i) \
   ((public_xtra)->input_types[(i)])
 
 /* Send cases wrapped in {} for sanity */
@@ -416,7 +416,7 @@ typedef struct {
  * @{
  */
 #define Do_SetupPatchTypes(public_xtra, interval, i, cases) \
-  switch (InputType(public_xtra, i))                        \
+  switch (GetInputType(public_xtra, i))                        \
   {                                                         \
     cases;                                                  \
   }
@@ -428,7 +428,7 @@ typedef struct {
     break;                         \
   }
 #define Do_SetupPatchIntervals(public_xtra, interval, i, cases) \
-  switch (InputType(public_xtra, i))                            \
+  switch (GetInputType(public_xtra, i))                            \
   {                                                             \
     cases;                                                      \
   }
@@ -440,7 +440,7 @@ typedef struct {
     break;                             \
   }
 #define Do_FreePatches(public_xtra, i, ...) \
-  switch (InputType(public_xtra, i))        \
+  switch (GetInputType(public_xtra, i))        \
   {                                         \
     __VA_ARGS__;                            \
   }

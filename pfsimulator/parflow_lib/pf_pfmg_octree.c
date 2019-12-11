@@ -26,6 +26,12 @@
  *  USA
  **********************************************************************EHEADER*/
 
+#include "parflow_config.h"
+
+#ifdef HAVE_CUDA
+extern "C"{
+#endif
+
 #include "parflow.h"
 
 /*--------------------------------------------------------------------------
@@ -1149,3 +1155,7 @@ int  PFMGOctreeSizeOfTempData()
 
 #endif
 
+#ifdef HAVE_CUDA
+}
+// end extern "C"
+#endif
