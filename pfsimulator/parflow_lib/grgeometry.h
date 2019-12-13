@@ -249,13 +249,14 @@ typedef struct {
       int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
       int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
       int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
-      PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) )                          \
-      for(k = PV_izl; k <= PV_izu; k++)                                       \
-        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
-          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
-          {                                                                   \
+      PRAGMA_IN_MACRO_BODY( omp for )                                         \
+      for( int k = PV_izl; k <= PV_izu; k++){                                 \
+        for( int j = PV_iyl; j <= PV_iyu; j++){                               \
+          for( int i = PV_ixl; i <= PV_ixu; i++){                             \
             body;                                                             \
-          }                                                                   \
+          } /* for i */                                                       \
+        } /* for j */                                                         \
+      } /* for k */                                                           \
     } /* close for box */                                                     \
   } /* close parallel section */                                              \
 } /* close macro block */
@@ -283,13 +284,14 @@ typedef struct {
       int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
       int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
       int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
-      PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) collapse(2))               \
-      for(k = PV_izl; k <= PV_izu; k++)                                       \
-        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
-          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
-          {                                                                   \
+      PRAGMA_IN_MACRO_BODY( omp for collapse(2) )                             \
+      for( int k = PV_izl; k <= PV_izu; k++){                                 \
+        for( int j = PV_iyl; j <= PV_iyu; j++){                               \
+          for( int i = PV_ixl; i <= PV_ixu; i++){                             \
             body;                                                             \
-          }                                                                   \
+          } /* for i */                                                       \
+        } /* for j */                                                         \
+      } /* for k */                                                           \
     } /* close for box */                                                     \
   } /* close parallel section */                                              \
 } /* close macro block */
@@ -317,13 +319,14 @@ typedef struct {
       int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
       int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
       int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
-      PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) collapse(3) )              \
-      for(k = PV_izl; k <= PV_izu; k++)                                       \
-        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
-          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
-          {                                                                   \
+      PRAGMA_IN_MACRO_BODY( omp for collapse(3) )                             \
+      for( int k = PV_izl; k <= PV_izu; k++){                                 \
+        for( int j = PV_iyl; j <= PV_iyu; j++){                               \
+          for( int i = PV_ixl; i <= PV_ixu; i++){                             \
             body;                                                             \
-          }                                                                   \
+          } /* for i */                                                       \
+        } /* for j */                                                         \
+      } /* for k */                                                           \
     } /* close for box */                                                     \
   } /* close parallel section */                                              \
 } /* close macro block */
@@ -350,13 +353,14 @@ typedef struct {
       int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
       int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
       int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
-      for(k = PV_izl; k <= PV_izu; k++)                                       \
-        PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) )                        \
-        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
-          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
-          {                                                                   \
+      for( int k = PV_izl; k <= PV_izu; k++){                                 \
+        PRAGMA_IN_MACRO_BODY( omp for )                                       \
+        for( int j = PV_iyl; j <= PV_iyu; j++){                               \
+          for( int i = PV_ixl; i <= PV_ixu; i++){                             \
             body;                                                             \
-          }                                                                   \
+          } /* for i */                                                       \
+        } /* for j */                                                         \
+      } /* for k */                                                           \
     } /* close for box */                                                     \
   } /* close parallel section */                                              \
 } /* close macro block */
@@ -384,13 +388,14 @@ typedef struct {
       int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
       int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
       int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
-      for(k = PV_izl; k <= PV_izu; k++)                                       \
-        PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) collapse(2) )            \
-        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
-          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
-          {                                                                   \
+      for( int k = PV_izl; k <= PV_izu; k++){                                 \
+        PRAGMA_IN_MACRO_BODY( omp for collapse(2) )                           \
+        for( int j = PV_iyl; j <= PV_iyu; j++){                               \
+          for( int i = PV_ixl; i <= PV_ixu; i++){                             \
             body;                                                             \
-          }                                                                   \
+          } /* for i */                                                       \
+        } /* for j */                                                         \
+      } /* for k */                                                           \
     } /* close for box */                                                     \
   } /* close parallel section */                                              \
 } /* close macro block */
@@ -417,13 +422,14 @@ typedef struct {
       int PV_ixu = pfmin((ix + nx - 1), box.up[0]);                           \
       int PV_iyu = pfmin((iy + ny - 1), box.up[1]);                           \
       int PV_izu = pfmin((iz + nz - 1), box.up[2]);                           \
-      for(k = PV_izl; k <= PV_izu; k++)                                       \
-        for(j = PV_iyl; j <= PV_iyu; j++)                                     \
-          PRAGMA_IN_MACRO_BODY( omp for private(i,j,k) )                      \
-          for(i = PV_ixl; i <= PV_ixu; i++)                                   \
-          {                                                                   \
+      for( int k = PV_izl; k <= PV_izu; k++){                                 \
+        for( int j = PV_iyl; j <= PV_iyu; j++){                               \
+          PRAGMA_IN_MACRO_BODY( omp for )                                     \
+          for( int i = PV_ixl; i <= PV_ixu; i++){                             \
             body;                                                             \
-          }                                                                   \
+          } /* for i */                                                       \
+        } /* for j */                                                         \
+      } /* for k */                                                           \
     } /* close for box */                                                     \
   } /* close parallel section */                                              \
 } /* close macro block */
