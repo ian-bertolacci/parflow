@@ -48,8 +48,15 @@
 *
 *****************************************************************************/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
 #include "problem_phase_density.h"
+#include "pf_parallel.h"
 
 /*--------------------------------------------------------------------------
  * Structures
@@ -193,16 +200,18 @@ void    PhaseDensity(
           id = 0;
           if (fcn == CALCFCN)
           {
-            BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-                      id, nx_d, ny_d, nz_d, 1, 1, 1,
+            _BoxLoopI1(NO_LOCALS,
+                       i, j, k, ix, iy, iz, nx, ny, nz,
+                       id, nx_d, ny_d, nz_d, 1, 1, 1,
             {
               dp[id] = constant;
             });
           }
           else   /* fcn = CALCDER */
           {
-            BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-                      id, nx_d, ny_d, nz_d, 1, 1, 1,
+            _BoxLoopI1(NO_LOCALS,
+                       i, j, k, ix, iy, iz, nx, ny, nz,
+                       id, nx_d, ny_d, nz_d, 1, 1, 1,
             {
               dp[id] = 0.0;
             });
@@ -264,18 +273,20 @@ void    PhaseDensity(
 
           if (fcn == CALCFCN)
           {
-            BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-                      ip, nx_p, ny_p, nz_p, 1, 1, 1,
-                      id, nx_d, ny_d, nz_d, 1, 1, 1,
+            _BoxLoopI2(NO_LOCALS,
+                       i, j, k, ix, iy, iz, nx, ny, nz,
+                       ip, nx_p, ny_p, nz_p, 1, 1, 1,
+                       id, nx_d, ny_d, nz_d, 1, 1, 1,
             {
               dp[id] = ref * exp(pp[ip] * comp);
             });
           }
           else          /* fcn = CALCDER */
           {
-            BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-                      ip, nx_p, ny_p, nz_p, 1, 1, 1,
-                      id, nx_d, ny_d, nz_d, 1, 1, 1,
+            _BoxLoopI2(NO_LOCALS,
+                       i, j, k, ix, iy, iz, nx, ny, nz,
+                       ip, nx_p, ny_p, nz_p, 1, 1, 1,
+                       id, nx_d, ny_d, nz_d, 1, 1, 1,
             {
               dp[id] = comp * ref * exp(pp[ip] * comp);
             });
@@ -470,3 +481,7 @@ int  PhaseDensitySizeOfTempData()
 {
   return 0;
 }
+
+#ifdef USING_PARALLEL
+}
+#endif

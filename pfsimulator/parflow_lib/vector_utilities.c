@@ -64,8 +64,14 @@
  *
  * PFVLayerCopy (a, b, x, y)         NBE: Extracts layer b from vector y, inserts into layer a of vector x
  ****************************************************************************/
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
 
 #include "parflow.h"
+#include "pf_parallel.h"
 
 #include <string.h>
 
@@ -212,10 +218,11 @@ void PFVLinearSum(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    BoxLoopI3(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI3(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = a * xp[i_x] + b * yp[i_y];
     });
@@ -262,8 +269,9 @@ void PFVConstInit(
     zp = SubvectorElt(z_sub, ix, iy, iz);
 
     i_z = 0;
-    BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI1(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = c;
     });
@@ -329,10 +337,11 @@ void PFVProd(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    BoxLoopI3(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI3(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = xp[i_x] * yp[i_y];
     });
@@ -474,9 +483,10 @@ void PFVScale(
 
       i_x = 0;
       i_z = 0;
-      BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-                i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+      _BoxLoopI2(NO_LOCALS,
+                 i, j, k, ix, iy, iz, nx, ny, nz,
+                 i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+                 i_z, nx_z, ny_z, nz_z, 1, 1, 1,
       {
         zp[i_z] = c * xp[i_x];
       });
@@ -533,9 +543,10 @@ void PFVAbs(
 
     i_x = 0;
     i_z = 0;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI2(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = fabs(xp[i_x]);
     });
@@ -649,9 +660,10 @@ void PFVAddConst(
 
     i_x = 0;
     i_z = 0;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI2(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = xp[i_x] + b;
     });
@@ -962,8 +974,8 @@ double PFVL1Norm(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     i_x = 0;
-    BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+    BoxLoopReduceI1(sum, i, j, k, ix, iy, iz, nx, ny, nz,
+                    i_x, nx_x, ny_x, nz_x, 1, 1, 1,
     {
       sum += fabs(xp[i_x]);
     });
@@ -1238,9 +1250,10 @@ void PFVCompare(
 
     i_x = 0;
     i_z = 0;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI2(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = (fabs(xp[i_x]) >= c) ? ONE : ZERO;
     });
@@ -1483,10 +1496,11 @@ void PFVDiff(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    BoxLoopI3(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI3(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = xp[i_x] - yp[i_y];
     });
@@ -1543,9 +1557,10 @@ void PFVNeg(
 
     i_x = 0;
     i_z = 0;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI2(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = -xp[i_x];
     });
@@ -1683,10 +1698,11 @@ void PFVScaleDiff(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    BoxLoopI3(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI3(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = c * (xp[i_x] - yp[i_y]);
     });
@@ -1754,10 +1770,11 @@ void PFVLin1(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    BoxLoopI3(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI3(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = a * (xp[i_x]) + yp[i_y];
     });
@@ -1825,10 +1842,11 @@ void PFVLin2(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    BoxLoopI3(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI3(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = a * (xp[i_x]) - yp[i_y];
     });
@@ -1886,9 +1904,10 @@ void PFVAxpy(
 
     i_x = 0;
     i_y = 0;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+    _BoxLoopI2(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_y, nx_y, ny_y, nz_y, 1, 1, 1,
     {
       yp[i_y] += a * (xp[i_x]);
     });
@@ -1936,8 +1955,9 @@ void PFVScaleBy(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     i_x = 0;
-    BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+    _BoxLoopI1(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
     {
       xp[i_x] = xp[i_x] * a;
     });
@@ -2033,3 +2053,7 @@ void PFVLayerCopy(
   }
   IncFLOPCount(2 * VectorSize(x));
 }
+
+#ifdef USING_PARALLEL
+}
+#endif

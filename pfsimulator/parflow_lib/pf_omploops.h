@@ -58,7 +58,7 @@ extern "C++"{
 /* Util function to calculate the desired step in BoxLoopIX macros.
    Not tested with strides other than 1, but the math seems right.
    Pragma is to enable SIMD function calls from SIMD loops */
-#pragma omp declare simd
+#pragma omp declare simd uniform(nx, ny, sx, jinc, kinc)
 inline int
 INC_IDX(int i, int j, int k,
         int nx, int ny, int sx,

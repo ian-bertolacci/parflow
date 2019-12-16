@@ -31,9 +31,15 @@
 *
 *
 *****************************************************************************/
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
 
 #include "parflow.h"
 #include "vector.h"
+#include "pf_parallel.h"
 
 #ifdef HAVE_SAMRAI
 #include "SAMRAI/hier/PatchDescriptor.h"
@@ -760,8 +766,9 @@ void    InitVector(
     vp = SubvectorElt(v_sub, ix, iy, iz);
 
     iv = 0;
-    BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-              iv, nx_v, ny_v, nz_v, 1, 1, 1,
+    _BoxLoopI1(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
       vp[iv] = value;
     });
@@ -867,8 +874,9 @@ void    InitVectorInc(
     vp = SubvectorElt(v_sub, ix, iy, iz);
 
     iv = 0;
-    BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-              iv, nx_v, ny_v, nz_v, 1, 1, 1,
+    _BoxLoopI1(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
       vp[iv] = value + (i + j + k) * inc;
     });
@@ -921,11 +929,15 @@ void    InitVectorRandom(
     vp = SubvectorElt(v_sub, ix, iy, iz);
 
     iv = 0;
-    BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-              iv, nx_v, ny_v, nz_v, 1, 1, 1,
+    _BoxLoopI1(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
       vp[iv] = drand48();
     });
   }
 }
 
+#ifdef USING_PARALLEL
+}
+#endif

@@ -31,9 +31,15 @@
 *
 *****************************************************************************/
 
-#include "parflow.h"
+#include "parflow_config.h"
 
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
+#include "parflow.h"
 #include "matrix.h"
+#include "pf_parallel.h"
 
 #ifdef HAVE_SAMRAI
 #include "SAMRAI/hier/PatchDescriptor.h"
@@ -763,11 +769,16 @@ void    InitMatrix(
       Ap = SubmatrixElt(A_sub, s, ix, iy, iz);
 
       im = 0;
-      BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-                im, nx_m, ny_m, nz_m, 1, 1, 1,
+      _BoxLoopI1(NO_LOCALS,
+                 i, j, k, ix, iy, iz, nx, ny, nz,
+                 im, nx_m, ny_m, nz_m, 1, 1, 1,
       {
         Ap[im] = value;
       });
     }
   }
 }
+
+#ifdef USING_PARALLEL
+}
+#endif
