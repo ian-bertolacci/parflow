@@ -724,6 +724,8 @@ void    InitMatrix(
                    Matrix *A,
                    double  value)
 {
+  BeginTiming(MatrixInitTimingIndex);
+
   Grid       *grid = MatrixGrid(A);
 
   Submatrix  *A_sub;
@@ -764,19 +766,29 @@ void    InitMatrix(
     nz_m = SubmatrixNZ(A_sub);
 
     stencil = MatrixStencil(A);
+    /*InitMatrixLoop(s, stencil, Ap, A_sub,
+                   i, j, k, ix, iy, iz, nx, ny, nz,
+                   im, nx_m, ny_m, nz_m, 1, 1, 1,
+    {
+      Ap[im] = value;
+    });
+    */
+
     for (s = 0; s < StencilSize(stencil); s++)
     {
       Ap = SubmatrixElt(A_sub, s, ix, iy, iz);
 
       im = 0;
-      _BoxLoopI1(NO_LOCALS,
-                 i, j, k, ix, iy, iz, nx, ny, nz,
-                 im, nx_m, ny_m, nz_m, 1, 1, 1,
+      BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
+                im, nx_m, ny_m, nz_m, 1, 1, 1,
       {
         Ap[im] = value;
       });
     }
+
   }
+
+  EndTiming(MatrixInitTimingIndex);
 }
 
 #ifdef USING_PARALLEL

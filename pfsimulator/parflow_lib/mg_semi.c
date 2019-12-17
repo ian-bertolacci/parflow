@@ -31,8 +31,14 @@
 *
 *****************************************************************************/
 
-#include "parflow.h"
+#include "parflow_config.h"
 
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
+#include "parflow.h"
+#include "pf_parallel.h"
 
 /*--------------------------------------------------------------------------
  * Structures
@@ -552,9 +558,10 @@ void              SetupCoarseOps(
         iP = SubmatrixEltIndex(P_sub, ix, iy, iz);
         iA = SubmatrixEltIndex(A_sub, ix, iy, iz);
 
-        BoxLoopI2(ii, jj, kk, ix, iy, iz, nx, ny, nz,
-                  iP, nx_P, ny_P, nz_P, 1, 1, 1,
-                  iA, nx_A, ny_A, nz_A, sx, sy, sz,
+        _BoxLoopI2(LOCALS(ap0),
+                   ii, jj, kk, ix, iy, iz, nx, ny, nz,
+                   iP, nx_P, ny_P, nz_P, 1, 1, 1,
+                   iA, nx_A, ny_A, nz_A, sx, sy, sz,
         {
           ap0 = a0[iA] + a3[iA] + a4[iA] + a5[iA] + a6[iA];
 
@@ -661,10 +668,11 @@ void              SetupCoarseOps(
           dA12 = SubmatrixNX(A_sub) * SubmatrixNY(A_sub);
         }
 
-        BoxLoopI3(ii, jj, kk, ix, iy, iz, nx, ny, nz,
-                  iP1, nx_P, ny_P, nz_P, 1, 1, 1,
-                  iA, nx_A, ny_A, nz_A, sx, sy, sz,
-                  iAc, nx_Ac, ny_Ac, nz_Ac, 1, 1, 1,
+        _BoxLoopI3(LOCALS(iP2, iA1, iA2),
+                   ii, jj, kk, ix, iy, iz, nx, ny, nz,
+                   iP1, nx_P, ny_P, nz_P, 1, 1, 1,
+                   iA, nx_A, ny_A, nz_A, sx, sy, sz,
+                   iAc, nx_Ac, ny_Ac, nz_Ac, 1, 1, 1,
         {
           iP2 = iP1 + dP12;
           iA1 = iA - dA12;
@@ -727,8 +735,9 @@ void              SetupCoarseOps(
 
         iAc = SubmatrixEltIndex(Ac_sub, ix / sx, iy / sy, iz / sz);
 
-        BoxLoopI1(ii, jj, kk, ix, iy, iz, nx, ny, nz,
-                  iAc, nx_Ac, ny_Ac, nz_Ac, 1, 1, 1,
+        _BoxLoopI1(NO_LOCALS,
+                   ii, jj, kk, ix, iy, iz, nx, ny, nz,
+                   iAc, nx_Ac, ny_Ac, nz_Ac, 1, 1, 1,
         {
           ac0[iAc] -= (ac3[iAc] + ac4[iAc] +
                        ac5[iAc] + ac6[iAc]);
@@ -1365,3 +1374,7 @@ int  MGSemiSizeOfTempData()
 
   return sz;
 }
+
+#ifdef USING_PARALLEL
+}
+#endif

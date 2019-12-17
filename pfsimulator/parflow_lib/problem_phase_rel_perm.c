@@ -503,8 +503,9 @@ void         PhaseRelPerm(
 
           if (fcn == CALCFCN)
           {
-            GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
-                           nx, ny, nz,
+            _GrGeomSurfLoop(LOCALS(ipr),
+                            i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                            nx, ny, nz,
             {
               ipr = SubvectorEltIndex(pr_sub,
                                       i + fdir[0], j + fdir[1], k + fdir[2]);
@@ -513,8 +514,9 @@ void         PhaseRelPerm(
           }
           else    /* fcn = CALCDER */
           {
-            GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
-                           nx, ny, nz,
+            _GrGeomSurfLoop(LOCALS(ipr),
+                            i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                            nx, ny, nz,
             {
               ipr = SubvectorEltIndex(pr_sub,
                                       i + fdir[0], j + fdir[1], k + fdir[2]);
@@ -693,8 +695,9 @@ void         PhaseRelPerm(
                   // Spline
                   case 0:
                   {
-                    GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
-                                   nx, ny, nz,
+                    _GrGeomSurfLoop(LOCALS(ipr, ipp, ipd, head),
+                                    i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                                    nx, ny, nz,
                     {
                       /* Table Lookup */
 
@@ -729,8 +732,9 @@ void         PhaseRelPerm(
                     int num_sample_points = lookup_table->num_sample_points;
                     int max = num_sample_points + 1;
 
-                    GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
-                                   nx, ny, nz,
+                    _GrGeomSurfLoop(LOCALS(ipr, ipp, ipd, head, pt),
+                                    i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                                    nx, ny, nz,
                     {
                       /* Table Lookup */
 
@@ -769,8 +773,9 @@ void         PhaseRelPerm(
               {
                 /* Compute VanG curve */
 
-                GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
-                               nx, ny, nz,
+                _GrGeomSurfLoop(LOCALS(ipr, ipp, ipd, alpha, n, m, head, opahn, ahnm1),
+                                i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                                nx, ny, nz,
                 {
                   ipr = SubvectorEltIndex(pr_sub,
                                           i + fdir[0], j + fdir[1], k + fdir[2]);
@@ -805,8 +810,9 @@ void         PhaseRelPerm(
                   // Spline
                   case 0:
                   {
-                    GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
-                                   nx, ny, nz,
+                    _GrGeomSurfLoop(LOCALS(ipr, ipp, ipd, head),
+                                    i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                                    nx, ny, nz,
                     {
                       /* Table Lookup */
 
@@ -840,8 +846,9 @@ void         PhaseRelPerm(
                     int num_sample_points = lookup_table->num_sample_points;
                     int max = num_sample_points + 1;
 
-                    GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
-                                   nx, ny, nz,
+                    _GrGeomSurfLoop(LOCALS(ipr, ipp, ipd, head, pt),
+                                    i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                                    nx, ny, nz,
                     {
                       /* Table Lookup */
 
@@ -886,7 +893,8 @@ void         PhaseRelPerm(
               {
                 /* Compute VanG curve */
 
-                GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                _GrGeomSurfLoop(LOCALS(ipr, ipp, ipd, alpha, n, m, head, opahn, ahnm1, coeff),
+                                i, j, k, fdir, gr_solid, r, ix, iy, iz,
                                nx, ny, nz,
                 {
                   ipr = SubvectorEltIndex(pr_sub,
@@ -959,8 +967,9 @@ void         PhaseRelPerm(
 
           if (fcn == CALCFCN)
           {
-            GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
-                           nx, ny, nz,
+            _GrGeomSurfLoop(LOCALS(ipr, ipp, ipd, n_index, alpha_index, alpha, n, m, head, opahn, ahnm1),
+                            i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                            nx, ny, nz,
             {
               ipr = SubvectorEltIndex(pr_sub,
                                       i + fdir[0], j + fdir[1], k + fdir[2]);
@@ -990,8 +999,9 @@ void         PhaseRelPerm(
           }
           else    /* fcn = CALCDER */
           {
-            GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
-                           nx, ny, nz,
+            _GrGeomSurfLoop(LOCALS(ipr, ipp, ipd, n_index, alpha_index, alpha, n, m, head, opahn, ahnm1, coeff),
+                            i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                            nx, ny, nz,
             {
               ipr = SubvectorEltIndex(pr_sub,
                                       i + fdir[0], j + fdir[1], k + fdir[2]);
@@ -1413,7 +1423,8 @@ void         PhaseRelPerm(
 
           if (fcn == CALCFCN)
           {
-            GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
+            _GrGeomSurfLoop(LOCALS(ipr, ipp, ipd, head, tmp),
+                            i, j, k, fdir, gr_solid, r, ix, iy, iz,
                            nx, ny, nz,
             {
               ipr = SubvectorEltIndex(pr_sub,
@@ -1435,7 +1446,8 @@ void         PhaseRelPerm(
           }      /* End if clause */
           else   /* fcn = CALCDER */
           {
-            GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
+            _GrGeomSurfLoop(LOCALS(ipr, ipp, ipd, head, tmp),
+                           i, j, k, fdir, gr_solid, r, ix, iy, iz,
                            nx, ny, nz,
             {
               ipr = SubvectorEltIndex(pr_sub,
@@ -1580,8 +1592,9 @@ void         PhaseRelPerm(
 
           if (fcn == CALCFCN)
           {
-            GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
-                           nx, ny, nz,
+            _GrGeomSurfLoop(LOCALS(ipr, ipp, dg),
+                            i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                            nx, ny, nz,
             {
               ipr = SubvectorEltIndex(pr_sub,
                                       i + fdir[0], j + fdir[1], k + fdir[2]);
@@ -1601,8 +1614,9 @@ void         PhaseRelPerm(
           }      /* End if clause */
           else   /* fcn = CALCDER */
           {
-            GrGeomSurfLoop(i, j, k, fdir, gr_solid, r, ix, iy, iz,
-                           nx, ny, nz,
+            _GrGeomSurfLoop(LOCALS(ipr, ipp, dg),
+                            i, j, k, fdir, gr_solid, r, ix, iy, iz,
+                            nx, ny, nz,
             {
               ipr = SubvectorEltIndex(pr_sub,
                                       i + fdir[0], j + fdir[1], k + fdir[2]);

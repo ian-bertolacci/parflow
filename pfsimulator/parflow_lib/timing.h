@@ -48,8 +48,9 @@
 #define CLMTimingIndex  6
 #define PFSOLReadTimingIndex  7
 #define ClusteringTimingIndex 8
+#define MatrixInitTimingIndex 9
 #ifdef VECTOR_UPDATE_TIMING
-#define VectorUpdateTimingIndex  9
+#define VectorUpdateTimingIndex  10
 #endif
 
 
