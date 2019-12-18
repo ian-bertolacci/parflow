@@ -25,9 +25,15 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
  *  USA
  **********************************************************************EHEADER*/
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
 
 #include "parflow.h"
 #include "parflow_netcdf.h"
+#include "pf_parallel.h"
 
 /*--------------------------------------------------------------------------
  * Structures
@@ -154,7 +160,7 @@ void         YSlope(
           r = SubgridRX(subgrid);
 
           data = SubvectorData(ps_sub);
-          GrGeomInLoop(i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+          _GrGeomInLoop(LOCALS(ips), i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
           {
             ips = SubvectorEltIndex(ps_sub, i, j, 0);
 
@@ -200,10 +206,11 @@ void         YSlope(
         {
           case 1:       /* p= x */
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
-              x = RealSpaceX(i, SubgridRX(subgrid));
+              /* x is unused here, skip.  */
+              //x = RealSpaceX(i, SubgridRX(subgrid));
               /* nonlinear case -div(p grad p) = f */
               data[ips] = -1.0;
             });
@@ -213,10 +220,11 @@ void         YSlope(
           case 2:    /* topo = cos(x)/8 + sin(y)/20 + x^(1/8) + y^(1/8) + cos(x/5)/(5*8) + sin(y/5)/(5*10)
                       * Sy =  cos(y)/ 10 + (1/2)y^(-1/2) + cos(y/5)/(5*10) */
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
-              x = RealSpaceX(i, SubgridRX(subgrid));
+              /* x is unused here, skip.  */
+              //x = RealSpaceX(i, SubgridRX(subgrid));
               y = RealSpaceY(j, SubgridRY(subgrid));
               /* nonlinear case -div(p grad p) = f */
               //data[ips] = cos(y)/20.0 + (1.0/8.0)*pow(x,-(7/8)) +cos(y/5.0)/(5.0*10.0);
@@ -227,7 +235,7 @@ void         YSlope(
 
           case 3:       /* p= x^3y^2 + sinxy + 1 */
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, x, y), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -240,7 +248,7 @@ void         YSlope(
 
           case 4:       /* f for p = x^3y^4 + x^2 + sinxy cosy + 1 */
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, x, y, z), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -254,7 +262,7 @@ void         YSlope(
 
           case 5:       /* f = xyz-y^2z^2t^2-x^2z^2t^2-x^2y^2t^2 (p=xyzt+1)*/
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, x, y, z), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -269,7 +277,7 @@ void         YSlope(
           case 6:       /* f = xyz-y^2z^2t^2-2x^2z^2t^2-3x^2y^2t^2 (p=xyzt+1,
                          * K=(1; 2; 3) )*/
           {
-            GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(LOCALS(ips, x, y, z), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -316,7 +324,7 @@ void         YSlope(
         psdat = SubvectorData(ps_sub);
         sy_values_dat = SubvectorData(sy_values_sub);
 
-        GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+        _GrGeomInLoop(LOCALS(ips, ipicv), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
         {
           ips = SubvectorEltIndex(ps_sub, i, j, 0);
           ipicv = SubvectorEltIndex(sy_values_sub, i, j, 0);
@@ -357,7 +365,7 @@ void         YSlope(
         psdat = SubvectorData(ps_sub);
         sy_values_dat = SubvectorData(sy_values_sub);
 
-        GrGeomInLoop(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+        _GrGeomInLoop(LOCALS(ips, ipicv), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
         {
           ips = SubvectorEltIndex(ps_sub, i, j, 0);
           ipicv = SubvectorEltIndex(sy_values_sub, i, j, 0);
@@ -649,3 +657,7 @@ int  YSlopeSizeOfTempData()
 {
   return 0;
 }
+
+#ifdef USING_PARALLEL
+}
+#endif

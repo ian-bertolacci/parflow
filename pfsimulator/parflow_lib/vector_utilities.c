@@ -407,10 +407,11 @@ void PFVDiv(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    BoxLoopI3(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI3(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = xp[i_x] / yp[i_y];
     });
@@ -601,9 +602,10 @@ void PFVInv(
 
     i_x = 0;
     i_z = 0;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI2(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = ONE / xp[i_x];
     });
@@ -722,9 +724,10 @@ double PFVDotProd(
 
     i_x = 0;
     i_y = 0;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+    BoxLoopReduceI2(NO_LOCALS, sum,
+                    i, j, k, ix, iy, iz, nx, ny, nz,
+                    i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+                    i_y, nx_y, ny_y, nz_y, 1, 1, 1,
     {
       sum += xp[i_x] * yp[i_y];
     });
@@ -781,7 +784,7 @@ double PFVMaxNorm(
 
     i_x = 0;
     BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
     {
       if (fabs(xp[i_x]) > max_val)
         max_val = fabs(xp[i_x]);
@@ -846,9 +849,10 @@ double PFVWrmsNorm(
 
     i_x = 0;
     i_w = 0;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_w, nx_w, ny_w, nz_w, 1, 1, 1,
+    BoxLoopReduceI2(LOCALS(prod), sum,
+                    i, j, k, ix, iy, iz, nx, ny, nz,
+                    i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+                    i_w, nx_w, ny_w, nz_w, 1, 1, 1,
     {
       prod = xp[i_x] * wp[i_w];
       sum += prod * prod;
@@ -915,9 +919,10 @@ double PFVWL2Norm(
 
     i_x = 0;
     i_w = 0;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_w, nx_w, ny_w, nz_w, 1, 1, 1,
+    BoxLoopReduceI2(LOCALS(prod), sum,
+                    i, j, k, ix, iy, iz, nx, ny, nz,
+                    i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+                    i_w, nx_w, ny_w, nz_w, 1, 1, 1,
     {
       prod = xp[i_x] * wp[i_w];
       sum += prod * prod;
@@ -1035,6 +1040,8 @@ double PFVMin(
     /* Get initial guess for min_val */
     if (sg == 0)
     {
+/* @MCB: This loop appears to not do anything, i_x will end up being 0 and no iterations occur
+ This is equivalent to just min_val = xp[0]? */
       i_x = 0;
       BoxLoopI1(i, j, k, ix, iy, iz, 1, 1, 1,
                 i_x, nx_x, ny_x, nz_x, 1, 1, 1,
@@ -1313,12 +1320,13 @@ int PFVInvTest(
     i_x = 0;
     i_z = 0;
     val = 1;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI2(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       if (xp[i_x] == ZERO)
-        val = 0;
+        AtomicSet(&val, 0);
       else
         zp[i_z] = ONE / (xp[i_x]);
     });
@@ -1426,10 +1434,11 @@ void PFVSum(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    BoxLoopI3(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI3(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = xp[i_x] + yp[i_y];
     });
@@ -1627,10 +1636,11 @@ void PFVScaleSum(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    BoxLoopI3(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_y, nx_y, ny_y, nz_y, 1, 1, 1,
-              i_z, nx_z, ny_z, nz_z, 1, 1, 1,
+    _BoxLoopI3(NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_y, nx_y, ny_y, nz_y, 1, 1, 1,
+               i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       zp[i_z] = c * (xp[i_x] + yp[i_y]);
     });
@@ -2020,7 +2030,7 @@ void PFVLayerCopy(
 
     i_x = 0;
     i_y = 0;
-
+//@MCB: TODO: Make this run in parallel
     for (k = iz; k < iz + nz; k++)
     {
       if (k == a)

@@ -405,8 +405,6 @@ else( ${PARFLOW_ENABLE_PROFILING} )
   set (PARFLOW_PROFILE_OPTS "")
 endif( ${PARFLOW_ENABLE_PROFILING} )
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg -save-temps")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg -save-temps")
 
 include_directories ("${CMAKE_SOURCE_DIR}/pfsimulator/parflow_lib")
 include_directories ("${PROJECT_SOURCE_DIR}/pfsimulator/amps/${PARFLOW_AMPS_LAYER}")

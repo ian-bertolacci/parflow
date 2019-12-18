@@ -14,7 +14,7 @@ extern "C++"{
   template<typename T>
   static inline void OMP_PlusEquals(T *arr_loc, T value)
   {
-#pragma omp atomic
+#pragma omp atomic update
     *arr_loc += value;
   }
 
@@ -45,6 +45,14 @@ extern "C++"{
   {
     return (0.5 * (a + b));
   }
+
+  template<typename T>
+  static inline void AtomicSet(T *var, T val)
+  {
+    #pragma omp atomic write
+    *var = val;
+  }
+
 }
 
 /*------------------------------------------------------------------------------
@@ -67,7 +75,6 @@ INC_IDX(int idx, int i, int j, int k,
   return (k * kinc + (k * ny + j) * jinc +
           (k * ny * nx + j * nx + i) * sx) + idx;
 }
-
 
 #if 0
 
@@ -249,6 +256,35 @@ INC_IDX(int idx, int i, int j, int k,
       }                                                                 \
   }
 
+#undef BoxLoopReduceI2
+#define BoxLoopReduceI2(locals, sum,                                    \
+												i, j, k,																				\
+												ix, iy, iz, nx, ny, nz,													\
+												i1, nx1, ny1, nz1, sx1, sy1, sz1,								\
+												i2, nx2, ny2, nz2, sx2, sy2, sz2,								\
+												body)																						\
+	{																																			\
+    int i1_start = i1;                                                  \
+    int i2_start = i2;                                                  \
+    DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
+    DeclareInc(PV_jinc_2, PV_kinc_2, nx, ny, nz, nx2, ny2, nz2, sx2, sy2, sz2); \
+    PRAGMA(omp parallel for reduction(+:sum) collapse(3) private(i, j, k, i1, i2 locals)) \
+      for (k = iz; k < iz + nz; k++)                                    \
+      {                                                                 \
+        for (j = iy; j < iy + ny; j++)                                  \
+        {                                                               \
+          for (i = ix; i < ix + nx; i++)                                \
+          {                                                             \
+            i1 = INC_IDX(i1_start, (i - ix), (j - iy), (k - iz),        \
+                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
+            i2 = INC_IDX(i2_start, (i - ix), (j - iy), (k - iz),        \
+                         nx, ny, sx2, PV_jinc_2, PV_kinc_2);            \
+            body;                                                       \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+	}
+
 #endif // BoxLoop #if
 
 /*------------------------------------------------------------------------
@@ -320,8 +356,118 @@ INC_IDX(int idx, int i, int j, int k,
 	}
 
 
+#define __GrGeomInLoop(locals, i, j, k, grgeom, r, ix, iy, iz, nx, ny, nz, body) \
+	{																																			\
+		if (r == 0 && GrGeomSolidInteriorBoxes(grgeom))											\
+    {                                                                   \
+      __GrGeomInLoopBoxes(locals,                                        \
+                         i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body); \
+    }                                                                   \
+		else																																\
+    {                                                                   \
+      GrGeomOctree  *PV_node;                                           \
+      double PV_ref = pow(2.0, r);                                      \
+																																				\
+      i = GrGeomSolidOctreeIX(grgeom) * (int)PV_ref;                    \
+      j = GrGeomSolidOctreeIY(grgeom) * (int)PV_ref;                    \
+      k = GrGeomSolidOctreeIZ(grgeom) * (int)PV_ref;                    \
+      GrGeomOctreeInteriorNodeLoop(i, j, k, PV_node,                    \
+                                   GrGeomSolidData(grgeom),             \
+                                   GrGeomSolidOctreeBGLevel(grgeom) + r, \
+                                   ix, iy, iz, nx, ny, nz,              \
+                                   TRUE,                                \
+                                   body);                               \
+    }                                                                   \
+	}
+
+#define __GrGeomInLoopBoxes(locals, i, j, k,                         \
+													 grgeom, ix, iy, iz,                      \
+													 nx, ny, nz, body)                        \
+  {                                                                 \
+    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;             \
+    int *PV_visiting = NULL;                                        \
+    BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);             \
+    for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)    \
+    {                                                               \
+      Box box = BoxArrayGetBox(boxes, PV_box);                      \
+      /* find octree and region intersection */                     \
+      PV_ixl = pfmax(ix, box.lo[0]);                                \
+      PV_iyl = pfmax(iy, box.lo[1]);                                \
+      PV_izl = pfmax(iz, box.lo[2]);                                \
+      PV_ixu = pfmin((ix + nx - 1), box.up[0]);                     \
+      PV_iyu = pfmin((iy + ny - 1), box.up[1]);                     \
+      PV_izu = pfmin((iz + nz - 1), box.up[2]);                     \
+                                                                    \
+      PRAGMA(omp for collapse(3) private(i, j, k locals))           \
+        for (k = PV_izl; k <= PV_izu; k++)                          \
+        {                                                           \
+          for (j = PV_iyl; j <= PV_iyu; j++)                        \
+          {                                                         \
+            for (i = PV_ixl; i <= PV_ixu; i++)                      \
+            {                                                       \
+              body;                                                 \
+            }                                                       \
+          }                                                         \
+        }                                                           \
+    }                                                               \
+  }
 
 
+#define ___GrGeomInLoop(locals, i, j, k, grgeom, r, ix, iy, iz, nx, ny, nz, body) \
+	{																																			\
+		if (r == 0 && GrGeomSolidInteriorBoxes(grgeom))											\
+    {                                                                   \
+      __GrGeomInLoopBoxes(locals,                                        \
+                         i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body); \
+    }                                                                   \
+		else																																\
+    {                                                                   \
+      GrGeomOctree  *PV_node;                                           \
+      double PV_ref = pow(2.0, r);                                      \
+																																				\
+      i = GrGeomSolidOctreeIX(grgeom) * (int)PV_ref;                    \
+      j = GrGeomSolidOctreeIY(grgeom) * (int)PV_ref;                    \
+      k = GrGeomSolidOctreeIZ(grgeom) * (int)PV_ref;                    \
+      GrGeomOctreeInteriorNodeLoop(i, j, k, PV_node,                    \
+                                   GrGeomSolidData(grgeom),             \
+                                   GrGeomSolidOctreeBGLevel(grgeom) + r, \
+                                   ix, iy, iz, nx, ny, nz,              \
+                                   TRUE,                                \
+                                   body);                               \
+    }                                                                   \
+	}
+
+#define ___GrGeomInLoopBoxes(locals, i, j, k,                         \
+													 grgeom, ix, iy, iz,                      \
+													 nx, ny, nz, body)                        \
+  {                                                                 \
+    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;             \
+    int *PV_visiting = NULL;                                        \
+    BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);             \
+    for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)    \
+    {                                                               \
+      Box box = BoxArrayGetBox(boxes, PV_box);                      \
+      /* find octree and region intersection */                     \
+      PV_ixl = pfmax(ix, box.lo[0]);                                \
+      PV_iyl = pfmax(iy, box.lo[1]);                                \
+      PV_izl = pfmax(iz, box.lo[2]);                                \
+      PV_ixu = pfmin((ix + nx - 1), box.up[0]);                     \
+      PV_iyu = pfmin((iy + ny - 1), box.up[1]);                     \
+      PV_izu = pfmin((iz + nz - 1), box.up[2]);                     \
+                                                                    \
+      PRAGMA(omp for nowait collapse(3) private(i, j, k locals))    \
+        for (k = PV_izl; k <= PV_izu; k++)                          \
+        {                                                           \
+          for (j = PV_iyl; j <= PV_iyu; j++)                        \
+          {                                                         \
+            for (i = PV_ixl; i <= PV_ixu; i++)                      \
+            {                                                       \
+              body;                                                 \
+            }                                                       \
+          }                                                         \
+        }                                                           \
+    }                                                               \
+  }
 
 
 #if 1

@@ -220,7 +220,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   int diffusive;             //@RMM
 
   double dtmp, dx, dy, dz, vol, ffx, ffy, ffz;
+#ifndef USE_FUSION
   double u_right, u_front, u_upper;
+#endif
   double diff = 0.0e0;
   double updir = 0.0e0;
   double lower_cond, upper_cond;
@@ -264,6 +266,16 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   qy = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
 
 
+#ifdef USE_FUSION
+  // @IJB
+  // Temp vectors for loop fission for parallelism
+  Vector *u_right_vec, *u_front_vec, *u_upper_vec;
+  Subvector   *u_right_sub, *u_front_sub, *u_upper_sub; // @IJB
+  double      *u_right, *u_front, *u_upper; // @IJB
+  u_right_vec = NewVectorType(grid, 1, 1, fval->type);
+  u_front_vec = NewVectorType(grid, 1, 1, fval->type);
+  u_upper_vec = NewVectorType(grid, 1, 1, fval->type);
+#endif
   /* Calculate pressure dependent properties: density and saturation */
 
   PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density, &dtmp, &dtmp,
@@ -280,6 +292,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     subgrid = GridSubgrid(grid, is);
     Subgrid* grid2d_subgrid = GridSubgrid(grid2d, is);
     int grid2d_iz = SubgridIZ(grid2d_subgrid);
+
+    ss_sub = VectorSubvector(sstorage, is);
 
     d_sub = VectorSubvector(density, is);
     od_sub = VectorSubvector(old_density, is);
@@ -336,6 +350,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     ny_po = SubvectorNY(po_sub);
     nz_po = SubvectorNZ(po_sub);
 
+    ss = SubvectorData(ss_sub);
+
     dp = SubvectorData(d_sub);
     odp = SubvectorData(od_sub);
     sp = SubvectorData(s_sub);
@@ -362,7 +378,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   }
 
   /*@ Add in contributions from compressible storage */
-
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -585,7 +600,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
                      (rel_perm, pressure, density, gravity, problem_data,
                       CALCFCN));
 
-
   /* Calculate contributions from second order derivatives and gravity */
   ForSubgridI(is, GridSubgrids(grid))
   {
@@ -613,6 +627,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     /* @RMM added to provide access to zmult */
     z_mult_sub = VectorSubvector(z_mult, is);
 
+
     /* RDF: assumes resolutions are the same in all 3 directions */
     r = SubgridRX(subgrid);
 
@@ -636,6 +651,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     ny_p = SubvectorNY(p_sub);
     nz_p = SubvectorNZ(p_sub);
 
+    int sx_p = 1;
     sy_p = nx_p;
     sz_p = ny_p * nx_p;
 
