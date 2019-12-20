@@ -88,7 +88,7 @@ double   InnerProd(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     iv = 0;
-    BoxLoopReduceI1(result,
+    BoxLoopReduceI1(NO_LOCALS, result,
                     i, j, k, ix, iy, iz, nx, ny, nz,
                     iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {

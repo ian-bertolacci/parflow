@@ -71,6 +71,12 @@ typedef struct {
   BoxArray** patch_boxes[GrGeomOctreeNumFaces];
 } GrGeomSolid;
 
+/*------------------------------------------------------------------------
+  Wrapper definitions around omp macros
+  ------------------------------------------------------------------------*/
+#define _GrGeomSurfLoop(locals, ...) GrGeomSurfLoop( __VA_ARGS__ )
+#define _GrGeomInLoop(locals, ...) GrGeomInLoop( __VA_ARGS__ )
+
 
 /*--------------------------------------------------------------------------
  * Accessor macros:
@@ -130,9 +136,6 @@ typedef struct {
           }                                                              \
     }                                                                    \
   }
-
-#define _GrGeomInLoop(locals, ...)\
-  GrGeomInLoop( __VA_ARGS__ )
 
 #define GrGeomInLoop(i, j, k, grgeom,                                    \
                      r, ix, iy, iz, nx, ny, nz, body)                    \
@@ -316,7 +319,6 @@ typedef struct {
       }                                                                          \
     }                                                                            \
   }
-
 
 #define GrGeomSurfLoop(i, j, k, fdir, grgeom,                                \
                        r, ix, iy, iz, nx, ny, nz, body)                      \

@@ -979,7 +979,8 @@ double PFVL1Norm(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     i_x = 0;
-    BoxLoopReduceI1(sum, i, j, k, ix, iy, iz, nx, ny, nz,
+    BoxLoopReduceI1(NO_LOCALS, sum,
+                    i, j, k, ix, iy, iz, nx, ny, nz,
                     i_x, nx_x, ny_x, nz_x, 1, 1, 1,
     {
       sum += fabs(xp[i_x]);
@@ -1326,7 +1327,7 @@ int PFVInvTest(
                i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
       if (xp[i_x] == ZERO)
-        AtomicSet(&val, 0);
+        AtomicSet(val, 0);
       else
         zp[i_z] = ONE / (xp[i_x]);
     });

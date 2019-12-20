@@ -3,16 +3,12 @@
 #ifndef _PF_PARALLEL_H
 #define _PF_PARALLEL_H
 
-#define PlusEquals(a, b) a += b
 
 #ifdef HAVE_OMP
 
-/* Utility macros for inserting OMP pragmas in macros */
-#define EMPTY()
-#define DEFER(x) x EMPTY()
-#define PRAGMA(args) _Pragma( #args )
-
+#if 1
 #include "pf_omploops.h"
+#endif
 
 #endif // HAVE_OMP
 

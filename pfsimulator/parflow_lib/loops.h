@@ -35,8 +35,8 @@
 #ifndef _LOOPS_HEADER
 #define _LOOPS_HEADER
 
-#define LOCALS(...) DEFER(_LOCALS)(__VA_ARGS__)
-#define _LOCALS(...) ,__VA_ARGS__
+
+#define LOCALS(...)
 #define NO_LOCALS
 
 /* Wrapper for BoxLoops without USING_PARALLEL
@@ -48,10 +48,13 @@
 
 /* Wrapper for Reduction loops without USING_PARALLEL
    Useful for OpenMP to allow the use of the reduction clause */
-#define BoxLoopReduceI0(sum, ...) BoxLoopI0(__VA_ARGS__)
-#define BoxLoopReduceI1(sum, ...) BoxLoopI1(__VA_ARGS__)
-#define BoxLoopReduceI2(sum, ...) BoxLoopI2(__VA_ARGS__)
-#define BoxLoopReduceI3(sum, ...) BoxLoopI3(__VA_ARGS__)
+#define BoxLoopReduceI0(locals, sum, ...) BoxLoopI0(__VA_ARGS__)
+#define BoxLoopReduceI1(locals, sum, ...) BoxLoopI1(__VA_ARGS__)
+#define BoxLoopReduceI2(locals, sum, ...) BoxLoopI2(__VA_ARGS__)
+#define BoxLoopReduceI3(locals, sum, ...) BoxLoopI3(__VA_ARGS__)
+
+#define AtomicSet(a, b) a = b
+#define PlusEquals(a, b) a += b
 
 #define DeclareInc(jinc, kinc, nx, ny, nz, nxd, nyd, nzd, sx, sy, sz) \
   int jinc = (sy) * (nxd) - (nx) * (sx);                              \

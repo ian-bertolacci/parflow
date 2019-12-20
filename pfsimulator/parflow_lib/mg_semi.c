@@ -435,6 +435,348 @@ void     MGSemi(
  * SetupCoarseOps
  *--------------------------------------------------------------------------*/
 
+#if 0
+void              SetupCoarseOps(
+                                 Matrix **        A_l,
+                                 Matrix **        P_l,
+                                 int              num_levels,
+                                 SubregionArray **f_sra_l,
+                                 SubregionArray **c_sra_l)
+{
+  SubregionArray *subregion_array;
+
+  Subregion      *subregion;
+
+  Submatrix      *P_sub;
+  Submatrix      *A_sub;
+  Submatrix      *Ac_sub;
+
+  double               *p1, *p2;
+  double         *a0, *a1, *a2, *a3, *a4, *a5, *a6;
+  double         *ac0, *ac1, *ac2, *ac3, *ac4, *ac5, *ac6;
+  double ap0;
+
+  Stencil        *P_stencil, *A_stencil;
+  StencilElt     *P_ss, *A_ss;
+  int P_sz, A_sz;
+  int s_num[7];
+
+  int nx, ny, nz;
+  int nx_A, ny_A, nz_A;
+  int nx_Ac, ny_Ac, nz_Ac;
+  int nx_P, ny_P, nz_P;
+
+  int ii, jj, kk;
+  int ix, iy, iz;
+  int sx, sy, sz;
+
+  int iP, iP1, iP2, dP12 = 0;
+  int iA, iA1, iA2, dA12 = 0;
+  int iAc;
+
+  int l, i, j, k;
+
+
+  /*-----------------------------------------------------------------------
+   * Set fine grid conductivity, current solution, and finest matrix.
+   *-----------------------------------------------------------------------*/
+#pragma omp parallel
+  {
+    for (l = 0; l <= (num_levels - 2); l++)
+    {
+      /*--------------------------------------------------------------
+       * Align prolongation stencil with matrix stencil
+       *--------------------------------------------------------------*/
+
+      P_stencil = MatrixStencil(P_l[l]);
+      A_stencil = MatrixStencil(A_l[l]);
+      P_ss = StencilShape(P_stencil);
+      A_ss = StencilShape(A_stencil);
+      P_sz = StencilSize(P_stencil);
+      A_sz = StencilSize(A_stencil);
+
+#pragma omp for private(j)
+      for (j = 0; j < A_sz; j++)
+        s_num[j] = j;
+
+      for (j = 1; j < A_sz; j++)
+      {
+        for (k = 0; k < P_sz; k++)
+        {
+          if ((A_ss[j][0] == P_ss[k][0]) &&
+              (A_ss[j][1] == P_ss[k][1]) &&
+              (A_ss[j][2] == P_ss[k][2]))
+          {
+            s_num[j] = s_num[k + 1];
+            s_num[k + 1] = j;
+            break;
+          }
+        }
+      }
+
+      /*--------------------------------------------------------------------
+       * Compute prolongation matrix
+       *--------------------------------------------------------------------*/
+
+      subregion_array = f_sra_l[l];
+
+      ForSubregionI(i, subregion_array)
+      {
+        subregion = SubregionArraySubregion(subregion_array, i);
+
+        nx = SubregionNX(subregion);
+        ny = SubregionNY(subregion);
+        nz = SubregionNZ(subregion);
+
+        if (nx && ny && nz)
+        {
+          ix = SubregionIX(subregion);
+          iy = SubregionIY(subregion);
+          iz = SubregionIZ(subregion);
+
+          sx = SubregionSX(subregion);
+          sy = SubregionSY(subregion);
+          sz = SubregionSZ(subregion);
+
+          P_sub = MatrixSubmatrix(P_l[l], i);
+          A_sub = MatrixSubmatrix(A_l[l], i);
+
+          nx_P = SubmatrixNX(P_sub);
+          ny_P = SubmatrixNY(P_sub);
+          nz_P = SubmatrixNZ(P_sub);
+
+          nx_A = SubmatrixNX(A_sub);
+          ny_A = SubmatrixNY(A_sub);
+          nz_A = SubmatrixNZ(A_sub);
+
+          p1 = SubmatrixStencilData(P_sub, 0);
+          p2 = SubmatrixStencilData(P_sub, 1);
+
+          a0 = SubmatrixStencilData(A_sub, s_num[0]);
+          a1 = SubmatrixStencilData(A_sub, s_num[1]);
+          a2 = SubmatrixStencilData(A_sub, s_num[2]);
+          a3 = SubmatrixStencilData(A_sub, s_num[3]);
+          a4 = SubmatrixStencilData(A_sub, s_num[4]);
+          a5 = SubmatrixStencilData(A_sub, s_num[5]);
+          a6 = SubmatrixStencilData(A_sub, s_num[6]);
+
+          iP = SubmatrixEltIndex(P_sub, ix, iy, iz);
+          iA = SubmatrixEltIndex(A_sub, ix, iy, iz);
+
+          _BoxLoopI2(LOCALS(ap0),
+                      ii, jj, kk, ix, iy, iz, nx, ny, nz,
+                      iP, nx_P, ny_P, nz_P, 1, 1, 1,
+                      iA, nx_A, ny_A, nz_A, sx, sy, sz,
+          {
+            ap0 = a0[iA] + a3[iA] + a4[iA] + a5[iA] + a6[iA];
+
+            if (ap0)
+            {
+              p1[iP] = -a1[iA] / ap0;
+              p2[iP] = -a2[iA] / ap0;
+            }
+            else
+            {
+              p1[iP] = 0.0;
+              p2[iP] = 0.0;
+            }
+          });
+        }
+      }
+
+      /*--------------------------------------------------------------------
+       * Update prolongation matrix boundaries
+       *--------------------------------------------------------------------*/
+#pragma omp single
+      {
+        FinalizeMatrixUpdate(InitMatrixUpdate(P_l[l]));
+      }
+      /*--------------------------------------------------------------------
+       * Compute coarse coefficient matrix
+       *--------------------------------------------------------------------*/
+
+      subregion_array = c_sra_l[l];
+
+      ForSubregionI(i, subregion_array)
+      {
+        subregion = SubregionArraySubregion(subregion_array, i);
+
+        nx = SubregionNX(subregion);
+        ny = SubregionNY(subregion);
+        nz = SubregionNZ(subregion);
+
+        if (nx && ny && nz)
+        {
+          ix = SubregionIX(subregion);
+          iy = SubregionIY(subregion);
+          iz = SubregionIZ(subregion);
+
+          sx = SubregionSX(subregion);
+          sy = SubregionSY(subregion);
+          sz = SubregionSZ(subregion);
+
+          P_sub = MatrixSubmatrix(P_l[l], i);
+          A_sub = MatrixSubmatrix(A_l[l], i);
+          Ac_sub = MatrixSubmatrix(A_l[l + 1], i);
+
+          nx_P = SubmatrixNX(P_sub);
+          ny_P = SubmatrixNY(P_sub);
+          nz_P = SubmatrixNZ(P_sub);
+
+          nx_A = SubmatrixNX(A_sub);
+          ny_A = SubmatrixNY(A_sub);
+          nz_A = SubmatrixNZ(A_sub);
+
+          nx_Ac = SubmatrixNX(Ac_sub);
+          ny_Ac = SubmatrixNY(Ac_sub);
+          nz_Ac = SubmatrixNZ(Ac_sub);
+
+          p1 = SubmatrixStencilData(P_sub, 0);
+          p2 = SubmatrixStencilData(P_sub, 1);
+
+          a0 = SubmatrixStencilData(A_sub, s_num[0]);
+          a1 = SubmatrixStencilData(A_sub, s_num[1]);
+          a2 = SubmatrixStencilData(A_sub, s_num[2]);
+          a3 = SubmatrixStencilData(A_sub, s_num[3]);
+          a4 = SubmatrixStencilData(A_sub, s_num[4]);
+          a5 = SubmatrixStencilData(A_sub, s_num[5]);
+          a6 = SubmatrixStencilData(A_sub, s_num[6]);
+
+          ac0 = SubmatrixStencilData(Ac_sub, s_num[0]);
+          ac1 = SubmatrixStencilData(Ac_sub, s_num[1]);
+          ac2 = SubmatrixStencilData(Ac_sub, s_num[2]);
+          ac3 = SubmatrixStencilData(Ac_sub, s_num[3]);
+          ac4 = SubmatrixStencilData(Ac_sub, s_num[4]);
+          ac5 = SubmatrixStencilData(Ac_sub, s_num[5]);
+          ac6 = SubmatrixStencilData(Ac_sub, s_num[6]);
+
+          iP1 = SubmatrixEltIndex(P_sub,
+                                  (ix + P_ss[0][0]),
+                                  (iy + P_ss[0][1]),
+                                  (iz + P_ss[0][2]));
+
+          iA = SubmatrixEltIndex(A_sub, ix, iy, iz);
+          iAc = SubmatrixEltIndex(Ac_sub, ix / sx, iy / sy, iz / sz);
+
+          if (s_num[2] == 2)
+          {
+            dP12 = 1;
+            dA12 = 1;
+          }
+          else if (s_num[2] == 4)
+          {
+            dP12 = SubmatrixNX(P_sub);
+            dA12 = SubmatrixNX(A_sub);
+          }
+          else if (s_num[2] == 6)
+          {
+            dP12 = SubmatrixNX(P_sub) * SubmatrixNY(P_sub);
+            dA12 = SubmatrixNX(A_sub) * SubmatrixNY(A_sub);
+          }
+
+          _BoxLoopI3(LOCALS(iP2, iA1, iA2),
+                      ii, jj, kk, ix, iy, iz, nx, ny, nz,
+                      iP1, nx_P, ny_P, nz_P, 1, 1, 1,
+                      iA, nx_A, ny_A, nz_A, sx, sy, sz,
+                      iAc, nx_Ac, ny_Ac, nz_Ac, 1, 1, 1,
+          {
+            iP2 = iP1 + dP12;
+            iA1 = iA - dA12;
+            iA2 = iA + dA12;
+
+            ac3[iAc] = a3[iA] + 0.5 * a3[iA1] + 0.5 * a3[iA2];
+            ac4[iAc] = a4[iA] + 0.5 * a4[iA1] + 0.5 * a4[iA2];
+            ac5[iAc] = a5[iA] + 0.5 * a5[iA1] + 0.5 * a5[iA2];
+            ac6[iAc] = a6[iA] + 0.5 * a6[iA1] + 0.5 * a6[iA2];
+
+            ac1[iAc] = a1[iA] * p1[iP1];
+            ac2[iAc] = a2[iA] * p2[iP2];
+
+            ac0[iAc] =
+                       a0[iA] + a3[iA] + a4[iA] + a5[iA] + a6[iA] +
+                       a1[iA] * p2[iP1] + a2[iA] * p1[iP2];
+          });
+        }
+      }
+
+      /*--------------------------------------------------------------------
+       * Update coefficient matrix boundaries
+       *--------------------------------------------------------------------*/
+
+#pragma omp single
+      {
+        FinalizeMatrixUpdate(InitMatrixUpdate(A_l[l + 1]));
+      }
+
+      /*--------------------------------------------------------------------
+       * Complete computation of center coefficient
+       *--------------------------------------------------------------------*/
+
+      ForSubregionI(i, subregion_array)
+      {
+        subregion = SubregionArraySubregion(subregion_array, i);
+
+        nx = SubregionNX(subregion);
+        ny = SubregionNY(subregion);
+        nz = SubregionNZ(subregion);
+
+        if (nx && ny && nz)
+        {
+          ix = SubregionIX(subregion);
+          iy = SubregionIY(subregion);
+          iz = SubregionIZ(subregion);
+
+          sx = SubregionSX(subregion);
+          sy = SubregionSY(subregion);
+          sz = SubregionSZ(subregion);
+
+          Ac_sub = MatrixSubmatrix(A_l[l + 1], i);
+
+          nx_Ac = SubmatrixNX(Ac_sub);
+          ny_Ac = SubmatrixNY(Ac_sub);
+          nz_Ac = SubmatrixNZ(Ac_sub);
+
+          ac0 = SubmatrixStencilData(Ac_sub, s_num[0]);
+          ac3 = SubmatrixStencilData(Ac_sub, s_num[3]);
+          ac4 = SubmatrixStencilData(Ac_sub, s_num[4]);
+          ac5 = SubmatrixStencilData(Ac_sub, s_num[5]);
+          ac6 = SubmatrixStencilData(Ac_sub, s_num[6]);
+
+          iAc = SubmatrixEltIndex(Ac_sub, ix / sx, iy / sy, iz / sz);
+
+          _BoxLoopI1(NO_LOCALS,
+                      ii, jj, kk, ix, iy, iz, nx, ny, nz,
+                      iAc, nx_Ac, ny_Ac, nz_Ac, 1, 1, 1,
+          {
+            ac0[iAc] -= (ac3[iAc] + ac4[iAc] +
+                         ac5[iAc] + ac6[iAc]);
+          });
+        }
+      }
+    }
+  }
+
+#if 0
+  /* for debugging purposes */
+  for (l = 0; l < num_levels; l++)
+  {
+    char filename[255];
+
+    sprintf(filename, "A.%02d", l);
+    PrintSortMatrix(filename, A_l[l], FALSE);
+  }
+  for (l = 0; l < (num_levels - 1); l++)
+  {
+    char filename[255];
+
+    sprintf(filename, "P.%02d", l);
+    PrintSortMatrix(filename, P_l[l], FALSE);
+  }
+#endif
+}
+
+#else
+
 void              SetupCoarseOps(
                                  Matrix **        A_l,
                                  Matrix **        P_l,
@@ -764,6 +1106,8 @@ void              SetupCoarseOps(
   }
 #endif
 }
+
+#endif // Coarse Ops #if
 
 
 /*--------------------------------------------------------------------------

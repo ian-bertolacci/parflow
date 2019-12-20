@@ -5,8 +5,17 @@
 
 #include <omp.h>
 
+/* Utility macros for inserting OMP pragmas in macros */
+#define EMPTY()
+#define DEFER(x) x EMPTY()
+#define PRAGMA(args) _Pragma( #args )
+
 #undef PlusEquals
 #define PlusEquals(a, b) OMP_PlusEquals(&(a), b)
+
+#undef LOCALS
+#define LOCALS(...) DEFER(_LOCALS)(__VA_ARGS__)
+#define _LOCALS(...) ,__VA_ARGS__
 
 extern "C++"{
 
@@ -46,8 +55,10 @@ extern "C++"{
     return (0.5 * (a + b));
   }
 
+  #undef AtomicSet
+#define AtomicSet(a, b) OMP_AtomicSet(&(a), b)
   template<typename T>
-  static inline void AtomicSet(T *var, T val)
+  static inline void OMP_AtomicSet(T *var, T val)
   {
     #pragma omp atomic write
     *var = val;
@@ -167,6 +178,30 @@ INC_IDX(int idx, int i, int j, int k,
       }                                                                 \
 	}
 
+#define __BoxLoopI1(locals,																							\
+                   i, j, k,                                             \
+                   ix, iy, iz, nx, ny, nz,                              \
+                   i1, nx1, ny1, nz1, sx1, sy1, sz1,                    \
+                   body)                                                \
+	{                                                                     \
+    int i1_start = i1;                                                  \
+		DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
+		PRAGMA(omp for collapse(3) private(i, j, k, i1 locals))							\
+			for (k = iz; k < iz + nz; k++)																		\
+      {                                                                 \
+        for (j = iy; j < iy + ny; j++)                                  \
+        {                                                               \
+          for (i = ix; i < ix + nx; i++)                                \
+          {                                                             \
+            i1 = INC_IDX(i1_start, (i - ix), (j - iy), (k - iz),        \
+                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
+            body;                                                       \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+	}
+
+
 #undef _BoxLoopI2
 #define _BoxLoopI2(locals,                                              \
                    i, j, k,                                             \
@@ -180,6 +215,34 @@ INC_IDX(int idx, int i, int j, int k,
     DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
     DeclareInc(PV_jinc_2, PV_kinc_2, nx, ny, nz, nx2, ny2, nz2, sx2, sy2, sz2); \
     PRAGMA(omp parallel for collapse(3) private(i, j, k, i1, i2 locals)) \
+      for (k = iz; k < iz + nz; k++)                                    \
+      {                                                                 \
+        for (j = iy; j < iy + ny; j++)                                  \
+        {                                                               \
+          for (i = ix; i < ix + nx; i++)                                \
+          {                                                             \
+            i1 = INC_IDX(i1_start, (i - ix), (j - iy), (k - iz),        \
+                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
+            i2 = INC_IDX(i2_start, (i - ix), (j - iy), (k - iz),        \
+                         nx, ny, sx2, PV_jinc_2, PV_kinc_2);            \
+            body;                                                       \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+  }
+
+#define __BoxLoopI2(locals,																							\
+                   i, j, k,                                             \
+                   ix, iy, iz, nx, ny, nz,                              \
+                   i1, nx1, ny1, nz1, sx1, sy1, sz1,                    \
+                   i2, nx2, ny2, nz2, sx2, sy2, sz2,                    \
+                   body)                                                \
+  {                                                                     \
+    int i1_start = i1;                                                  \
+    int i2_start = i2;                                                  \
+    DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
+    DeclareInc(PV_jinc_2, PV_kinc_2, nx, ny, nz, nx2, ny2, nz2, sx2, sy2, sz2); \
+    PRAGMA(omp for collapse(3) private(i, j, k, i1, i2 locals))					\
       for (k = iz; k < iz + nz; k++)                                    \
       {                                                                 \
         for (j = iy; j < iy + ny; j++)                                  \
@@ -231,9 +294,42 @@ INC_IDX(int idx, int i, int j, int k,
       }                                                                 \
   }
 
+#define __BoxLoopI3(locals,																							\
+                   i, j, k,                                             \
+                   ix, iy, iz, nx, ny, nz,                              \
+                   i1, nx1, ny1, nz1, sx1, sy1, sz1,                    \
+                   i2, nx2, ny2, nz2, sx2, sy2, sz2,                    \
+                   i3, nx3, ny3, nz3, sx3, sy3, sz3,                    \
+                   body)                                                \
+  {                                                                     \
+    int i1_start = i1;                                                  \
+    int i2_start = i2;                                                  \
+    int i3_start = i3;                                                  \
+    DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
+    DeclareInc(PV_jinc_2, PV_kinc_2, nx, ny, nz, nx2, ny2, nz2, sx2, sy2, sz2); \
+    DeclareInc(PV_jinc_3, PV_kinc_3, nx, ny, nz, nx3, ny3, nz3, sx3, sy3, sz3); \
+    PRAGMA(omp for collapse(3) private(i, j, k, i1, i2, i3 locals))			\
+      for (k = iz; k < iz + nz; k++)                                    \
+      {                                                                 \
+        for (j = iy; j < iy + ny; j++)                                  \
+        {                                                               \
+          for (i = ix; i < ix + nx; i++)                                \
+          {                                                             \
+            i1 = INC_IDX(i1_start, (i - ix), (j - iy), (k - iz),        \
+                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
+            i2 = INC_IDX(i2_start, (i - ix), (j - iy), (k - iz),        \
+                         nx, ny, sx2, PV_jinc_2, PV_kinc_2);            \
+            i3 = INC_IDX(i3_start, (i - ix), (j - iy), (k - iz),        \
+                         nx, ny, sx3, PV_jinc_3, PV_kinc_3);            \
+            body;                                                       \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+  }
+
 
 #undef BoxLoopReduceI1
-#define BoxLoopReduceI1(sum,                                            \
+#define BoxLoopReduceI1(locals, sum,																		\
                         i, j, k,                                        \
                         ix, iy, iz, nx, ny, nz,                         \
                         i1, nx1, ny1, nz1, sx1, sy1, sz1,               \
@@ -241,7 +337,7 @@ INC_IDX(int idx, int i, int j, int k,
   {                                                                     \
     int i1_start = i1;                                                  \
     DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
-    PRAGMA(omp parallel for reduction(+:sum) collapse(3) private(i, j, k, i1)) \
+    PRAGMA(omp parallel for reduction(+:sum) collapse(3) private(i, j, k, i1 locals)) \
       for (k = iz; k < iz + nz; k++)                                    \
       {                                                                 \
         for (j = iy; j < iy + ny; j++)                                  \
@@ -437,7 +533,7 @@ INC_IDX(int idx, int i, int j, int k,
     }                                                                   \
 	}
 
-#define ___GrGeomInLoopBoxes(locals, i, j, k,                         \
+#define ___GrGeomInLoopBoxes(locals, i, j, k,												\
 													 grgeom, ix, iy, iz,                      \
 													 nx, ny, nz, body)                        \
   {                                                                 \
