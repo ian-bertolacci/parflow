@@ -95,19 +95,27 @@ void             MGSemiRestrict(
    * Compute r_c in c_sr_array
    *--------------------------------------------------------------------*/
 
+#pragma omp parallel private(compute_i, i, j)
+  {
   for (compute_i = 0; compute_i < 2; compute_i++)
   {
     switch (compute_i)
     {
       case 0:
+#pragma omp master
+      {
         handle = InitCommunication(r_f_comm_pkg);
-        compute_reg = ComputePkgIndRegion(compute_pkg);
-        break;
+      }
+      compute_reg = ComputePkgIndRegion(compute_pkg);
+      break;
 
       case 1:
+#pragma omp master
+      {
         FinalizeCommunication(handle);
-        compute_reg = ComputePkgDepRegion(compute_pkg);
-        break;
+      }
+      compute_reg = ComputePkgDepRegion(compute_pkg);
+      break;
     }
 
     ForSubregionArrayI(i, compute_reg)
@@ -178,7 +186,7 @@ void             MGSemiRestrict(
       }
     }
   }
-
+  } // End Parallel Region
   /*-----------------------------------------------------------------------
    * Increment the flop counter
    *-----------------------------------------------------------------------*/

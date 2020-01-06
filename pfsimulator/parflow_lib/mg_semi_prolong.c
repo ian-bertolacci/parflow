@@ -91,6 +91,8 @@ void             MGSemiProlong(
    * Compute e_f in c_sr_array
    *--------------------------------------------------------------------*/
 
+#pragma omp parallel private(i, j, compute_i)
+  {
   ForSubregionI(i, c_sr_array)
   {
     subregion = SubregionArraySubregion(c_sr_array, i);
@@ -125,7 +127,7 @@ void             MGSemiProlong(
 
       i_c = 0;
       i_f = 0;
-      _BoxLoopI2(NO_LOCALS,
+      __BoxLoopI2(NO_LOCALS,
                  ii, jj, kk, ix, iy, iz, nx, ny, nz,
                  i_c, nx_c, ny_c, nz_c, 1, 1, 1,
                  i_f, nx_f, ny_f, nz_f, sx, sy, sz,
@@ -144,12 +146,18 @@ void             MGSemiProlong(
     switch (compute_i)
     {
       case 0:
+#pragma omp master
+      {
         handle = InitCommunication(e_f_comm_pkg);
+      }
         compute_reg = ComputePkgIndRegion(compute_pkg);
         break;
 
       case 1:
+#pragma omp master
+      {
         FinalizeCommunication(handle);
+      }
         compute_reg = ComputePkgDepRegion(compute_pkg);
         break;
     }
@@ -198,7 +206,7 @@ void             MGSemiProlong(
 
         i_c = 0;
         i_f = 0;
-        _BoxLoopI2(NO_LOCALS,
+        __BoxLoopI2(NO_LOCALS,
                    ii, jj, kk, ix, iy, iz, nx, ny, nz,
                    i_c, nx_c, ny_c, nz_c, 1, 1, 1,
                    i_f, nx_f, ny_f, nz_f, sx, sy, sz,
@@ -209,7 +217,7 @@ void             MGSemiProlong(
       }
     }
   }
-
+  } // End Parallel Region
   /*-----------------------------------------------------------------------
    * Increment the flop counter
    *-----------------------------------------------------------------------*/

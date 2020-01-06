@@ -747,46 +747,43 @@ void    InitMatrix(
 
 
   subgrids = GridSubgrids(grid);
-  ForSubgridI(is, subgrids)
+#pragma omp parallel private(is, s, Ap)
   {
-    subgrid = SubgridArraySubgrid(subgrids, is);
-
-    A_sub = MatrixSubmatrix(A, is);
-
-    ix = SubgridIX(subgrid);
-    iy = SubgridIY(subgrid);
-    iz = SubgridIZ(subgrid);
-
-    nx = SubgridNX(subgrid);
-    ny = SubgridNY(subgrid);
-    nz = SubgridNZ(subgrid);
-
-    nx_m = SubmatrixNX(A_sub);
-    ny_m = SubmatrixNY(A_sub);
-    nz_m = SubmatrixNZ(A_sub);
-
-    stencil = MatrixStencil(A);
-    /*InitMatrixLoop(s, stencil, Ap, A_sub,
-                   i, j, k, ix, iy, iz, nx, ny, nz,
-                   im, nx_m, ny_m, nz_m, 1, 1, 1,
+    ForSubgridI(is, subgrids)
     {
-      Ap[im] = value;
-    });
-    */
+      subgrid = SubgridArraySubgrid(subgrids, is);
 
-    for (s = 0; s < StencilSize(stencil); s++)
-    {
-      Ap = SubmatrixElt(A_sub, s, ix, iy, iz);
+      A_sub = MatrixSubmatrix(A, is);
 
-      im = 0;
-      BoxLoopI1(i, j, k, ix, iy, iz, nx, ny, nz,
-                im, nx_m, ny_m, nz_m, 1, 1, 1,
+      ix = SubgridIX(subgrid);
+      iy = SubgridIY(subgrid);
+      iz = SubgridIZ(subgrid);
+
+      nx = SubgridNX(subgrid);
+      ny = SubgridNY(subgrid);
+      nz = SubgridNZ(subgrid);
+
+      nx_m = SubmatrixNX(A_sub);
+      ny_m = SubmatrixNY(A_sub);
+      nz_m = SubmatrixNZ(A_sub);
+
+      stencil = MatrixStencil(A);
+
+      for (s = 0; s < StencilSize(stencil); s++)
       {
-        Ap[im] = value;
-      });
-    }
+        Ap = SubmatrixElt(A_sub, s, ix, iy, iz);
 
-  }
+        im = 0;
+        ___BoxLoopI1(NO_LOCALS,
+                     i, j, k, ix, iy, iz, nx, ny, nz,
+                     im, nx_m, ny_m, nz_m, 1, 1, 1,
+        {
+          Ap[im] = value;
+        });
+      }
+
+    }
+  } // End Parallel Region
 
   EndTiming(MatrixInitTimingIndex);
 }
