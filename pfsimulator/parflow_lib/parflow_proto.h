@@ -1236,11 +1236,18 @@ void FreeUserGrid(Grid *user_grid);
 
 /* vector.c */
 CommPkg *NewVectorCommPkg(Vector *vector, ComputePkg *compute_pkg);
+
+#ifdef DEBUGGING_VECTOR_UPDATE
+VectorUpdateCommHandle  *_InitVectorUpdate(Vector *vector, int     update_mode);
+void         _FinalizeVectorUpdate(VectorUpdateCommHandle *handle);
+#else
 VectorUpdateCommHandle  *InitVectorUpdate(
                                           Vector *vector,
                                           int     update_mode);
 void         FinalizeVectorUpdate(
                                   VectorUpdateCommHandle *handle);
+#endif
+
 Vector  *NewVector(
                    Grid *grid,
                    int   nc,

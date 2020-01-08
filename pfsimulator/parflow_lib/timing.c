@@ -60,6 +60,10 @@ void  NewTiming()
   RegisterTiming("PFSOL Read");
   RegisterTiming("Clustering");
   RegisterTiming("MatrixInit");
+  RegisterTiming("Copy");
+  RegisterTiming("MGSemiRestrict");
+  RegisterTiming("MGSemiProlong");
+  RegisterTiming("RBGSPoint");
 #ifdef VECTOR_UPDATE_TIMING
   RegisterTiming("VectorUpdate");
 #endif

@@ -84,11 +84,15 @@ CommPkg  *NewVectorCommPkg(
 /*--------------------------------------------------------------------------
  * InitVectorUpdate
  *--------------------------------------------------------------------------*/
-
-VectorUpdateCommHandle  *InitVectorUpdate(
-                                          Vector *vector,
-                                          int     update_mode)
+#ifdef DEBUGGING_VECTOR_UPDATE
+VectorUpdateCommHandle  *_InitVectorUpdate(Vector *vector, int     update_mode)
+#else
+VectorUpdateCommHandle  *InitVectorUpdate(Vector *vector, int     update_mode)
+#endif
 {
+  VectorUpdateCommHandle *vector_update_comm_handle = NULL;
+#pragma omp master
+  {
   enum ParflowGridType grid_type = invalid_grid_type;
 
 #ifdef HAVE_SAMRAI
@@ -175,10 +179,14 @@ VectorUpdateCommHandle  *InitVectorUpdate(
 #endif
   }
 
-  VectorUpdateCommHandle *vector_update_comm_handle = ctalloc(VectorUpdateCommHandle, 1);
+  //VectorUpdateCommHandle *vector_update_comm_handle = ctalloc(VectorUpdateCommHandle, 1);
+  vector_update_comm_handle = ctalloc(VectorUpdateCommHandle, 1);
   vector_update_comm_handle->vector = vector;
   vector_update_comm_handle->comm_handle = amps_com_handle;
 
+  }
+
+  #pragma omp barrier
 
   return vector_update_comm_handle;
 }
@@ -187,10 +195,14 @@ VectorUpdateCommHandle  *InitVectorUpdate(
 /*--------------------------------------------------------------------------
  * FinalizeVectorUpdate
  *--------------------------------------------------------------------------*/
-
-void         FinalizeVectorUpdate(
-                                  VectorUpdateCommHandle *handle)
+#ifdef DEBUGGING_VECTOR_UPDATE
+void         _FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
+#else
+void         FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
+#endif
 {
+  #pragma omp master
+  {
   switch (handle->vector->type)
   {
     case vector_cell_centered:
@@ -221,6 +233,9 @@ void         FinalizeVectorUpdate(
   ;
 
   tfree(handle);
+  }
+  #pragma omp barrier
+
 }
 
 

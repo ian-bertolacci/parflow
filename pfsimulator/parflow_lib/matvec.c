@@ -152,7 +152,7 @@ void            Matvec(
 
   compute_pkg = GridComputePkg(grid, VectorUpdateAll);
 
-#pragma omp parallel private(compute_i, sg, sra, sr, si)
+#pragma omp parallel private(compute_i, sg, sra, sr, si, handle)
   {
     int vi;
     int mi;
@@ -164,21 +164,24 @@ void            Matvec(
       {
         case 0:
 
-#pragma omp master
-        {
 #ifndef NO_VECTOR_UPDATE
 #ifdef VECTOR_UPDATE_TIMING
+#pragma omp master
+        {
           BeginTiming(VectorUpdateTimingIndex);
           EventTiming[NumEvents][InitStart] = amps_Clock();
+        }
 #endif
           handle = InitVectorUpdate(x, VectorUpdateAll);
 
 #ifdef VECTOR_UPDATE_TIMING
-          EventTiming[NumEvents][InitEnd] = amps_Clock();
-          EndTiming(VectorUpdateTimingIndex);
+#pragma omp master
+          {
+            EventTiming[NumEvents][InitEnd] = amps_Clock();
+            EndTiming(VectorUpdateTimingIndex);
+          }
 #endif
 #endif
-        }
 
         compute_reg = ComputePkgIndRegion(compute_pkg);
         /*-----------------------------------------------------------------
@@ -240,21 +243,24 @@ void            Matvec(
 
         case 1:
 
-#pragma omp master
-        {
 #ifndef NO_VECTOR_UPDATE
 #ifdef VECTOR_UPDATE_TIMING
+#pragma omp master
+        {
           BeginTiming(VectorUpdateTimingIndex);
           EventTiming[NumEvents][FinalizeStart] = amps_Clock();
+        }
 #endif
           FinalizeVectorUpdate(handle);
 
 #ifdef VECTOR_UPDATE_TIMING
-          EventTiming[NumEvents][FinalizeEnd] = amps_Clock();
-          EndTiming(VectorUpdateTimingIndex);
+#pragma omp master
+          {
+            EventTiming[NumEvents][FinalizeEnd] = amps_Clock();
+            EndTiming(VectorUpdateTimingIndex);
+          }
 #endif
 #endif
-        }
 
         compute_reg = ComputePkgDepRegion(compute_pkg);
         break;
@@ -789,21 +795,24 @@ void            MatvecSubMat(
     switch (compute_i)
     {
       case 0:
-#pragma omp master
-      {
 #ifndef NO_VECTOR_UPDATE
 #ifdef VECTOR_UPDATE_TIMING
+#pragma omp master
+      {
         BeginTiming(VectorUpdateTimingIndex);
         EventTiming[NumEvents][InitStart] = amps_Clock();
+      }
 #endif
         handle = InitVectorUpdate(x, VectorUpdateAll);
 
 #ifdef VECTOR_UPDATE_TIMING
-        EventTiming[NumEvents][InitEnd] = amps_Clock();
-        EndTiming(VectorUpdateTimingIndex);
+#pragma omp master
+        {
+          EventTiming[NumEvents][InitEnd] = amps_Clock();
+          EndTiming(VectorUpdateTimingIndex);
+        }
 #endif
 #endif
-      }
         compute_reg = ComputePkgIndRegion(compute_pkg);
 
         /*-----------------------------------------------------------------
@@ -865,21 +874,24 @@ void            MatvecSubMat(
 
       case 1:
 
-#pragma omp master
-      {
 #ifndef NO_VECTOR_UPDATE
 #ifdef VECTOR_UPDATE_TIMING
+#pragma omp master
+      {
         BeginTiming(VectorUpdateTimingIndex);
         EventTiming[NumEvents][FinalizeStart] = amps_Clock();
+      }
 #endif
-        FinalizeVectorUpdate(handle);
+      FinalizeVectorUpdate(handle);
 
 #ifdef VECTOR_UPDATE_TIMING
+#pragma omp master
+      {
         EventTiming[NumEvents][FinalizeEnd] = amps_Clock();
         EndTiming(VectorUpdateTimingIndex);
-#endif
-#endif
       }
+#endif
+#endif
 
         compute_reg = ComputePkgDepRegion(compute_pkg);
 

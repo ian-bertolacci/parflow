@@ -49,8 +49,12 @@
 #define PFSOLReadTimingIndex  7
 #define ClusteringTimingIndex 8
 #define MatrixInitTimingIndex 9
+#define CopyTimingIndex 10
+#define MGRestrictTimingIndex 11
+#define MGProlongTimingIndex 12
+#define RedBlackGSTimingIndex 13
 #ifdef VECTOR_UPDATE_TIMING
-#define VectorUpdateTimingIndex  10
+#define VectorUpdateTimingIndex  14
 #endif
 
 
