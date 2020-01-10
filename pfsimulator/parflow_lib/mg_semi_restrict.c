@@ -44,7 +44,6 @@ extern "C"{
 /*--------------------------------------------------------------------------
  * MGSemiRestrict
  *--------------------------------------------------------------------------*/
-
 void             MGSemiRestrict(
                                 Matrix *        A_f,
                                 Vector *        r_f,
@@ -95,27 +94,21 @@ void             MGSemiRestrict(
    * Compute r_c in c_sr_array
    *--------------------------------------------------------------------*/
 
-#pragma omp parallel private(compute_i, i, j)
+#pragma omp parallel private(compute_i, i, j, handle)
   {
   for (compute_i = 0; compute_i < 2; compute_i++)
   {
     switch (compute_i)
     {
       case 0:
-#pragma omp master
-      {
         handle = InitCommunication(r_f_comm_pkg);
-      }
-      compute_reg = ComputePkgIndRegion(compute_pkg);
-      break;
+        compute_reg = ComputePkgIndRegion(compute_pkg);
+        break;
 
       case 1:
-#pragma omp master
-      {
         FinalizeCommunication(handle);
-      }
-      compute_reg = ComputePkgDepRegion(compute_pkg);
-      break;
+        compute_reg = ComputePkgDepRegion(compute_pkg);
+        break;
     }
 
     ForSubregionArrayI(i, compute_reg)
@@ -174,7 +167,7 @@ void             MGSemiRestrict(
         i_p = 0;
         i_c = 0;
         i_f = 0;
-        _BoxLoopI3(NO_LOCALS,
+        _BoxLoopI3(InParallel, NO_LOCALS,
                    ii, jj, kk, ix, iy, iz, nx, ny, nz,
                    i_p, nx_p, ny_p, nz_p, 1, 1, 1,
                    i_c, nx_c, ny_c, nz_c, 1, 1, 1,

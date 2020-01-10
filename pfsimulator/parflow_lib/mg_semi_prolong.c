@@ -44,7 +44,6 @@ extern "C"{
 /*--------------------------------------------------------------------------
  * MGSemiProlong
  *--------------------------------------------------------------------------*/
-
 void             MGSemiProlong(
                                Matrix *        A_f,
                                Vector *        e_f,
@@ -127,7 +126,7 @@ void             MGSemiProlong(
 
       i_c = 0;
       i_f = 0;
-      __BoxLoopI2(NO_LOCALS,
+      _BoxLoopI2(InParallel, NO_LOCALS,
                  ii, jj, kk, ix, iy, iz, nx, ny, nz,
                  i_c, nx_c, ny_c, nz_c, 1, 1, 1,
                  i_f, nx_f, ny_f, nz_f, sx, sy, sz,
@@ -146,18 +145,12 @@ void             MGSemiProlong(
     switch (compute_i)
     {
       case 0:
-#pragma omp master
-      {
         handle = InitCommunication(e_f_comm_pkg);
-      }
         compute_reg = ComputePkgIndRegion(compute_pkg);
         break;
 
       case 1:
-#pragma omp master
-      {
         FinalizeCommunication(handle);
-      }
         compute_reg = ComputePkgDepRegion(compute_pkg);
         break;
     }
@@ -206,7 +199,7 @@ void             MGSemiProlong(
 
         i_c = 0;
         i_f = 0;
-        __BoxLoopI2(NO_LOCALS,
+        _BoxLoopI2(InParallel, NO_LOCALS,
                    ii, jj, kk, ix, iy, iz, nx, ny, nz,
                    i_c, nx_c, ny_c, nz_c, 1, 1, 1,
                    i_f, nx_f, ny_f, nz_f, sx, sy, sz,
@@ -224,7 +217,6 @@ void             MGSemiProlong(
 
   IncFLOPCount(3 * VectorSize(e_c));
 }
-
 
 /*--------------------------------------------------------------------------
  * NewMGSemiProlongComputePkg

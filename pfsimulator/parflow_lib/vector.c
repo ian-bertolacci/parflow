@@ -781,7 +781,7 @@ void    InitVector(
     vp = SubvectorElt(v_sub, ix, iy, iz);
 
     iv = 0;
-    _BoxLoopI1(NO_LOCALS,
+    _BoxLoopI1(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
@@ -829,8 +829,11 @@ void    InitVectorAll(
     vp = SubvectorData(v_sub);
 
     iv = 0;
-    BoxLoopI1(i, j, k, ix_v, iy_v, iz_v, nx_v, ny_v, nz_v,
-              iv, nx_v, ny_v, nz_v, 1, 1, 1,
+    _BoxLoopI1(NoWait, NO_LOCALS,
+               i, j, k,
+               ix_v, iy_v, iz_v,
+               nx_v, ny_v, nz_v,
+               iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
       vp[iv] = value;
     });
@@ -889,7 +892,7 @@ void    InitVectorInc(
     vp = SubvectorElt(v_sub, ix, iy, iz);
 
     iv = 0;
-    _BoxLoopI1(NO_LOCALS,
+    _BoxLoopI1(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
@@ -944,7 +947,7 @@ void    InitVectorRandom(
     vp = SubvectorElt(v_sub, ix, iy, iz);
 
     iv = 0;
-    _BoxLoopI1(NO_LOCALS,
+    _BoxLoopI1(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {

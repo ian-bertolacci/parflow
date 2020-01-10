@@ -160,7 +160,8 @@ void         YSlope(
           r = SubgridRX(subgrid);
 
           data = SubvectorData(ps_sub);
-          _GrGeomInLoop(LOCALS(ips), i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
+          _GrGeomInLoop(NewParallel, LOCALS(ips),
+                        i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
           {
             ips = SubvectorEltIndex(ps_sub, i, j, 0);
 
@@ -206,7 +207,8 @@ void         YSlope(
         {
           case 1:       /* p= x */
           {
-            _GrGeomInLoop(LOCALS(ips), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(NewParallel, LOCALS(ips),
+                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
               /* x is unused here, skip.  */
@@ -220,7 +222,8 @@ void         YSlope(
           case 2:    /* topo = cos(x)/8 + sin(y)/20 + x^(1/8) + y^(1/8) + cos(x/5)/(5*8) + sin(y/5)/(5*10)
                       * Sy =  cos(y)/ 10 + (1/2)y^(-1/2) + cos(y/5)/(5*10) */
           {
-            _GrGeomInLoop(LOCALS(ips), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(NewParallel, LOCALS(ips),
+                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
               /* x is unused here, skip.  */
@@ -235,7 +238,8 @@ void         YSlope(
 
           case 3:       /* p= x^3y^2 + sinxy + 1 */
           {
-            _GrGeomInLoop(LOCALS(ips, x, y), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(NewParallel, LOCALS(ips, x, y),
+                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -248,7 +252,8 @@ void         YSlope(
 
           case 4:       /* f for p = x^3y^4 + x^2 + sinxy cosy + 1 */
           {
-            _GrGeomInLoop(LOCALS(ips, x, y, z), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(NewParallel, LOCALS(ips, x, y, z),
+                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -262,7 +267,8 @@ void         YSlope(
 
           case 5:       /* f = xyz-y^2z^2t^2-x^2z^2t^2-x^2y^2t^2 (p=xyzt+1)*/
           {
-            _GrGeomInLoop(LOCALS(ips, x, y, z), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(NewParallel, LOCALS(ips, x, y, z),
+                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -277,7 +283,8 @@ void         YSlope(
           case 6:       /* f = xyz-y^2z^2t^2-2x^2z^2t^2-3x^2y^2t^2 (p=xyzt+1,
                          * K=(1; 2; 3) )*/
           {
-            _GrGeomInLoop(LOCALS(ips, x, y, z), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+            _GrGeomInLoop(NewParallel, LOCALS(ips, x, y, z),
+                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, 0);
               x = RealSpaceX(i, SubgridRX(subgrid));
@@ -324,7 +331,8 @@ void         YSlope(
         psdat = SubvectorData(ps_sub);
         sy_values_dat = SubvectorData(sy_values_sub);
 
-        _GrGeomInLoop(LOCALS(ips, ipicv), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+        _GrGeomInLoop(NewParallel, LOCALS(ips, ipicv),
+                      i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
         {
           ips = SubvectorEltIndex(ps_sub, i, j, 0);
           ipicv = SubvectorEltIndex(sy_values_sub, i, j, 0);
@@ -365,7 +373,8 @@ void         YSlope(
         psdat = SubvectorData(ps_sub);
         sy_values_dat = SubvectorData(sy_values_sub);
 
-        _GrGeomInLoop(LOCALS(ips, ipicv), i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+        _GrGeomInLoop(NewParallel, LOCALS(ips, ipicv),
+                      i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
         {
           ips = SubvectorEltIndex(ps_sub, i, j, 0);
           ipicv = SubvectorEltIndex(sy_values_sub, i, j, 0);

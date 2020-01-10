@@ -218,7 +218,7 @@ void PFVLinearSum(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    _BoxLoopI3(NO_LOCALS,
+    _BoxLoopI3(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_y, nx_y, ny_y, nz_y, 1, 1, 1,
@@ -269,7 +269,7 @@ void PFVConstInit(
     zp = SubvectorElt(z_sub, ix, iy, iz);
 
     i_z = 0;
-    _BoxLoopI1(NO_LOCALS,
+    _BoxLoopI1(InParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_z, nx_z, ny_z, nz_z, 1, 1, 1,
     {
@@ -337,7 +337,7 @@ void PFVProd(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    _BoxLoopI3(NO_LOCALS,
+    _BoxLoopI3(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_y, nx_y, ny_y, nz_y, 1, 1, 1,
@@ -407,7 +407,7 @@ void PFVDiv(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    _BoxLoopI3(NO_LOCALS,
+    _BoxLoopI3(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_y, nx_y, ny_y, nz_y, 1, 1, 1,
@@ -484,7 +484,7 @@ void PFVScale(
 
       i_x = 0;
       i_z = 0;
-      _BoxLoopI2(NO_LOCALS,
+      _BoxLoopI2(NewParallel, NO_LOCALS,
                  i, j, k, ix, iy, iz, nx, ny, nz,
                  i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                  i_z, nx_z, ny_z, nz_z, 1, 1, 1,
@@ -544,7 +544,7 @@ void PFVAbs(
 
     i_x = 0;
     i_z = 0;
-    _BoxLoopI2(NO_LOCALS,
+    _BoxLoopI2(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_z, nx_z, ny_z, nz_z, 1, 1, 1,
@@ -602,7 +602,7 @@ void PFVInv(
 
     i_x = 0;
     i_z = 0;
-    _BoxLoopI2(NO_LOCALS,
+    _BoxLoopI2(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_z, nx_z, ny_z, nz_z, 1, 1, 1,
@@ -662,7 +662,7 @@ void PFVAddConst(
 
     i_x = 0;
     i_z = 0;
-    _BoxLoopI2(NO_LOCALS,
+    _BoxLoopI2(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_z, nx_z, ny_z, nz_z, 1, 1, 1,
@@ -1187,9 +1187,10 @@ int PFVConstrProdPos(
     val = 1;
     i_c = 0;
     i_x = 0;
-    BoxLoopI2(i, j, k, ix, iy, iz, nx, ny, nz,
-              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
-              i_c, nx_c, ny_c, nz_c, 1, 1, 1,
+    _BoxLoopI2(NewParallel, NO_LOCALS,
+               i, j, k, ix, iy, iz, nx, ny, nz,
+               i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+               i_c, nx_c, ny_c, nz_c, 1, 1, 1,
     {
       if (cp[i_c] != ZERO)
       {
@@ -1258,7 +1259,7 @@ void PFVCompare(
 
     i_x = 0;
     i_z = 0;
-    _BoxLoopI2(NO_LOCALS,
+    _BoxLoopI2(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_z, nx_z, ny_z, nz_z, 1, 1, 1,
@@ -1321,7 +1322,7 @@ int PFVInvTest(
     i_x = 0;
     i_z = 0;
     val = 1;
-    _BoxLoopI2(NO_LOCALS,
+    _BoxLoopI2(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_z, nx_z, ny_z, nz_z, 1, 1, 1,
@@ -1435,7 +1436,7 @@ void PFVSum(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    _BoxLoopI3(NO_LOCALS,
+    _BoxLoopI3(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_y, nx_y, ny_y, nz_y, 1, 1, 1,
@@ -1506,7 +1507,7 @@ void PFVDiff(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    _BoxLoopI3(NO_LOCALS,
+    _BoxLoopI3(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_y, nx_y, ny_y, nz_y, 1, 1, 1,
@@ -1567,7 +1568,7 @@ void PFVNeg(
 
     i_x = 0;
     i_z = 0;
-    _BoxLoopI2(NO_LOCALS,
+    _BoxLoopI2(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_z, nx_z, ny_z, nz_z, 1, 1, 1,
@@ -1637,7 +1638,7 @@ void PFVScaleSum(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    _BoxLoopI3(NO_LOCALS,
+    _BoxLoopI3(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_y, nx_y, ny_y, nz_y, 1, 1, 1,
@@ -1709,7 +1710,7 @@ void PFVScaleDiff(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    _BoxLoopI3(NO_LOCALS,
+    _BoxLoopI3(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_y, nx_y, ny_y, nz_y, 1, 1, 1,
@@ -1781,7 +1782,7 @@ void PFVLin1(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    _BoxLoopI3(NO_LOCALS,
+    _BoxLoopI3(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_y, nx_y, ny_y, nz_y, 1, 1, 1,
@@ -1853,7 +1854,7 @@ void PFVLin2(
     i_x = 0;
     i_y = 0;
     i_z = 0;
-    _BoxLoopI3(NO_LOCALS,
+    _BoxLoopI3(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_y, nx_y, ny_y, nz_y, 1, 1, 1,
@@ -1915,7 +1916,7 @@ void PFVAxpy(
 
     i_x = 0;
     i_y = 0;
-    _BoxLoopI2(NO_LOCALS,
+    _BoxLoopI2(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                i_y, nx_y, ny_y, nz_y, 1, 1, 1,
@@ -1966,7 +1967,7 @@ void PFVScaleBy(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     i_x = 0;
-    _BoxLoopI1(NO_LOCALS,
+    _BoxLoopI1(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
     {

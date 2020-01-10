@@ -6,6 +6,7 @@
 #include <omp.h>
 #include <stdarg.h>
 
+
 /* Utility macros for inserting OMP pragmas in macros */
 #define EMPTY()
 #define DEFER(x) x EMPTY()
@@ -18,6 +19,29 @@
 #define LOCALS(...) DEFER(_LOCALS)(__VA_ARGS__)
 #define _LOCALS(...) ,__VA_ARGS__
 
+#undef NO_LOCALS
+#define NO_LOCALS DEFER(_NO_LOCALS)
+#define _NO_LOCALS
+
+/*
+  Keeps the BoxLoop macros much tidier
+  For GrGeomInLoop macros, the macro name will be used, not its expanded value
+  i.e. In BoxLoopI# NoWait will expand to "for nowait", but in GrGeomInLoop it will
+  be concatinated with _GrGeomInLoop resulting in NoWait_GrGeomInLoop
+  This is necessary because going over the box clusters in a NewParallel section
+  wraps the entire body of the macro inside the region for better performance,
+  and so simply adjusting the pragma on the for loops is not sufficient.
+*/
+#define NewParallel "parallel for"
+#define InParallel "for"
+#define NoWait "for nowait"
+
+/* Include other macro files AFTER we redefine the LOCALS pragmas */
+#include "pf_omp_grgeom.h"
+
+
+
+/* Helper Functions */
 extern "C++"{
 
 #pragma omp declare simd
@@ -70,7 +94,7 @@ extern "C++"{
 inline
 void omp_Printf(const char *fmt, ...)
 {
-  #pragma omp single
+  #pragma omp master
   {
     va_list argp;
     va_start(argp, fmt);
@@ -78,6 +102,31 @@ void omp_Printf(const char *fmt, ...)
     va_end(argp);
   }
 }
+
+inline
+void omp_AllPrintf(const char *fmt, ...)
+{
+  #pragma omp critical
+  {
+    va_list argp;
+    va_start(argp, fmt);
+    vfprintf(stderr, fmt, argp);
+    va_end(argp);
+  }
+}
+
+inline
+void omp_AnyPrintf(const char *fmt, ...)
+{
+#pragma omp single nowait
+  {
+    va_list argp;
+    va_start(argp, fmt);
+    vfprintf(stderr, fmt, argp);
+    va_end(argp);
+  }
+}
+
 
 /*------------------------------------------------------------------------------
   BoxLoop Macro Redefinitions
@@ -101,23 +150,6 @@ INC_IDX(int idx, int i, int j, int k,
 }
 
 #define MASTER(body) PRAGMA(omp master) body
-
-/* Debugging macros */
-#if 0
-
-#undef _BoxLoopI1
-#define _BoxLoopI1(...) DEBUG_BoxLoopI1( __VA_ARGS__ )
-
-#undef _BoxLoopI2
-#define _BoxLoopI2(...) DEBUG_BoxLoopI2( __VA_ARGS__ )
-
-#undef _BoxLoopI3
-#define _BoxLoopI3(...) DEBUG_BoxLoopI3( __VA_ARGS__ )
-
-#include "pf_omploops_debug.h"
-
-#endif
-/* #endif on Debugging Macros */
 
 #if 1
 
@@ -149,77 +181,17 @@ INC_IDX(int idx, int i, int j, int k,
         }                                                               \
     }                                                                   \
   }
-#if 0
-#undef _BoxLoopI0
-#define _BoxLoopI0(pragma, ...) pragma ## _BoxLoopI0( __VA_ARGS__ )
-
-#define NewParallel_BoxLoopI0(locals,                             \
-                   i, j, k,                                       \
-                   ix, iy, iz,                                    \
-                   nx, ny, nz,                                    \
-                   body)                                          \
-  {                                                               \
-    PRAGMA(omp parallel for collapse(3) private(i, j, k locals))  \
-      for (k = iz; k < iz + nz; k++)                              \
-      {                                                           \
-        for (j = iy; j < iy + ny; j++)                            \
-        {                                                         \
-          for (i = ix; i < ix + nx; i++)                          \
-          {                                                       \
-            body;                                                 \
-          }                                                       \
-        }                                                         \
-      }                                                           \
-  }
-
-#define InParallel_BoxLoopI0(locals,                              \
-                             i, j, k,                             \
-                             ix, iy, iz,                          \
-                             nx, ny, nz,                          \
-                             body)                                \
-  {                                                               \
-    PRAGMA(omp for collapse(3) private(i, j, k locals))           \
-      for (k = iz; k < iz + nz; k++)                              \
-      {                                                           \
-        for (j = iy; j < iy + ny; j++)                            \
-        {                                                         \
-          for (i = ix; i < ix + nx; i++)                          \
-          {                                                       \
-            body;                                                 \
-          }                                                       \
-        }                                                         \
-      }                                                           \
-  }
-
-#define NoWait_BoxLoopI0(locals,                                  \
-                   i, j, k,                                       \
-                   ix, iy, iz,                                    \
-                   nx, ny, nz,                                    \
-                   body)                                          \
-  {                                                               \
-    PRAGMA(omp for nowait collapse(3) private(i, j, k locals))    \
-      for (k = iz; k < iz + nz; k++)                              \
-      {                                                           \
-        for (j = iy; j < iy + ny; j++)                            \
-        {                                                         \
-          for (i = ix; i < ix + nx; i++)                          \
-          {                                                       \
-            body;                                                 \
-          }                                                       \
-        }                                                         \
-      }                                                           \
-  }
 
 #endif
 
 #undef _BoxLoopI0
-#define _BoxLoopI0(locals,                                        \
+#define _BoxLoopI0(pragma, locals,                                \
                    i, j, k,                                       \
                    ix, iy, iz,                                    \
                    nx, ny, nz,                                    \
                    body)                                          \
   {                                                               \
-    PRAGMA(omp parallel for collapse(3) private(i, j, k locals))  \
+    PRAGMA(omp pragma collapse(3) private(i, j, k locals))        \
       for (k = iz; k < iz + nz; k++)                              \
       {                                                           \
         for (j = iy; j < iy + ny; j++)                            \
@@ -233,7 +205,7 @@ INC_IDX(int idx, int i, int j, int k,
   }
 
 #undef _BoxLoopI1
-#define _BoxLoopI1(locals,                                              \
+#define _BoxLoopI1(pragma, locals,                                      \
                    i, j, k,                                             \
                    ix, iy, iz, nx, ny, nz,                              \
                    i1, nx1, ny1, nz1, sx1, sy1, sz1,                    \
@@ -241,58 +213,11 @@ INC_IDX(int idx, int i, int j, int k,
   {                                                                     \
     int i1_start = i1;                                                  \
     DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
-    PRAGMA(omp parallel for collapse(3) private(i, j, k, i1 locals))    \
+    PRAGMA(omp pragma collapse(3) private(i, j, k, i1 locals))          \
       for (k = iz; k < iz + nz; k++)                                    \
       {                                                                 \
         for (j = iy; j < iy + ny; j++)                                  \
         {                                                               \
-          for (i = ix; i < ix + nx; i++)                                \
-          {                                                             \
-            i1 = INC_IDX(i1_start, (i - ix), (j - iy), (k - iz),        \
-                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
-            body;                                                       \
-          }                                                             \
-        }                                                               \
-      }                                                                 \
-  }
-
-#define __BoxLoopI1(locals,                                             \
-                    i, j, k,                                            \
-                    ix, iy, iz, nx, ny, nz,                             \
-                    i1, nx1, ny1, nz1, sx1, sy1, sz1,                   \
-                    body)                                               \
-  {                                                                     \
-    int i1_start = i1;                                                  \
-    DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
-    PRAGMA(omp for collapse(3) private(i, j, k, i1 locals))             \
-      for (k = iz; k < iz + nz; k++)                                    \
-      {                                                                 \
-        for (j = iy; j < iy + ny; j++)                                  \
-        {                                                               \
-          for (i = ix; i < ix + nx; i++)                                \
-          {                                                             \
-            i1 = INC_IDX(i1_start, (i - ix), (j - iy), (k - iz),        \
-                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
-            body;                                                       \
-          }                                                             \
-        }                                                               \
-      }                                                                 \
-  }
-
-#define ___BoxLoopI1(locals,                                            \
-                    i, j, k,                                            \
-                    ix, iy, iz, nx, ny, nz,                             \
-                    i1, nx1, ny1, nz1, sx1, sy1, sz1,                   \
-                    body)                                               \
-  {                                                                     \
-    int i1_start = i1;                                                  \
-    DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
-    PRAGMA(omp for nowait collapse(2) private(i, j, k, i1 locals))      \
-      for (k = iz; k < iz + nz; k++)                                    \
-      {                                                                 \
-        for (j = iy; j < iy + ny; j++)                                  \
-        {                                                               \
-          PRAGMA(omp simd)                                              \
           for (i = ix; i < ix + nx; i++)                                \
           {                                                             \
             i1 = INC_IDX(i1_start, (i - ix), (j - iy), (k - iz),        \
@@ -304,7 +229,7 @@ INC_IDX(int idx, int i, int j, int k,
   }
 
 #undef _BoxLoopI2
-#define _BoxLoopI2(locals,                                              \
+#define _BoxLoopI2(pragma, locals,                                      \
                    i, j, k,                                             \
                    ix, iy, iz, nx, ny, nz,                              \
                    i1, nx1, ny1, nz1, sx1, sy1, sz1,                    \
@@ -315,7 +240,7 @@ INC_IDX(int idx, int i, int j, int k,
     int i2_start = i2;                                                  \
     DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
     DeclareInc(PV_jinc_2, PV_kinc_2, nx, ny, nz, nx2, ny2, nz2, sx2, sy2, sz2); \
-    PRAGMA(omp parallel for collapse(3) private(i, j, k, i1, i2 locals)) \
+    PRAGMA(omp pragma collapse(3) private(i, j, k, i1, i2 locals))      \
       for (k = iz; k < iz + nz; k++)                                    \
       {                                                                 \
         for (j = iy; j < iy + ny; j++)                                  \
@@ -332,18 +257,19 @@ INC_IDX(int idx, int i, int j, int k,
       }                                                                 \
   }
 
-#define __BoxLoopI2(locals,                                             \
-                    i, j, k,                                            \
-                    ix, iy, iz, nx, ny, nz,                             \
-                    i1, nx1, ny1, nz1, sx1, sy1, sz1,                   \
-                    i2, nx2, ny2, nz2, sx2, sy2, sz2,                   \
-                    body)                                               \
+#undef _BoxLoopI2
+#define _BoxLoopI2(pragma, locals,                                      \
+                   i, j, k,                                             \
+                   ix, iy, iz, nx, ny, nz,                              \
+                   i1, nx1, ny1, nz1, sx1, sy1, sz1,                    \
+                   i2, nx2, ny2, nz2, sx2, sy2, sz2,                    \
+                   body)                                                \
   {                                                                     \
     int i1_start = i1;                                                  \
     int i2_start = i2;                                                  \
     DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
     DeclareInc(PV_jinc_2, PV_kinc_2, nx, ny, nz, nx2, ny2, nz2, sx2, sy2, sz2); \
-    PRAGMA(omp for collapse(3) private(i, j, k, i1, i2 locals))         \
+    PRAGMA(omp pragma collapse(3) private(i, j, k, i1, i2 locals))      \
       for (k = iz; k < iz + nz; k++)                                    \
       {                                                                 \
         for (j = iy; j < iy + ny; j++)                                  \
@@ -359,38 +285,9 @@ INC_IDX(int idx, int i, int j, int k,
         }                                                               \
       }                                                                 \
   }
-
-#define ___BoxLoopI2(locals,                                            \
-                    i, j, k,                                            \
-                    ix, iy, iz, nx, ny, nz,                             \
-                    i1, nx1, ny1, nz1, sx1, sy1, sz1,                   \
-                    i2, nx2, ny2, nz2, sx2, sy2, sz2,                   \
-                    body)                                               \
-  {                                                                     \
-    int i1_start = i1;                                                  \
-    int i2_start = i2;                                                  \
-    DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
-    DeclareInc(PV_jinc_2, PV_kinc_2, nx, ny, nz, nx2, ny2, nz2, sx2, sy2, sz2); \
-    PRAGMA(omp for nowait collapse(3) private(i, j, k, i1, i2 locals))  \
-      for (k = iz; k < iz + nz; k++)                                    \
-      {                                                                 \
-        for (j = iy; j < iy + ny; j++)                                  \
-        {                                                               \
-          for (i = ix; i < ix + nx; i++)                                \
-          {                                                             \
-            i1 = INC_IDX(i1_start, (i - ix), (j - iy), (k - iz),        \
-                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
-            i2 = INC_IDX(i2_start, (i - ix), (j - iy), (k - iz),        \
-                         nx, ny, sx2, PV_jinc_2, PV_kinc_2);            \
-            body;                                                       \
-          }                                                             \
-        }                                                               \
-      }                                                                 \
-  }
-
 
 #undef _BoxLoopI3
-#define _BoxLoopI3(locals,                                              \
+#define _BoxLoopI3(pragma, locals,                                      \
                    i, j, k,                                             \
                    ix, iy, iz, nx, ny, nz,                              \
                    i1, nx1, ny1, nz1, sx1, sy1, sz1,                    \
@@ -404,7 +301,7 @@ INC_IDX(int idx, int i, int j, int k,
     DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
     DeclareInc(PV_jinc_2, PV_kinc_2, nx, ny, nz, nx2, ny2, nz2, sx2, sy2, sz2); \
     DeclareInc(PV_jinc_3, PV_kinc_3, nx, ny, nz, nx3, ny3, nz3, sx3, sy3, sz3); \
-    PRAGMA(omp parallel for collapse(3) private(i, j, k, i1, i2, i3 locals)) \
+    PRAGMA(omp pragma collapse(3) private(i, j, k, i1, i2, i3 locals))  \
       for (k = iz; k < iz + nz; k++)                                    \
       {                                                                 \
         for (j = iy; j < iy + ny; j++)                                  \
@@ -422,40 +319,6 @@ INC_IDX(int idx, int i, int j, int k,
         }                                                               \
       }                                                                 \
   }
-
-#define __BoxLoopI3(locals,                                             \
-                    i, j, k,                                            \
-                    ix, iy, iz, nx, ny, nz,                             \
-                    i1, nx1, ny1, nz1, sx1, sy1, sz1,                   \
-                    i2, nx2, ny2, nz2, sx2, sy2, sz2,                   \
-                    i3, nx3, ny3, nz3, sx3, sy3, sz3,                   \
-                    body)                                               \
-  {                                                                     \
-    int i1_start = i1;                                                  \
-    int i2_start = i2;                                                  \
-    int i3_start = i3;                                                  \
-    DeclareInc(PV_jinc_1, PV_kinc_1, nx, ny, nz, nx1, ny1, nz1, sx1, sy1, sz1); \
-    DeclareInc(PV_jinc_2, PV_kinc_2, nx, ny, nz, nx2, ny2, nz2, sx2, sy2, sz2); \
-    DeclareInc(PV_jinc_3, PV_kinc_3, nx, ny, nz, nx3, ny3, nz3, sx3, sy3, sz3); \
-    PRAGMA(omp for collapse(3) private(i, j, k, i1, i2, i3 locals))     \
-      for (k = iz; k < iz + nz; k++)                                    \
-      {                                                                 \
-        for (j = iy; j < iy + ny; j++)                                  \
-        {                                                               \
-          for (i = ix; i < ix + nx; i++)                                \
-          {                                                             \
-            i1 = INC_IDX(i1_start, (i - ix), (j - iy), (k - iz),        \
-                         nx, ny, sx1, PV_jinc_1, PV_kinc_1);            \
-            i2 = INC_IDX(i2_start, (i - ix), (j - iy), (k - iz),        \
-                         nx, ny, sx2, PV_jinc_2, PV_kinc_2);            \
-            i3 = INC_IDX(i3_start, (i - ix), (j - iy), (k - iz),        \
-                         nx, ny, sx3, PV_jinc_3, PV_kinc_3);            \
-            body;                                                       \
-          }                                                             \
-        }                                                               \
-      }                                                                 \
-  }
-
 
 #undef BoxLoopReduceI1
 #define BoxLoopReduceI1(locals, sum,                                    \
@@ -531,190 +394,6 @@ INC_IDX(int idx, int i, int j, int k,
           }                                                             \
         }                                                               \
       }                                                                 \
-  }
-
-#endif // BoxLoop #if
-
-/*------------------------------------------------------------------------
- * Clustering Box Loop Redefinitions
- *------------------------------------------------------------------------*/
-
-/*------------------------------------------------------------------------
- * GrGeomInLoop Redefinitions
- *------------------------------------------------------------------------*/
-#undef _GrGeomInLoop
-#define _GrGeomInLoop(locals, i, j, k, grgeom, r, ix, iy, iz, nx, ny, nz, body) \
-  {                                                                     \
-    if (r == 0 && GrGeomSolidInteriorBoxes(grgeom))                     \
-    {                                                                   \
-      _GrGeomInLoopBoxes(locals,                                        \
-                         i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body); \
-    }                                                                   \
-    else                                                                \
-    {                                                                   \
-      GrGeomOctree  *PV_node;                                           \
-      double PV_ref = pow(2.0, r);                                      \
-                                                                        \
-      i = GrGeomSolidOctreeIX(grgeom) * (int)PV_ref;                    \
-      j = GrGeomSolidOctreeIY(grgeom) * (int)PV_ref;                    \
-      k = GrGeomSolidOctreeIZ(grgeom) * (int)PV_ref;                    \
-      GrGeomOctreeInteriorNodeLoop(i, j, k, PV_node,                    \
-                                   GrGeomSolidData(grgeom),             \
-                                   GrGeomSolidOctreeBGLevel(grgeom) + r, \
-                                   ix, iy, iz, nx, ny, nz,              \
-                                   TRUE,                                \
-                                   body);                               \
-    }                                                                   \
-  }
-
-//#undef GrGeomInLoopBoxes
-#define _GrGeomInLoopBoxes(locals, i, j, k,                         \
-                           grgeom, ix, iy, iz,                      \
-                           nx, ny, nz, body)                        \
-  {                                                                 \
-    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;             \
-    int *PV_visiting = NULL;                                        \
-    BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);             \
-    PRAGMA(omp parallel)                                            \
-    {                                                               \
-      for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)  \
-      {                                                             \
-        Box box = BoxArrayGetBox(boxes, PV_box);                    \
-        /* find octree and region intersection */                   \
-        PV_ixl = pfmax(ix, box.lo[0]);                              \
-        PV_iyl = pfmax(iy, box.lo[1]);                              \
-        PV_izl = pfmax(iz, box.lo[2]);                              \
-        PV_ixu = pfmin((ix + nx - 1), box.up[0]);                   \
-        PV_iyu = pfmin((iy + ny - 1), box.up[1]);                   \
-        PV_izu = pfmin((iz + nz - 1), box.up[2]);                   \
-                                                                    \
-        PRAGMA(omp for collapse(3) private(i, j, k locals))         \
-          for (k = PV_izl; k <= PV_izu; k++)                        \
-          {                                                         \
-            for (j = PV_iyl; j <= PV_iyu; j++)                      \
-            {                                                       \
-              for (i = PV_ixl; i <= PV_ixu; i++)                    \
-              {                                                     \
-                body;                                               \
-              }                                                     \
-            }                                                       \
-          }                                                         \
-      }                                                             \
-    }                                                               \
-  }
-
-
-#define __GrGeomInLoop(locals, i, j, k, grgeom, r, ix, iy, iz, nx, ny, nz, body) \
-  {                                                                     \
-    if (r == 0 && GrGeomSolidInteriorBoxes(grgeom))                     \
-    {                                                                   \
-      __GrGeomInLoopBoxes(locals,                                       \
-                          i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body); \
-    }                                                                   \
-    else                                                                \
-    {                                                                   \
-      GrGeomOctree  *PV_node;                                           \
-      double PV_ref = pow(2.0, r);                                      \
-                                                                        \
-      i = GrGeomSolidOctreeIX(grgeom) * (int)PV_ref;                    \
-      j = GrGeomSolidOctreeIY(grgeom) * (int)PV_ref;                    \
-      k = GrGeomSolidOctreeIZ(grgeom) * (int)PV_ref;                    \
-      GrGeomOctreeInteriorNodeLoop(i, j, k, PV_node,                    \
-                                   GrGeomSolidData(grgeom),             \
-                                   GrGeomSolidOctreeBGLevel(grgeom) + r, \
-                                   ix, iy, iz, nx, ny, nz,              \
-                                   TRUE,                                \
-                                   body);                               \
-    }                                                                   \
-  }
-
-#define __GrGeomInLoopBoxes(locals, i, j, k,                      \
-                            grgeom, ix, iy, iz,                   \
-                            nx, ny, nz, body)                     \
-  {                                                               \
-    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;           \
-    int *PV_visiting = NULL;                                      \
-    BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);           \
-    for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)  \
-    {                                                             \
-      Box box = BoxArrayGetBox(boxes, PV_box);                    \
-      /* find octree and region intersection */                   \
-      PV_ixl = pfmax(ix, box.lo[0]);                              \
-      PV_iyl = pfmax(iy, box.lo[1]);                              \
-      PV_izl = pfmax(iz, box.lo[2]);                              \
-      PV_ixu = pfmin((ix + nx - 1), box.up[0]);                   \
-      PV_iyu = pfmin((iy + ny - 1), box.up[1]);                   \
-      PV_izu = pfmin((iz + nz - 1), box.up[2]);                   \
-                                                                  \
-      PRAGMA(omp for collapse(3) private(i, j, k locals))         \
-        for (k = PV_izl; k <= PV_izu; k++)                        \
-        {                                                         \
-          for (j = PV_iyl; j <= PV_iyu; j++)                      \
-          {                                                       \
-            for (i = PV_ixl; i <= PV_ixu; i++)                    \
-            {                                                     \
-              body;                                               \
-            }                                                     \
-          }                                                       \
-        }                                                         \
-    }                                                             \
-  }
-
-
-#define ___GrGeomInLoop(locals, i, j, k, grgeom, r, ix, iy, iz, nx, ny, nz, body) \
-  {                                                                     \
-    if (r == 0 && GrGeomSolidInteriorBoxes(grgeom))                     \
-    {                                                                   \
-      ___GrGeomInLoopBoxes(locals,                                      \
-                          i, j, k, grgeom, ix, iy, iz, nx, ny, nz, body); \
-    }                                                                   \
-    else                                                                \
-    {                                                                   \
-      GrGeomOctree  *PV_node;                                           \
-      double PV_ref = pow(2.0, r);                                      \
-                                                                        \
-      i = GrGeomSolidOctreeIX(grgeom) * (int)PV_ref;                    \
-      j = GrGeomSolidOctreeIY(grgeom) * (int)PV_ref;                    \
-      k = GrGeomSolidOctreeIZ(grgeom) * (int)PV_ref;                    \
-      GrGeomOctreeInteriorNodeLoop(i, j, k, PV_node,                    \
-                                   GrGeomSolidData(grgeom),             \
-                                   GrGeomSolidOctreeBGLevel(grgeom) + r, \
-                                   ix, iy, iz, nx, ny, nz,              \
-                                   TRUE,                                \
-                                   body);                               \
-    }                                                                   \
-  }
-
-#define ___GrGeomInLoopBoxes(locals, i, j, k,                     \
-                             grgeom, ix, iy, iz,                  \
-                             nx, ny, nz, body)                    \
-  {                                                               \
-    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;           \
-    int *PV_visiting = NULL;                                      \
-    BoxArray* boxes = GrGeomSolidInteriorBoxes(grgeom);           \
-    for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)  \
-    {                                                             \
-      Box box = BoxArrayGetBox(boxes, PV_box);                    \
-      /* find octree and region intersection */                   \
-      PV_ixl = pfmax(ix, box.lo[0]);                              \
-      PV_iyl = pfmax(iy, box.lo[1]);                              \
-      PV_izl = pfmax(iz, box.lo[2]);                              \
-      PV_ixu = pfmin((ix + nx - 1), box.up[0]);                   \
-      PV_iyu = pfmin((iy + ny - 1), box.up[1]);                   \
-      PV_izu = pfmin((iz + nz - 1), box.up[2]);                   \
-                                                                  \
-      PRAGMA(omp for nowait collapse(3) private(i, j, k locals))  \
-        for (k = PV_izl; k <= PV_izu; k++)                        \
-        {                                                         \
-          for (j = PV_iyl; j <= PV_iyu; j++)                      \
-          {                                                       \
-            for (i = PV_ixl; i <= PV_ixu; i++)                    \
-            {                                                     \
-              body;                                               \
-            }                                                     \
-          }                                                       \
-        }                                                         \
-    }                                                             \
   }
 
 
@@ -841,6 +520,122 @@ INC_IDX(int idx, int i, int j, int k,
       }                                                                 \
     }                                                                   \
   }
+
+
+#define __BCStructPatchLoop(locals,                                     \
+                           i, j, k, fdir, ival, bc_struct, ipatch, is, body) \
+  {                                                                     \
+    GrGeomSolid  *PV_gr_domain = BCStructGrDomain(bc_struct);           \
+    int PV_patch_index = BCStructPatchIndex(bc_struct, ipatch);         \
+    Subgrid      *PV_subgrid = BCStructSubgrid(bc_struct, is);          \
+                                                                        \
+    int PV_r = SubgridRX(PV_subgrid);                                   \
+    int PV_ix = SubgridIX(PV_subgrid);                                  \
+    int PV_iy = SubgridIY(PV_subgrid);                                  \
+    int PV_iz = SubgridIZ(PV_subgrid);                                  \
+    int PV_nx = SubgridNX(PV_subgrid);                                  \
+    int PV_ny = SubgridNY(PV_subgrid);                                  \
+    int PV_nz = SubgridNZ(PV_subgrid);                                  \
+                                                                        \
+    ival = 0;                                                           \
+    if (PV_r == 0 && GrGeomSolidPatchBoxes(PV_gr_domain, PV_patch_index, GrGeomOctreeNumFaces -1)) \
+    {                                                                   \
+      __GrGeomPatchLoopBoxes(locals, i, j, k, fdir,                     \
+                            PV_gr_domain, PV_patch_index, PV_r,         \
+                            PV_ix, PV_iy, PV_iz, PV_nx, PV_ny, PV_nz,   \
+                            body);                                      \
+    }                                                                   \
+    else                                                                \
+    {                                                                   \
+      GrGeomPatchLoop(i, j, k, fdir, PV_gr_domain, PV_patch_index,      \
+                      PV_r, PV_ix, PV_iy, PV_iz, PV_nx, PV_ny, PV_nz,   \
+      {                                                                 \
+        body;                                                           \
+        ival++;                                                         \
+      });                                                               \
+    }                                                                   \
+  }
+
+
+#define __GrGeomPatchLoopBoxes(locals,																	\
+                               i, j, k, fdir, grgeom, patch_num,        \
+                               r, ix, iy, iz, nx, ny, nz, body)         \
+  {                                                                     \
+    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;                 \
+    int *PV_visiting = NULL;                                            \
+    int PV_fdir[3];                                                     \
+    fdir = PV_fdir;                                                     \
+    for (int PV_f = 0; PV_f < GrGeomOctreeNumFaces; PV_f++)             \
+    {                                                                   \
+      switch (PV_f)                                                     \
+      {                                                                 \
+        case GrGeomOctreeFaceL:                                         \
+          fdir[0] = -1; fdir[1] = 0; fdir[2] = 0;                       \
+          break;                                                        \
+        case GrGeomOctreeFaceR:                                         \
+          fdir[0] = 1; fdir[1] = 0; fdir[2] = 0;                        \
+          break;                                                        \
+        case GrGeomOctreeFaceD:                                         \
+          fdir[0] = 0; fdir[1] = -1; fdir[2] = 0;                       \
+          break;                                                        \
+        case GrGeomOctreeFaceU:                                         \
+          fdir[0] = 0; fdir[1] = 1; fdir[2] = 0;                        \
+          break;                                                        \
+        case GrGeomOctreeFaceB:                                         \
+          fdir[0] = 0; fdir[1] = 0; fdir[2] = -1;                       \
+          break;                                                        \
+        case GrGeomOctreeFaceF:                                         \
+          fdir[0] = 0; fdir[1] = 0; fdir[2] = 1;                        \
+          break;                                                        \
+        default:                                                        \
+          fdir[0] = -9999; fdir[1] = -9999; fdir[2] = -99999;           \
+          break;                                                        \
+      }                                                                 \
+                                                                        \
+      BoxArray* boxes = GrGeomSolidPatchBoxes(grgeom, patch_num, PV_f); \
+      for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)      \
+      {                                                                 \
+        Box box = BoxArrayGetBox(boxes, PV_box);                        \
+        /* find octree and region intersection */                       \
+        PV_ixl = pfmax(ix, box.lo[0]);                                  \
+        PV_iyl = pfmax(iy, box.lo[1]);                                  \
+        PV_izl = pfmax(iz, box.lo[2]);                                  \
+        PV_ixu = pfmin((ix + nx - 1), box.up[0]);                       \
+        PV_iyu = pfmin((iy + ny - 1), box.up[1]);                       \
+        PV_izu = pfmin((iz + nz - 1), box.up[2]);                       \
+                                                                        \
+        int PV_diff_x = PV_ixu - PV_ixl;                                \
+        int PV_diff_y = PV_iyu - PV_iyl;                                \
+        int PV_diff_z = PV_izu - PV_izl;                                \
+        int x_scale = !!PV_diff_x;                                      \
+        int y_scale = !!PV_diff_y;                                      \
+        int z_scale = !!PV_diff_z;                                      \
+        if (PV_diff_x * PV_diff_y * PV_diff_z != 0) {                   \
+          fprintf(stderr, "ERROR: Diff not 0 at %s %d\n", __FILE__, __LINE__); \
+          exit(-1);                                                     \
+        }                                                               \
+        PRAGMA(omp for collapse(3) private(i, j, k, ival locals))       \
+          for (k = PV_izl; k <= PV_izu; k++)                            \
+          {                                                             \
+            for (j = PV_iyl; j <= PV_iyu; j++)                          \
+            {                                                           \
+              for (i = PV_ixl; i <= PV_ixu; i++)                        \
+              {                                                         \
+                if (!z_scale) {                                         \
+                  ival = (PV_diff_x * j + j + i);                       \
+                } else if (!y_scale) {                                  \
+                  ival = (PV_diff_x * k + k + i);                       \
+                } else {                                                \
+                  ival = (PV_diff_y * k + k + j);                       \
+                }                                                       \
+                body;                                                   \
+              }                                                         \
+            }                                                           \
+          }                                                             \
+      }                                                                 \
+    }                                                                   \
+	}
+
 #endif // BCStruct #if
 
 #undef _GrGeomSurfLoop

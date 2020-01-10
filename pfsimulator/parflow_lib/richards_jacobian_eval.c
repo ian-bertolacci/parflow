@@ -480,7 +480,7 @@ void    RichardsJacobianEval(
     pop = SubvectorData(po_sub);     // porosity
     ss = SubvectorData(ss_sub);     // sepcific storage
 
-    _GrGeomInLoop(LOCALS(im, ipo, iv, vol2),
+    _GrGeomInLoop(NewParallel, LOCALS(im, ipo, iv, vol2),
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -631,7 +631,7 @@ void    RichardsJacobianEval(
     FBy_dat = SubvectorData(FBy_sub);
     FBz_dat = SubvectorData(FBz_sub);
 
-    _GrGeomInLoop(LOCALS(ip, im, ioo,
+    _GrGeomInLoop(NewParallel, LOCALS(ip, im, ioo,
                          prod, prod_der, prod_rt, prod_rt_der,
                          prod_no, prod_no_der, prod_up, prod_up_der,
                          x_dir_g, x_dir_g_c, y_dir_g, y_dir_g_c,

@@ -148,7 +148,7 @@ void         PhaseSource(
           r = SubgridRX(subgrid);
 
           data = SubvectorData(ps_sub);
-          _GrGeomInLoop(LOCALS(ips),
+          _GrGeomInLoop(InParallel, NO_LOCALS,
                         i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
           {
             ips = SubvectorEltIndex(ps_sub, i, j, k);
@@ -195,7 +195,7 @@ void         PhaseSource(
         {
           case 1: /* p= x */
           {
-            _GrGeomInLoop(LOCALS(ips, x),
+            _GrGeomInLoop(InParallel, NO_LOCALS,
                           i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
@@ -208,7 +208,7 @@ void         PhaseSource(
 
           case 2: /* p= x+y+z */
           {
-            _GrGeomInLoop(LOCALS(ips),
+            _GrGeomInLoop(InParallel, NO_LOCALS,
                           i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
@@ -220,7 +220,7 @@ void         PhaseSource(
 
           case 3: /* p= x^3y^2 + sinxy + 1 */
           {
-            _GrGeomInLoop(LOCALS(ips, x, y),
+            _GrGeomInLoop(InParallel, NO_LOCALS,
                           i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
@@ -234,7 +234,7 @@ void         PhaseSource(
 
           case 4: /* f for p = x^3y^4 + x^2 + sinxy cosy + 1 */
           {
-            _GrGeomInLoop(LOCALS(ips, x, y, z),
+            _GrGeomInLoop(InParallel, NO_LOCALS,
                           i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
@@ -249,7 +249,7 @@ void         PhaseSource(
 
           case 5: /* f = xyz-y^2z^2t^2-x^2z^2t^2-x^2y^2t^2 (p=xyzt+1)*/
           {
-            _GrGeomInLoop(LOCALS(ips, x, y, z),
+            _GrGeomInLoop(InParallel, NO_LOCALS,
                           i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
@@ -265,7 +265,7 @@ void         PhaseSource(
           case 6: /* f = xyz-y^2z^2t^2-2x^2z^2t^2-3x^2y^2t^2 (p=xyzt+1,
                    *                                          K=(1; 2; 3) )*/
           {
-            _GrGeomInLoop(LOCALS(ips, x, y, z),
+            _GrGeomInLoop(InParallel, NO_LOCALS,
                          i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
@@ -370,7 +370,7 @@ void         PhaseSource(
 
           ip = 0;
           ips = 0;
-          _BoxLoopI2(LOCALS(weight),
+          _BoxLoopI2(InParallel, NO_LOCALS,
                      i, j, k,
                      ix, iy, iz,
                      nx, ny, nz,

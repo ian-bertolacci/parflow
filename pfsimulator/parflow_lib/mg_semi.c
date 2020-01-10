@@ -268,6 +268,7 @@ void     MGSemi(
       MGSemiRestrict(A_l[l], temp_vec_l[l], b_l[l + 1], P_l[l],
                      f_sra_l[l], c_sra_l[l],
                      restrict_compute_pkg_l[l], restrict_comm_pkg_l[l]);
+
 #if 0
       /* for debugging purposes */
       {
@@ -429,7 +430,6 @@ void     MGSemi(
     }
   }
 }
-
 
 /*--------------------------------------------------------------------------
  * SetupCoarseOps
@@ -900,7 +900,7 @@ void              SetupCoarseOps(
         iP = SubmatrixEltIndex(P_sub, ix, iy, iz);
         iA = SubmatrixEltIndex(A_sub, ix, iy, iz);
 
-        _BoxLoopI2(LOCALS(ap0),
+        _BoxLoopI2(NewParallel, LOCALS(ap0),
                    ii, jj, kk, ix, iy, iz, nx, ny, nz,
                    iP, nx_P, ny_P, nz_P, 1, 1, 1,
                    iA, nx_A, ny_A, nz_A, sx, sy, sz,
@@ -1010,7 +1010,7 @@ void              SetupCoarseOps(
           dA12 = SubmatrixNX(A_sub) * SubmatrixNY(A_sub);
         }
 
-        _BoxLoopI3(LOCALS(iP2, iA1, iA2),
+        _BoxLoopI3(NewParallel, LOCALS(iP2, iA1, iA2),
                    ii, jj, kk, ix, iy, iz, nx, ny, nz,
                    iP1, nx_P, ny_P, nz_P, 1, 1, 1,
                    iA, nx_A, ny_A, nz_A, sx, sy, sz,
@@ -1077,7 +1077,7 @@ void              SetupCoarseOps(
 
         iAc = SubmatrixEltIndex(Ac_sub, ix / sx, iy / sy, iz / sz);
 
-        _BoxLoopI1(NO_LOCALS,
+        _BoxLoopI1(NewParallel, NO_LOCALS,
                    ii, jj, kk, ix, iy, iz, nx, ny, nz,
                    iAc, nx_Ac, ny_Ac, nz_Ac, 1, 1, 1,
         {

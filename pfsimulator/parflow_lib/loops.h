@@ -42,7 +42,7 @@
 /* Wrapper for BoxLoops without USING_PARALLEL
    TODO: Come up with a better name for this variant of BoxLoop */
 #define _BoxLoopI0(locals, ...) BoxLoopI0(__VA_ARGS__)
-#define _BoxLoopI1(locals, ...) BoxLoopI1(__VA_ARGS__)
+#define _BoxLoopI1(unused_pragma, locals, ...) BoxLoopI1(__VA_ARGS__)
 #define _BoxLoopI2(locals, ...) BoxLoopI2(__VA_ARGS__)
 #define _BoxLoopI3(locals, ...) BoxLoopI3(__VA_ARGS__)
 

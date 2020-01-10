@@ -726,29 +726,30 @@ void    InitMatrix(
 {
   BeginTiming(MatrixInitTimingIndex);
 
-  Grid       *grid = MatrixGrid(A);
-
-  Submatrix  *A_sub;
-  double     *Ap;
-  int im;
-
-  SubgridArray  *subgrids;
-  Subgrid       *subgrid;
-
-  Stencil       *stencil;
-
-  int is, s;
-
-  int ix, iy, iz;
-  int nx, ny, nz;
-  int nx_m, ny_m, nz_m;
-
-  int i, j, k;
-
-
-  subgrids = GridSubgrids(grid);
-#pragma omp parallel private(is, s, Ap)
+#pragma omp parallel
   {
+    Grid       *grid = MatrixGrid(A);
+
+    Submatrix  *A_sub;
+    double     *Ap;
+    int im;
+
+    SubgridArray  *subgrids;
+    Subgrid       *subgrid;
+
+    Stencil       *stencil;
+
+    int is, s;
+
+    int ix, iy, iz;
+    int nx, ny, nz;
+    int nx_m, ny_m, nz_m;
+
+    int i, j, k;
+
+
+    subgrids = GridSubgrids(grid);
+
     ForSubgridI(is, subgrids)
     {
       subgrid = SubgridArraySubgrid(subgrids, is);
@@ -774,9 +775,9 @@ void    InitMatrix(
         Ap = SubmatrixElt(A_sub, s, ix, iy, iz);
 
         im = 0;
-        ___BoxLoopI1(NO_LOCALS,
-                     i, j, k, ix, iy, iz, nx, ny, nz,
-                     im, nx_m, ny_m, nz_m, 1, 1, 1,
+        _BoxLoopI1(NoWait, NO_LOCALS,
+                  i, j, k, ix, iy, iz, nx, ny, nz,
+                  im, nx_m, ny_m, nz_m, 1, 1, 1,
         {
           Ap[im] = value;
         });

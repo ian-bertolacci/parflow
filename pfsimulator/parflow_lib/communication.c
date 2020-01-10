@@ -400,7 +400,12 @@ void FreeCommPkg(
 CommHandle  *InitCommunication(
                                CommPkg *comm_pkg)
 {
-  return (CommHandle*)amps_IExchangePackage(comm_pkg->package);
+  CommHandle *tmp = NULL;
+#pragma omp master
+  {
+   tmp = (CommHandle*)amps_IExchangePackage(comm_pkg->package);
+  }
+  return tmp;
 }
 
 
@@ -411,8 +416,8 @@ CommHandle  *InitCommunication(
 void         FinalizeCommunication(
                                    CommHandle *handle)
 {
-  (void)amps_Wait((amps_Handle)handle);
+  #pragma omp master
+  {
+    (void)amps_Wait((amps_Handle)handle);
+  }
 }
-
-
-

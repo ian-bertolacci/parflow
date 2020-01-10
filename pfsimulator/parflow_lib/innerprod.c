@@ -88,16 +88,24 @@ double   InnerProd(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     iv = 0;
+#if 1
     BoxLoopReduceI1(NO_LOCALS, result,
                     i, j, k, ix, iy, iz, nx, ny, nz,
                     iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
       result += yp[iv] * xp[iv];
     });
+#else
+    __BoxLoopI1(NO_LOCALS,
+                i, j, k, ix, iy, iz, nx, ny, nz,
+                iv, nx_v, ny_v, nz_v, 1, 1, 1,
+    {
+      result += yp[iv] * xp[iv];
+    });
+#endif
   }
 
   amps_AllReduce(amps_CommWorld, result_invoice, amps_Add);
-
   amps_FreeInvoice(result_invoice);
 
   IncFLOPCount(2 * VectorSize(x) - 1);

@@ -146,23 +146,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   PFModule    *overlandflow_module_diff = (instance_xtra->overlandflow_module_diff);
   PFModule    *overlandflow_module_kin = (instance_xtra->overlandflow_module_kin);
 
-
-  /* Re-use saturation vector to save memory */
-  Vector      *rel_perm = saturation;
-  Vector      *source = saturation;
-
-  /* Overland flow variables */  //sk
-  Vector      *KW, *KE, *KN, *KS;
-  Vector      *qx, *qy;
-  Subvector   *kw_sub, *ke_sub, *kn_sub, *ks_sub, *qx_sub, *qy_sub;
-  Subvector   *x_sl_sub, *y_sl_sub, *mann_sub;
-  Subvector   *obf_sub;
-  double      *kw_, *ke_, *kn_, *ks_, *qx_, *qy_;
-  double      *x_sl_dat, *y_sl_dat, *mann_dat;
-  double      *obf_dat;
-  double q_overlnd;
-  double sep;          // scaling difference temp var @RMM
-
   Vector      *porosity = ProblemDataPorosity(problem_data);
   Vector      *permeability_x = ProblemDataPermeabilityX(problem_data);
   Vector      *permeability_y = ProblemDataPermeabilityY(problem_data);
@@ -175,24 +158,93 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   /* @RMM terrain following grid slope variables */
   Vector      *x_ssl = ProblemDataSSlopeX(problem_data);               //@RMM
   Vector      *y_ssl = ProblemDataSSlopeY(problem_data);               //@RMM
-  Subvector   *x_ssl_sub, *y_ssl_sub;    //@RMM
-  double      *x_ssl_dat, *y_ssl_dat;     //@RMM
 
   /* @RMM variable dz multiplier */
   Vector      *z_mult = ProblemDataZmult(problem_data);              //@RMM
-  Subvector   *z_mult_sub;    //@RMM
-  double      *z_mult_dat;    //@RMM
 
 /* @RMM Flow Barrier / Boundary values */
   Vector      *FBx = ProblemDataFBx(problem_data);
   Vector      *FBy = ProblemDataFBy(problem_data);
   Vector      *FBz = ProblemDataFBz(problem_data);
-  Subvector   *FBx_sub, *FBy_sub, *FBz_sub;  //@RMM
-  double      *FBx_dat, *FBy_dat, *FBz_dat;   //@RMM
-
 
   double gravity = ProblemGravity(problem);
   double viscosity = ProblemPhaseViscosity(problem, 0);
+
+  Grid        *grid = VectorGrid(pressure);
+  Grid        *grid2d = VectorGrid(x_sl);
+  GrGeomSolid *gr_domain = ProblemDataGrDomain(problem_data);
+
+  BeginTiming(public_xtra->time_index);
+
+  /* diffusive test here, this is NOT PF style and should be
+   * re-done putting keys in BC Pressure Package and adding to the
+   * datastructure for overlandflowBC */
+  int diffusive;             //@RMM
+  diffusive = GetIntDefault("OverlandFlowDiffusive", 0);
+
+  int overlandspinup;              //@RMM
+  overlandspinup = GetIntDefault("OverlandFlowSpinUp", 0);
+
+  /* Pass pressure values to neighbors.  */
+  VectorUpdateCommHandle  *handle;
+  handle = InitVectorUpdate(pressure, VectorUpdateAll);
+  FinalizeVectorUpdate(handle);
+
+  Vector      *KW, *KE, *KN, *KS;
+  Vector      *qx, *qy;
+  KW = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
+  KE = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
+  KN = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
+  KS = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
+  qx = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
+  qy = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
+
+  BCStruct    *bc_struct;
+
+/* Initialize function values to zero. */
+  PFVConstInit(0.0, fval);
+
+  /* Calculate pressure dependent properties: density and saturation */
+  double dtmp;
+  PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density, &dtmp, &dtmp,
+                                                          CALCFCN));
+/*
+  TODO: For reasons as yet to be determined, calling this in the parallel region causes
+  something to go off and we never end up solving anything.  Probably overwriting something
+  somewhere due to a bad loop nest?
+*/
+  PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation, pressure, density,
+                                                           gravity, problem_data, CALCFCN));
+
+#pragma omp parallel
+  {
+  /* Re-use saturation vector to save memory */
+  Vector      *rel_perm = saturation;
+  Vector      *source = saturation;
+
+  /* Overland flow variables */  //sk
+  Subvector   *kw_sub, *ke_sub, *kn_sub, *ks_sub, *qx_sub, *qy_sub;
+  Subvector   *x_sl_sub, *y_sl_sub, *mann_sub;
+  Subvector   *obf_sub;
+  double      *kw_, *ke_, *kn_, *ks_, *qx_, *qy_;
+  double      *x_sl_dat, *y_sl_dat, *mann_dat;
+  double      *obf_dat;
+  double q_overlnd;
+  double sep;          // scaling difference temp var @RMM
+
+
+
+
+  Subvector   *x_ssl_sub, *y_ssl_sub;    //@RMM
+  double      *x_ssl_dat, *y_ssl_dat;     //@RMM
+
+
+  Subvector   *z_mult_sub;    //@RMM
+  double      *z_mult_dat;    //@RMM
+
+
+  Subvector   *FBx_sub, *FBy_sub, *FBz_sub;  //@RMM
+  double      *FBx_dat, *FBy_dat, *FBz_dat;   //@RMM
 
   Subgrid     *subgrid;
 
@@ -203,8 +255,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   double      *vx, *vy, *vz;  //jjb
   int vxi, vyi, vzi;         //jjb
 
-  Grid        *grid = VectorGrid(pressure);
-  Grid        *grid2d = VectorGrid(x_sl);
+
 
   double      *pp, *odp, *sp, *osp, *pop, *fp, *dp, *rpp, *opp, *ss, *et;
   double      *permxp, *permyp, *permzp;
@@ -217,9 +268,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   int nx_po, ny_po, nz_po;
   int sy_p, sz_p;
   int ip, ipo, io;
-  int diffusive;             //@RMM
 
-  double dtmp, dx, dy, dz, vol, ffx, ffy, ffz;
+
+  double dx, dy, dz, vol, ffx, ffy, ffz;
   double u_right, u_front, u_upper;
   double diff = 0.0e0;
   double updir = 0.0e0;
@@ -227,8 +278,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   //@RMM : terms for gravity/terrain
   double x_dir_g, y_dir_g, z_dir_g, del_x_slope, del_y_slope, x_dir_g_c, y_dir_g_c;
 
-  BCStruct    *bc_struct;
-  GrGeomSolid *gr_domain = ProblemDataGrDomain(problem_data);
   double      *bc_patch_values;
   double u_old = 0.0e0;
   double u_new = 0.0e0;
@@ -236,42 +285,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   int         *fdir;
   int ipatch, ival;
   int dir = 0;
-
-  VectorUpdateCommHandle  *handle;
-
-  BeginTiming(public_xtra->time_index);
-
-  /* Initialize function values to zero. */
-  PFVConstInit(0.0, fval);
-
-  /* diffusive test here, this is NOT PF style and should be
-   * re-done putting keys in BC Pressure Package and adding to the
-   * datastructure for overlandflowBC */
-  diffusive = GetIntDefault("OverlandFlowDiffusive", 0);
-
-  int overlandspinup;              //@RMM
-  overlandspinup = GetIntDefault("OverlandFlowSpinUp", 0);
-
-  /* Pass pressure values to neighbors.  */
-  handle = InitVectorUpdate(pressure, VectorUpdateAll);
-  FinalizeVectorUpdate(handle);
-
-  KW = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
-  KE = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
-  KN = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
-  KS = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
-  qx = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
-  qy = NewVectorType(grid2d, 1, 1, vector_cell_centered_2D);
-
-
-  /* Calculate pressure dependent properties: density and saturation */
-
-  PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density, &dtmp, &dtmp,
-                                                          CALCFCN));
-
-  PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation, pressure, density,
-                                                           gravity, problem_data, CALCFCN));
-
 
   /* Calculate accumulation terms for the function values */
 
@@ -345,7 +358,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     pop = SubvectorData(po_sub);
     fp = SubvectorData(f_sub);
 
-    _GrGeomInLoop(LOCALS(ip, ipo, io, del_x_slope, del_y_slope),
+    _GrGeomInLoop(NoWait, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
@@ -420,7 +433,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     osp = SubvectorData(os_sub);
     fp = SubvectorData(f_sub);
 
-    _GrGeomInLoop(LOCALS(ip, io, del_x_slope, del_y_slope),
+    _GrGeomInLoop(NoWait, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
@@ -497,7 +510,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     FBz_dat = SubvectorData(FBz_sub);
 
 
-    _GrGeomInLoop(LOCALS(ip, io, del_x_slope, del_y_slope),
+    _GrGeomInLoop(NoWait, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
@@ -511,8 +524,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     });
   }
 
+#pragma omp single
+  {
   bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
                                  (problem_data, grid, gr_domain, time));
+  }
 
   /*
    * Temporarily insert boundary pressure values for Dirichlet
@@ -565,7 +581,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       {
         case DirichletBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          __BCStructPatchLoop(NO_LOCALS,
+                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
             value = bc_patch_values[ival];
@@ -661,11 +678,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
     qx_sub = VectorSubvector(qx, is);
 
-    _GrGeomInLoop(LOCALS(ip, io, vxi, vyi, vzi, del_x_slope, del_y_slope,
-                         x_dir_g, x_dir_g_c, y_dir_g, y_dir_g_c, z_dir_g,
-                         diff, updir, u_right, u_front, u_upper,
-                         sep, lower_cond, upper_cond),
-    /* GrGeomInLoop( */
+    _GrGeomInLoop(NoWait, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -931,11 +944,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       {
         case DirichletBC:
         {
-          _BCStructPatchLoop(LOCALS(ip, io, value,
-                                    x_dir_g, y_dir_g,
-                                    del_x_slope, del_y_slope,
-                                    dir, diff, u_old, u_new,
-                                    sep, lower_cond, upper_cond),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -1158,11 +1167,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
         case FluxBC:
         {
-          _BCStructPatchLoop(LOCALS(ip, io,
-                                    x_dir_g, y_dir_g, z_dir_g,
-                                    del_x_slope, del_y_slope,
-                                    dir, diff, u_old, u_new,
-                                    sep, upper_cond, lower_cond),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -1337,11 +1342,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
         case OverlandBC:
         {
-          _BCStructPatchLoop(LOCALS(ip, io,
-                                    x_dir_g, y_dir_g, z_dir_g,
-                                    del_x_slope, del_y_slope,
-                                    dir, diff, u_old, u_new,
-                                    sep, lower_cond, upper_cond),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -1509,19 +1510,27 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 #if 1
           if (diffusive == 0)
           {
+#pragma omp single
+            {
             /* Call overlandflow_eval to compute fluxes across the east, west, north, and south faces */
-            PFModuleInvokeType(OverlandFlowEvalInvoke, overlandflow_module, (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
-                                                                             ke_, kw_, kn_, ks_, qx_, qy_, CALCFCN));
+            PFModuleInvokeType(OverlandFlowEvalInvoke, overlandflow_module,
+                               (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
+                                ke_, kw_, kn_, ks_, qx_, qy_, CALCFCN));
+            }
           }
           else
           {
             /*  @RMM this is modified to be kinematic wave routing, with a new module for diffusive wave
              * routing added */
             double *dummy1, *dummy2, *dummy3, *dummy4;
-            PFModuleInvokeType(OverlandFlowEvalDiffInvoke, overlandflow_module_diff, (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
-                                                                                      ke_, kw_, kn_, ks_,
-                                                                                      dummy1, dummy2, dummy3, dummy4,
-                                                                                      qx_, qy_, CALCFCN));
+#pragma omp single
+            {
+            PFModuleInvokeType(OverlandFlowEvalDiffInvoke, overlandflow_module_diff,
+                               (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
+                                ke_, kw_, kn_, ks_,
+                                dummy1, dummy2, dummy3, dummy4,
+                                qx_, qy_, CALCFCN));
+            }
           }
 #else
           // SGS TODO can these loops be merged?
@@ -1578,7 +1587,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
 
 
-          _BCStructPatchLoop(LOCALS(ip, io, dir, q_overlnd),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2])
@@ -1621,10 +1630,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
         case SeepageFaceBC:
         {
-          _BCStructPatchLoop(LOCALS(ip, io,
-                                    x_dir_g, y_dir_g, z_dir_g,
-                                    del_x_slope, del_y_slope,
-                                    dir, u_old, u_new),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -1721,7 +1727,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
             fp[ip] += dt * dir * u_new;
           }); /* End BCStructPatchLoop */
 
-          _BCStructPatchLoop(LOCALS(dir, ip, io, q_overlnd),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2])
@@ -1752,11 +1758,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         /*  OverlandBC for KWE upwind */
         case OverlandKinematicBC:
         {
-          _BCStructPatchLoop(LOCALS(ip, io,
-                                    x_dir_g, y_dir_g, z_dir_g,
-                                    del_x_slope, del_y_slope,
-                                    dir, diff, u_old, u_new,
-                                    sep, lower_cond, upper_cond),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -1919,7 +1921,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
             fp[ip] += dt * dir * u_new;
           });
 
-
+#pragma omp single
+          {
           //printf("Case overland_flow \n");
           /*  @RMM this is modified to be kinematic wave routing, with a new module for diffusive wave
            * routing added */
@@ -1929,8 +1932,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
                               ke_, kw_, kn_, ks_,
                               dummy1, dummy2, dummy3, dummy4,
                               qx_, qy_, CALCFCN));
+          }
 
-          _BCStructPatchLoop(LOCALS(dir, ip, io, q_overlnd),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2])
@@ -1965,11 +1969,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
         /* Duplicate of OverlandBC computations to be worked on */
         case OverlandDiffusiveBC:
         {
-          _BCStructPatchLoop(LOCALS(ip, io,
-                                    x_dir_g, y_dir_g, z_dir_g,
-                                    del_x_slope, del_y_slope,
-                                    dir, diff, u_old, u_new,
-                                    sep, lower_cond, upper_cond),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -2137,15 +2137,16 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
           /*  @RMM this is a new module for diffusive wave
            */
-
+#pragma omp single
+          {
           double *dummy1, *dummy2, *dummy3, *dummy4;
           PFModuleInvokeType(OverlandFlowEvalDiffInvoke, overlandflow_module_diff, (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
                                                                                     ke_, kw_, kn_, ks_,
                                                                                     dummy1, dummy2, dummy3, dummy4,
                                                                                     qx_, qy_, CALCFCN));
+          }
 
-
-          _BCStructPatchLoop(LOCALS(dir, ip, io, q_overlnd),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2])
@@ -2209,7 +2210,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       {
         case DirichletBC:
         {
-          BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+          __BCStructPatchLoop(NO_LOCALS,
+                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
             value = bc_patch_values[ival];
@@ -2223,8 +2225,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
-
-  FreeBCStruct(bc_struct);
+#pragma omp master
+  {
+    FreeBCStruct(bc_struct);
+  }
+  }
 
   PFModuleInvokeType(RichardsBCInternalInvoke, bc_internal, (problem, problem_data, fval, NULL,
                                                              time, pressure, CALCFCN));
