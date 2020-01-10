@@ -405,17 +405,20 @@ void    RichardsJacobianEval(
   InitMatrix(JC, 0.0);
 
   /* Calculate time term contributions. */
-
+#pragma omp parallel
+  {
   PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density, &dtmp, &dtmp,
                                                           CALCFCN));
   PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density_der, &dtmp,
                                                           &dtmp, CALCDER));
+
   PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation, pressure,
                                                            density, gravity, problem_data,
                                                            CALCFCN));
   PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation_der, pressure,
                                                            density, gravity, problem_data,
                                                            CALCDER));
+  }
 
   ForSubgridI(is, GridSubgrids(grid))
   {

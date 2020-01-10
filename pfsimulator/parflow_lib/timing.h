@@ -113,6 +113,7 @@ amps_ThreadLocalDcl(extern TimingType *, timing_ptr);
 
 #ifdef TIMING_WITH_SYNC
 #define BeginTiming(i)                  \
+  PRAGMA(omp master)                    \
   {                                     \
     StopTiming();                       \
     TimingTime(i) -= TimingTimeCount;   \
@@ -123,6 +124,7 @@ amps_ThreadLocalDcl(extern TimingType *, timing_ptr);
   }
 #else
 #define BeginTiming(i)                  \
+  PRAGMA(omp master)                    \
   {                                     \
     StopTiming();                       \
     TimingTime(i) -= TimingTimeCount;   \
@@ -133,6 +135,7 @@ amps_ThreadLocalDcl(extern TimingType *, timing_ptr);
 #endif
 
 #define EndTiming(i)                    \
+  PRAGMA(omp master)                    \
   {                                     \
     StopTiming();                       \
     TimingTime(i) += TimingTimeCount;   \

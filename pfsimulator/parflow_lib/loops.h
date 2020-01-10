@@ -35,7 +35,7 @@
 #ifndef _LOOPS_HEADER
 #define _LOOPS_HEADER
 
-
+#define PRAGMA(...)
 #define LOCALS(...)
 #define NO_LOCALS
 

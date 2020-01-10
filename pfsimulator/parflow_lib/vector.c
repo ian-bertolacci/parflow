@@ -829,7 +829,7 @@ void    InitVectorAll(
     vp = SubvectorData(v_sub);
 
     iv = 0;
-    _BoxLoopI1(NoWait, NO_LOCALS,
+    _BoxLoopI1(InParallel, NO_LOCALS,
                i, j, k,
                ix_v, iy_v, iz_v,
                nx_v, ny_v, nz_v,
@@ -840,7 +840,10 @@ void    InitVectorAll(
   }
 
 #ifdef SHMEM_OBJECTS
-  amps_Sync(amps_CommWorld);
+  #pragma omp single
+  {
+    amps_Sync(amps_CommWorld);
+  }
 #endif
 }
 

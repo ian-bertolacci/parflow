@@ -204,18 +204,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 /* Initialize function values to zero. */
   PFVConstInit(0.0, fval);
 
-  /* Calculate pressure dependent properties: density and saturation */
-  double dtmp;
-  PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density, &dtmp, &dtmp,
-                                                          CALCFCN));
-/*
-  TODO: For reasons as yet to be determined, calling this in the parallel region causes
-  something to go off and we never end up solving anything.  Probably overwriting something
-  somewhere due to a bad loop nest?
-*/
-  PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation, pressure, density,
-                                                           gravity, problem_data, CALCFCN));
-
 #pragma omp parallel
   {
   /* Re-use saturation vector to save memory */
@@ -285,6 +273,15 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   int         *fdir;
   int ipatch, ival;
   int dir = 0;
+
+
+  /* Calculate pressure dependent properties: density and saturation */
+  double dtmp;
+  PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density, &dtmp, &dtmp,
+                                                          CALCFCN));
+
+  PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation, pressure, density,
+                                                           gravity, problem_data, CALCFCN));
 
   /* Calculate accumulation terms for the function values */
 
@@ -596,12 +593,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
   /* Calculate relative permeability values overwriting current
    * phase source values */
-#pragma omp single
-  {
+
   PFModuleInvokeType(PhaseRelPermInvoke, rel_perm_module,
                      (rel_perm, pressure, density, gravity, problem_data,
                       CALCFCN));
-  }
+
 
   /* Calculate contributions from second order derivatives and gravity */
   ForSubgridI(is, GridSubgrids(grid))

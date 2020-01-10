@@ -10,6 +10,8 @@
 /* Utility macros for inserting OMP pragmas in macros */
 #define EMPTY()
 #define DEFER(x) x EMPTY()
+
+#undef PRAGMA
 #define PRAGMA(args) _Pragma( #args )
 
 #undef PlusEquals
@@ -38,7 +40,6 @@
 
 /* Include other macro files AFTER we redefine the LOCALS pragmas */
 #include "pf_omp_grgeom.h"
-
 
 
 /* Helper Functions */
@@ -637,174 +638,5 @@ INC_IDX(int idx, int i, int j, int k,
 	}
 
 #endif // BCStruct #if
-
-#undef _GrGeomSurfLoop
-#define _GrGeomSurfLoop(locals, i, j, k, fdir, grgeom,                  \
-                        r, ix, iy, iz, nx, ny, nz, body)                \
-  {                                                                     \
-    if (r == 0 && GrGeomSolidSurfaceBoxes(grgeom, GrGeomOctreeNumFaces - 1)) \
-    {                                                                   \
-      _GrGeomSurfLoopBoxes(locals, i, j, k, fdir, grgeom,               \
-                           ix, iy, iz, nx, ny, nz, body);               \
-    }                                                                   \
-    else                                                                \
-    {                                                                   \
-      GrGeomOctree  *PV_node;                                           \
-      double PV_ref = pow(2.0, r);                                      \
-                                                                        \
-      i = GrGeomSolidOctreeIX(grgeom) * (int)PV_ref;                    \
-      j = GrGeomSolidOctreeIY(grgeom) * (int)PV_ref;                    \
-      k = GrGeomSolidOctreeIZ(grgeom) * (int)PV_ref;                    \
-      GrGeomOctreeFaceLoop(i, j, k, fdir, PV_node,                      \
-                           GrGeomSolidData(grgeom),                     \
-                           GrGeomSolidOctreeBGLevel(grgeom) + r,        \
-                           ix, iy, iz, nx, ny, nz, body);               \
-    }                                                                   \
-  }
-
-#define _GrGeomSurfLoopBoxes(locals, i, j, k, fdir, grgeom, ix, iy, iz, nx, ny, nz, body) \
-  {                                                                     \
-    PRAGMA(omp parallel private(fdir))                                  \
-    {                                                                   \
-                                                                        \
-      int PV_fdir[3];                                                   \
-      int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;               \
-      int *PV_visiting = NULL;                                          \
-      fdir = PV_fdir;                                                   \
-      for (int PV_f = 0; PV_f < GrGeomOctreeNumFaces; PV_f++)           \
-      {                                                                 \
-        switch (PV_f)                                                   \
-        {                                                               \
-          case GrGeomOctreeFaceL:                                       \
-            fdir[0] = -1; fdir[1] = 0; fdir[2] = 0;                     \
-            break;                                                      \
-          case GrGeomOctreeFaceR:                                       \
-            fdir[0] = 1; fdir[1] = 0; fdir[2] = 0;                      \
-            break;                                                      \
-          case GrGeomOctreeFaceD:                                       \
-            fdir[0] = 0; fdir[1] = -1; fdir[2] = 0;                     \
-            break;                                                      \
-          case GrGeomOctreeFaceU:                                       \
-            fdir[0] = 0; fdir[1] = 1; fdir[2] = 0;                      \
-            break;                                                      \
-          case GrGeomOctreeFaceB:                                       \
-            fdir[0] = 0; fdir[1] = 0; fdir[2] = -1;                     \
-            break;                                                      \
-          case GrGeomOctreeFaceF:                                       \
-            fdir[0] = 0; fdir[1] = 0; fdir[2] = 1;                      \
-            break;                                                      \
-          default:                                                      \
-            fdir[0] = -9999; fdir[1] = -9999; fdir[2] = -99999;         \
-            break;                                                      \
-        }                                                               \
-                                                                        \
-        BoxArray* boxes = GrGeomSolidSurfaceBoxes(grgeom, PV_f);        \
-        for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)    \
-        {                                                               \
-          Box box = BoxArrayGetBox(boxes, PV_box);                      \
-          /* find octree and region intersection */                     \
-          PV_ixl = pfmax(ix, box.lo[0]);                                \
-          PV_iyl = pfmax(iy, box.lo[1]);                                \
-          PV_izl = pfmax(iz, box.lo[2]);                                \
-          PV_ixu = pfmin((ix + nx - 1), box.up[0]);                     \
-          PV_iyu = pfmin((iy + ny - 1), box.up[1]);                     \
-          PV_izu = pfmin((iz + nz - 1), box.up[2]);                     \
-                                                                        \
-          PRAGMA(omp for collapse(3) private(i, j, k locals))           \
-            for (k = PV_izl; k <= PV_izu; k++)                          \
-              for (j = PV_iyl; j <= PV_iyu; j++)                        \
-                for (i = PV_ixl; i <= PV_ixu; i++)                      \
-                {                                                       \
-                  body;                                                 \
-                }                                                       \
-        }                                                               \
-      }                                                                 \
-    }                                                                   \
-  }
-
-#define ___GrGeomSurfLoop(locals, i, j, k, fdir, grgeom,                 \
-                        r, ix, iy, iz, nx, ny, nz, body)                \
-  {                                                                     \
-    if (r == 0 && GrGeomSolidSurfaceBoxes(grgeom, GrGeomOctreeNumFaces - 1)) \
-    {                                                                   \
-      ___GrGeomSurfLoopBoxes(locals, i, j, k, fdir, grgeom,             \
-                           ix, iy, iz, nx, ny, nz, body);               \
-    }                                                                   \
-    else                                                                \
-    {                                                                   \
-      GrGeomOctree  *PV_node;                                           \
-      double PV_ref = pow(2.0, r);                                      \
-                                                                        \
-      i = GrGeomSolidOctreeIX(grgeom) * (int)PV_ref;                    \
-      j = GrGeomSolidOctreeIY(grgeom) * (int)PV_ref;                    \
-      k = GrGeomSolidOctreeIZ(grgeom) * (int)PV_ref;                    \
-      GrGeomOctreeFaceLoop(i, j, k, fdir, PV_node,                      \
-                           GrGeomSolidData(grgeom),                     \
-                           GrGeomSolidOctreeBGLevel(grgeom) + r,        \
-                           ix, iy, iz, nx, ny, nz, body);               \
-    }                                                                   \
-  }
-
-#define ___GrGeomSurfLoopBoxes(locals,                                  \
-                              i, j, k,                                  \
-                              fdir, grgeom,                             \
-                              ix, iy, iz,                               \
-                              nx, ny, nz,                               \
-                              body)                                     \
-  {                                                                     \
-    int PV_fdir[3];                                                     \
-    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;                 \
-    int *PV_visiting = NULL;                                            \
-    fdir = PV_fdir;                                                     \
-    for (int PV_f = 0; PV_f < GrGeomOctreeNumFaces; PV_f++)             \
-    {                                                                   \
-      switch (PV_f)                                                     \
-      {                                                                 \
-        case GrGeomOctreeFaceL:                                         \
-          fdir[0] = -1; fdir[1] = 0; fdir[2] = 0;                       \
-          break;                                                        \
-        case GrGeomOctreeFaceR:                                         \
-          fdir[0] = 1; fdir[1] = 0; fdir[2] = 0;                        \
-          break;                                                        \
-        case GrGeomOctreeFaceD:                                         \
-          fdir[0] = 0; fdir[1] = -1; fdir[2] = 0;                       \
-          break;                                                        \
-        case GrGeomOctreeFaceU:                                         \
-          fdir[0] = 0; fdir[1] = 1; fdir[2] = 0;                        \
-          break;                                                        \
-        case GrGeomOctreeFaceB:                                         \
-          fdir[0] = 0; fdir[1] = 0; fdir[2] = -1;                       \
-          break;                                                        \
-        case GrGeomOctreeFaceF:                                         \
-          fdir[0] = 0; fdir[1] = 0; fdir[2] = 1;                        \
-          break;                                                        \
-        default:                                                        \
-          fdir[0] = -9999; fdir[1] = -9999; fdir[2] = -99999;           \
-          break;                                                        \
-      }                                                                 \
-                                                                        \
-      BoxArray* boxes = GrGeomSolidSurfaceBoxes(grgeom, PV_f);          \
-      for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)      \
-      {                                                                 \
-        Box box = BoxArrayGetBox(boxes, PV_box);                        \
-        /* find octree and region intersection */                       \
-        PV_ixl = pfmax(ix, box.lo[0]);                                  \
-        PV_iyl = pfmax(iy, box.lo[1]);                                  \
-        PV_izl = pfmax(iz, box.lo[2]);                                  \
-        PV_ixu = pfmin((ix + nx - 1), box.up[0]);                       \
-        PV_iyu = pfmin((iy + ny - 1), box.up[1]);                       \
-        PV_izu = pfmin((iz + nz - 1), box.up[2]);                       \
-                                                                        \
-        PRAGMA(omp for nowait collapse(3) private(i, j, k locals))      \
-          for (k = PV_izl; k <= PV_izu; k++)                            \
-            for (j = PV_iyl; j <= PV_iyu; j++)                          \
-              for (i = PV_ixl; i <= PV_ixu; i++)                        \
-              {                                                         \
-                body;                                                   \
-              }                                                         \
-      }                                                                 \
-    }                                                                   \
-  }
-
 
 #endif // _PF_OMPLOOPS_H
