@@ -358,7 +358,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     pop = SubvectorData(po_sub);
     fp = SubvectorData(f_sub);
 
-    _GrGeomInLoop(NoWait, NO_LOCALS,
+    _GrGeomInLoop(InParallel, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
@@ -433,7 +433,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     osp = SubvectorData(os_sub);
     fp = SubvectorData(f_sub);
 
-    _GrGeomInLoop(NoWait, NO_LOCALS,
+    _GrGeomInLoop(InParallel, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
@@ -510,7 +510,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     FBz_dat = SubvectorData(FBz_sub);
 
 
-    _GrGeomInLoop(NoWait, NO_LOCALS,
+    _GrGeomInLoop(InParallel, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
@@ -596,10 +596,12 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
   /* Calculate relative permeability values overwriting current
    * phase source values */
-
+#pragma omp single
+  {
   PFModuleInvokeType(PhaseRelPermInvoke, rel_perm_module,
                      (rel_perm, pressure, density, gravity, problem_data,
                       CALCFCN));
+  }
 
   /* Calculate contributions from second order derivatives and gravity */
   ForSubgridI(is, GridSubgrids(grid))
@@ -678,7 +680,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
     qx_sub = VectorSubvector(qx, is);
 
-    _GrGeomInLoop(NoWait, NO_LOCALS,
+    _GrGeomInLoop(InParallel, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(p_sub, i, j, k);

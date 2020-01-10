@@ -32,9 +32,9 @@
   wraps the entire body of the macro inside the region for better performance,
   and so simply adjusting the pragma on the for loops is not sufficient.
 */
-#define NewParallel "parallel for"
-#define InParallel "for"
-#define NoWait "for nowait"
+#define NewParallel parallel for
+#define InParallel for
+#define NoWait for nowait
 
 /* Include other macro files AFTER we redefine the LOCALS pragmas */
 #include "pf_omp_grgeom.h"

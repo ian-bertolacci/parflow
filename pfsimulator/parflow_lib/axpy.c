@@ -89,7 +89,7 @@ void     Axpy(
       yp[iv] += alpha * xp[iv];
     });
     #else
-    __BoxLoopI1(NO_LOCALS,
+    _BoxLoopI1(InParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
