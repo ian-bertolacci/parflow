@@ -40,7 +40,7 @@ static inline void tfreeCUDA(void *ptr)
 }
 
 /*--------------------------------------------------------------------------
- * Redefine allocation macros for CUDA
+ * Redefine macros for CUDA
  *--------------------------------------------------------------------------*/
 
 // Redefine amps.h definitions
@@ -67,24 +67,19 @@ static inline void tfreeCUDA(void *ptr)
 #undef tfree
 #define tfree(ptr) if (ptr) tfreeCUDA(ptr); else {}
 
-/*--------------------------------------------------------------------------
- * Structures needed across CUDA compilation units
- *--------------------------------------------------------------------------*/
+#undef MemPrefetchDeviceToHost
+#define MemPrefetchDeviceToHost(ptr, size, stream)                   \
+{                                                                    \
+  CUDA_ERR(cudaMemPrefetchAsync(ptr, size, cudaCpuDeviceId, stream));\
+  CUDA_ERR(cudaStreamSynchronize(stream));                           \
+}
 
-typedef struct {
-  int num_phases;
-
-  int    *type;  /* array of size num_phases of input types */
-  void  **data;  /* array of size num_phases of pointers to Type structures */
-} PublicXtraPhaseDensity;
-
-typedef struct {
-  double constant;
-} Type0PhaseDensity;
-
-typedef struct {
-  double reference_density;
-  double compressibility_constant;
-} Type1PhaseDensity;
+#undef MemPrefetchHostToDevice
+#define MemPrefetchHostToDevice(ptr, size, stream)                   \
+{                                                                    \
+  int device;                                                        \
+  CUDA_ERR(cudaGetDevice(&device));                                  \
+  CUDA_ERR(cudaMemPrefetchAsync(ptr, size, device, stream))          \
+}
 
 #endif // PFCUDAMALLOC_H

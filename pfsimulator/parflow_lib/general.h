@@ -162,6 +162,15 @@
 #define PUSH_RANGE(name,cid)
 #define POP_RANGE
 
+//Memory Prefetching
+#define MemPrefetchDeviceToHost(ptr, size, stream)
+#define MemPrefetchHostToDevice(ptr, size, gpuid, stream)
+
+//CUDA synchronizations
+#define GPU_NOSYNC
+#define GPU_SYNC
+
+//CUDA compiler specific keywords
 #ifndef __CUDACC__
 #define __host__
 #define __device__

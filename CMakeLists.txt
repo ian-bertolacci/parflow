@@ -19,9 +19,11 @@ if( ${PARFLOW_ENABLE_CUDA} )
   check_language(CUDA)
   if(CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode=arch=compute_60,code=sm_60 -gencode=arch=compute_70,code=sm_70 --maxrregcount=64 --expt-extended-lambda")
+    set(CMAKE_CUDA_STANDARD 11)
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode=arch=compute_60,code=sm_60 -gencode=arch=compute_70,code=sm_70 --expt-extended-lambda")
     set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -G --ptxas-options=-v")
     set(CMAKE_CUDA_FLAGS_RELEASE "-Xptxas ${CMAKE_CUDA_FLAGS_RELEASE}")
+    set(CMAKE_CUDA_HOST_COMPILER mpicxx)
     message(STATUS "Found CUDA ${CMAKE_CUDA_COMPILER_VERSION} at ${CMAKE_CUDA_COMPILER}")
     set(PARFLOW_HAVE_CUDA "yes")
     set(HAVE_CUDA ${PARFLOW_HAVE_CUDA})
@@ -101,7 +103,7 @@ ENDIF("${isSystemDir}" STREQUAL "-1")
 
 # Set AMPS communication layer
 set(PARFLOW_AMPS_LAYER "seq" CACHE STRING "Set the Communications layer to use")
-set_property(CACHE PARFLOW_AMPS_LAYER PROPERTY STRINGS seq mpi1 smpi oas3 win32)
+set_property(CACHE PARFLOW_AMPS_LAYER PROPERTY STRINGS seq mpi1 cuda smpi oas3 win32)
 set(AMPS ${PARFLOW_AMPS_LAYER})
 
 option(PARFLOW_AMPS_SEQUENTIAL_IO "Use AMPS single file I/O model for output of PFB files" "FALSE")
@@ -121,7 +123,7 @@ if (${PARFLOW_HAVE_OAS3})
   set (HAVE_OAS3 ${PARFLOW_HAVE_OAS3})
 endif (${PARFLOW_HAVE_OAS3})
 
-set (PARFLOW_AMPS_LAYER_REQUIRE_MPI mpi1 smpi oas3)
+set (PARFLOW_AMPS_LAYER_REQUIRE_MPI mpi1 cuda smpi oas3)
 
 # Check for MPI only if AMPS requires it
 if ( ${PARFLOW_AMPS_LAYER} IN_LIST PARFLOW_AMPS_LAYER_REQUIRE_MPI )
@@ -481,6 +483,8 @@ if ( ${PARFLOW_ENABLE_LATEX} )
 endif()
 
 install (DIRECTORY ${CMAKE_BINARY_DIR}/config/ DESTINATION config)
+# Test script for docker builds
+install(PROGRAMS bin/parflow-docker-test DESTINATION bin)
 
 #-----------------------------------------------------------------------------
 # Doxygen 
