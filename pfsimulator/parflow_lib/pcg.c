@@ -171,10 +171,10 @@ void     PCG(
     gamma_old = gamma;
 
     /* x = x + alpha*p */
-    Axpy(alpha, p, x);
+    ParflowAxpy(alpha, p, x);
 
     /* r = r - alpha*s */
-    Axpy(-alpha, s, r);
+    ParflowAxpy(-alpha, s, r);
 
     /* s = C*r */
     PFModuleInvokeType(PrecondInvoke, precond, (s, r, 0.0, 1));
@@ -218,7 +218,7 @@ void     PCG(
 
     /* p = s + beta p */
     Scale(beta, p);
-    Axpy(1.0, s, p);
+    ParflowAxpy(1.0, s, p);
   }
 
 #if 1

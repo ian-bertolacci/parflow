@@ -134,14 +134,14 @@ void     Chebyshev(
 
     /* r = b - A*x */
     Matvec(-1.0, A, x, 0.0, r);
-    Axpy(1.0, b, r);
+    ParflowAxpy(1.0, b, r);
 
     /* del = alpha*r + beta*del */
     Scale(beta, del);
-    Axpy(alpha, r, del);
+    ParflowAxpy(alpha, r, del);
 
     /* x = x + del */
-    Axpy(1.0, del, x);
+    ParflowAxpy(1.0, del, x);
   }
 
   /*-----------------------------------------------------------------------

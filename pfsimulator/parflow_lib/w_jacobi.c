@@ -285,7 +285,7 @@ void     WJacobi(
     if (weight != 1.0)
     {
       Scale((1.0 - weight), x);
-      Axpy(weight, t, x);
+      ParflowAxpy(weight, t, x);
     }
     else
     {

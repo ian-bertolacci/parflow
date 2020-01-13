@@ -41,7 +41,7 @@ extern "C"{
 #include "pfcudamalloc.h"
 #endif
 
-void     Axpy(
+void     ParflowAxpy(
               double  alpha,
               Vector *x,
               Vector *y)

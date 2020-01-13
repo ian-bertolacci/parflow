@@ -314,7 +314,7 @@ void     MGSemi(
 #endif
 
       /* update solution (x = x + e) */
-      Axpy(1.0, temp_vec_l[l], x_l[l]);
+      ParflowAxpy(1.0, temp_vec_l[l], x_l[l]);
 
       /* smooth (non-zero initial x) */
       PFModuleInvokeType(LinearSolverInvoke, smooth_l[l], (x_l[l], b_l[l], 0.0, 0));
@@ -330,7 +330,7 @@ void     MGSemi(
 #endif
 
     /* update solution (x = x + e) */
-    Axpy(1.0, temp_vec_l[0], x);
+    ParflowAxpy(1.0, temp_vec_l[0], x);
 
     /* smooth (non-zero initial x) */
     PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, 0));

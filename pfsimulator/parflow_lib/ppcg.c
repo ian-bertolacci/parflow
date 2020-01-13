@@ -230,10 +230,10 @@ void     PPCG(
     gamma_old = gamma;
 
     /* x = x + alpha*p */
-    Axpy(alpha, p, x);
+    ParflowAxpy(alpha, p, x);
 
     /* r = r - alpha*s */
-    Axpy(-alpha, s, r);
+    ParflowAxpy(-alpha, s, r);
 
     /* s = C*r */
     PFModuleInvokeType(ChebyshevInvoke, precond, (s, r, 0.0, 1, ia, ib, degree));
@@ -247,7 +247,7 @@ void     PPCG(
 
     /* p = s + beta p */
     Scale(beta, p);
-    Axpy(1.0, s, p);
+    ParflowAxpy(1.0, s, p);
 
     /* set i_prod for convergence test */
     if (two_norm)

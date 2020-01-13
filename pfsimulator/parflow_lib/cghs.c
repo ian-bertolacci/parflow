@@ -153,10 +153,10 @@ void     CGHS(
     gamma_old = gamma;
 
     /* x = x + alpha*p */
-    Axpy(alpha, p, x);
+    ParflowAxpy(alpha, p, x);
 
     /* r = r - alpha*s */
-    Axpy(-alpha, s, r);
+    ParflowAxpy(-alpha, s, r);
 
     /* gamma = <r,r> */
     gamma = InnerProd(r, r);
@@ -183,7 +183,7 @@ void     CGHS(
 
     /* p = r + beta p */
     Scale(beta, p);
-    Axpy(1.0, r, p);
+    ParflowAxpy(1.0, r, p);
   }
 
   if (!amps_Rank(amps_CommWorld))

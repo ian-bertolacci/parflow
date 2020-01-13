@@ -13,7 +13,7 @@ void GodunovFreePublicXtra(void);
 int GodunovSizeOfTempData(void);
 
 /* axpy.c */
-void Axpy(double alpha, Vector *x, Vector *y);
+void ParflowAxpy(double alpha, Vector *x, Vector *y);
 
 /* background.c */
 Background *ReadBackground(void);

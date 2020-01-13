@@ -183,7 +183,7 @@ void          PhaseVelocityFace(
                        (temp_pressure, phase, 0,
                         problem_data, saturations[0]));
 
-    Axpy(1.0, pressure, temp_pressure);
+    ParflowAxpy(1.0, pressure, temp_pressure);
 
     pressure_vector = temp_pressure;
 

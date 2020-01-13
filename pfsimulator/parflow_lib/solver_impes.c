@@ -666,9 +666,9 @@ void      SolverImpes()
                             saturations[phase],
                             ProblemPhaseViscosity(problem, phase)));
 
-        Axpy(1.0, temp_mobility_x, total_mobility_x);
-        Axpy(1.0, temp_mobility_y, total_mobility_y);
-        Axpy(1.0, temp_mobility_z, total_mobility_z);
+        ParflowAxpy(1.0, temp_mobility_x, total_mobility_x);
+        ParflowAxpy(1.0, temp_mobility_y, total_mobility_y);
+        ParflowAxpy(1.0, temp_mobility_z, total_mobility_z);
       }
 
       handle = InitVectorUpdate(total_mobility_x, VectorUpdateAll);
