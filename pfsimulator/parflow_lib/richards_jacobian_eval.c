@@ -243,57 +243,27 @@ void    RichardsJacobianEval(
   Vector      *top = ProblemDataIndexOfDomainTop(problem_data);               //DOK
   Vector      *slope_x = ProblemDataTSlopeX(problem_data);                //DOK
 
-  /* Overland flow variables */  //DOK
-  Vector      *KW, *KE, *KN, *KS, *KWns, *KEns, *KNns, *KSns;
-  Subvector   *kw_sub, *ke_sub, *kn_sub, *ks_sub, *kwns_sub, *kens_sub, *knns_sub, *ksns_sub, *top_sub, *sx_sub;
-  double      *kw_der, *ke_der, *kn_der, *ks_der, *kwns_der, *kens_der, *knns_der, *ksns_der;
-
   double gravity = ProblemGravity(problem);
   double viscosity = ProblemPhaseViscosity(problem, 0);
 
   /* @RMM terrain following grid slope variables */
   Vector      *x_ssl = ProblemDataSSlopeX(problem_data);               //@RMM
   Vector      *y_ssl = ProblemDataSSlopeY(problem_data);               //@RMM
-  Subvector   *x_ssl_sub, *y_ssl_sub;    //@RMM
-  double      *x_ssl_dat, *y_ssl_dat;     //@RMM
+
+
 
   /* @RMM variable dz multiplier */
   Vector      *z_mult = ProblemDataZmult(problem_data);              //@RMM
-  Subvector   *z_mult_sub;    //@RMM
-  double      *z_mult_dat;    //@RMM
 
   /* @RMM Flow Barrier / Boundary values */
   Vector      *FBx = ProblemDataFBx(problem_data);
   Vector      *FBy = ProblemDataFBy(problem_data);
   Vector      *FBz = ProblemDataFBz(problem_data);
-  Subvector   *FBx_sub, *FBy_sub, *FBz_sub;    //@RMM
-  double      *FBx_dat, *FBy_dat, *FBz_dat;     //@RMM
 
-  Subgrid     *subgrid;
-
-  Subvector   *p_sub, *d_sub, *s_sub, *po_sub, *rp_sub, *ss_sub;
-  Subvector   *permx_sub, *permy_sub, *permz_sub, *dd_sub, *sd_sub, *rpd_sub;
-  Submatrix   *J_sub;
-  Submatrix   *JC_sub;
 
   Grid        *grid = VectorGrid(pressure);
   Grid        *grid2d = VectorGrid(slope_x);
 
-  double      *pp, *sp, *sdp, *pop, *dp, *ddp, *rpp, *rpdp;
-  double      *permxp, *permyp, *permzp;
-  double      *cp, *wp, *ep, *sop, *np, *lp, *up, *op = NULL, *ss;
-
-  double      *cp_c, *wp_c, *ep_c, *sop_c, *np_c, *top_dat;  //DOK
-
-  int i, j, k, r, is;
-  int ix, iy, iz;
-  int nx, ny, nz;
-  int nx_v, ny_v, nz_v;
-  int nx_m, ny_m, nz_m;
-  int nx_po, ny_po, nz_po;
-  int sy_v, sz_v;
-  int sy_m, sz_m;
-  int ip, ipo, im, iv;
 
 
   int diffusive;             //@LEC
@@ -303,28 +273,7 @@ void    RichardsJacobianEval(
   int overlandspinup;              //@RMM
   overlandspinup = GetIntDefault("OverlandFlowSpinUp", 0);
 
-  int itop, k1, io, io1, ovlnd_flag;           //DOK
-  int ioo;         //@RMM
-
-  double dtmp, dx, dy, dz, vol, vol2, ffx, ffy, ffz;          //@RMM
-  double diff, coeff, x_coeff, y_coeff, z_coeff, updir, sep;         //@RMM
-  double prod, prod_rt, prod_no, prod_up, prod_val, prod_lo;
-  double prod_der, prod_rt_der, prod_no_der, prod_up_der;
-  double west_temp, east_temp, north_temp, south_temp;
-  double lower_temp, upper_temp, o_temp = 0.0;
-  double sym_west_temp, sym_east_temp, sym_south_temp, sym_north_temp;
-  double sym_lower_temp, sym_upper_temp;
-  double lower_cond, upper_cond;
-
-  //@RMM : terms for gravity/terrain
-  double x_dir_g, y_dir_g, z_dir_g, del_x_slope, del_y_slope, x_dir_g_c, y_dir_g_c;
-
-  BCStruct    *bc_struct;
   GrGeomSolid *gr_domain = ProblemDataGrDomain(problem_data);
-  double      *bc_patch_values;
-  double value, den_d, dend_d;
-  int         *fdir;
-  int ipatch, ival;
 
   CommHandle  *handle;
   VectorUpdateCommHandle  *vector_update_handle;
@@ -377,6 +326,7 @@ void    RichardsJacobianEval(
   FinalizeVectorUpdate(vector_update_handle);
 
 /* Define grid for surface contribution */
+  Vector      *KW, *KE, *KN, *KS, *KWns, *KEns, *KNns, *KSns;
   KW = NewVectorType(grid2d, 1, 1, vector_cell_centered);
   KE = NewVectorType(grid2d, 1, 1, vector_cell_centered);
   KN = NewVectorType(grid2d, 1, 1, vector_cell_centered);
@@ -397,16 +347,76 @@ void    RichardsJacobianEval(
 
   // SGS set this to 1 since the off/on behavior does not work in
   // parallel.
-  ovlnd_flag = 1;  // determines whether or not to set up data structs for overland flow contribution
+  int ovlnd_flag = 1;  // determines whether or not to set up data structs for overland flow contribution
 
 
   /* Initialize matrix values to zero. */
   InitMatrix(J, 0.0);
   InitMatrix(JC, 0.0);
 
+  BCStruct    *bc_struct;
   /* Calculate time term contributions. */
-#pragma omp parallel
+#pragma omp parallel private(handle, vector_update_handle)
   {
+
+      /* Overland flow variables */  //DOK
+  Subvector   *kw_sub, *ke_sub, *kn_sub, *ks_sub, *kwns_sub, *kens_sub, *knns_sub, *ksns_sub, *top_sub, *sx_sub;
+  double      *kw_der, *ke_der, *kn_der, *ks_der, *kwns_der, *kens_der, *knns_der, *ksns_der;
+
+  Subvector   *x_ssl_sub, *y_ssl_sub;    //@RMM
+  double      *x_ssl_dat, *y_ssl_dat;     //@RMM
+  Subvector   *z_mult_sub;    //@RMM
+  double      *z_mult_dat;    //@RMM
+  Subvector   *FBx_sub, *FBy_sub, *FBz_sub;    //@RMM
+  double      *FBx_dat, *FBy_dat, *FBz_dat;     //@RMM
+
+  Subgrid     *subgrid;
+
+  Subvector   *p_sub, *d_sub, *s_sub, *po_sub, *rp_sub, *ss_sub;
+  Subvector   *permx_sub, *permy_sub, *permz_sub, *dd_sub, *sd_sub, *rpd_sub;
+  Submatrix   *J_sub;
+  Submatrix   *JC_sub;
+
+
+  double      *pp, *sp, *sdp, *pop, *dp, *ddp, *rpp, *rpdp;
+  double      *permxp, *permyp, *permzp;
+  double      *cp, *wp, *ep, *sop, *np, *lp, *up, *op = NULL, *ss;
+
+  double      *cp_c, *wp_c, *ep_c, *sop_c, *np_c, *top_dat;  //DOK
+
+  int i, j, k, r, is;
+  int ix, iy, iz;
+  int nx, ny, nz;
+  int nx_v, ny_v, nz_v;
+  int nx_m, ny_m, nz_m;
+  int nx_po, ny_po, nz_po;
+  int sy_v, sz_v;
+  int sy_m, sz_m;
+  int ip, ipo, im, iv;
+
+
+  int itop, k1, io, io1;           //DOK
+  int ioo;         //@RMM
+
+  double dtmp, dx, dy, dz, vol, vol2, ffx, ffy, ffz;          //@RMM
+  double diff, coeff, x_coeff, y_coeff, z_coeff, updir, sep;         //@RMM
+  double prod, prod_rt, prod_no, prod_up, prod_val, prod_lo;
+  double prod_der, prod_rt_der, prod_no_der, prod_up_der;
+  double west_temp, east_temp, north_temp, south_temp;
+  double lower_temp, upper_temp, o_temp = 0.0;
+  double sym_west_temp, sym_east_temp, sym_south_temp, sym_north_temp;
+  double sym_lower_temp, sym_upper_temp;
+  double lower_cond, upper_cond;
+
+  //@RMM : terms for gravity/terrain
+  double x_dir_g, y_dir_g, z_dir_g, del_x_slope, del_y_slope, x_dir_g_c, y_dir_g_c;
+
+  double      *bc_patch_values;
+  double value, den_d, dend_d;
+  int         *fdir;
+  int ipatch, ival;
+
+
   PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density, &dtmp, &dtmp,
                                                           CALCFCN));
   PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density_der, &dtmp,
@@ -418,7 +428,6 @@ void    RichardsJacobianEval(
   PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation_der, pressure,
                                                            density, gravity, problem_data,
                                                            CALCDER));
-  }
 
   ForSubgridI(is, GridSubgrids(grid))
   {
@@ -483,7 +492,7 @@ void    RichardsJacobianEval(
     pop = SubvectorData(po_sub);     // porosity
     ss = SubvectorData(ss_sub);     // sepcific storage
 
-    _GrGeomInLoop(NewParallel, LOCALS(im, ipo, iv, vol2),
+    _GrGeomInLoop(InParallel,  LOCALS(im, ipo, iv, vol2),
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -497,8 +506,11 @@ void    RichardsJacobianEval(
     });
   }    /* End subgrid loop */
 
-  bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
-                                 (problem_data, grid, gr_domain, time));
+  #pragma omp single
+  {
+    bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
+                                   (problem_data, grid, gr_domain, time));
+  }
 
   /* Get boundary pressure values for Dirichlet boundaries.   */
   /* These are needed for upstream weighting in mobilities - need boundary */
@@ -527,7 +539,7 @@ void    RichardsJacobianEval(
       {
         case DirichletBC:
         {
-          _BCStructPatchLoop(LOCALS(ip, value),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -634,7 +646,7 @@ void    RichardsJacobianEval(
     FBy_dat = SubvectorData(FBy_sub);
     FBz_dat = SubvectorData(FBz_sub);
 
-    _GrGeomInLoop(NewParallel, LOCALS(ip, im, ioo,
+    _GrGeomInLoop(InParallel,  LOCALS(ip, im, ioo,
                          prod, prod_der, prod_rt, prod_rt_der,
                          prod_no, prod_no_der, prod_up, prod_up_der,
                          x_dir_g, x_dir_g_c, y_dir_g, y_dir_g_c,
@@ -896,7 +908,8 @@ void    RichardsJacobianEval(
 
       for (ipatch = 0; ipatch < BCStructNumPatches(bc_struct); ipatch++)
       {
-        BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is,
+        __BCStructPatchLoop(NO_LOCALS,
+                            i, j, k, fdir, ival, bc_struct, ipatch, is,
         {
           ip = SubvectorEltIndex(p_sub, i, j, k);
           im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -1103,6 +1116,12 @@ void    RichardsJacobianEval(
     permyp = SubvectorData(permy_sub);
     permzp = SubvectorData(permz_sub);
 
+    double fcn_phase_const = 0.0;
+    double der_phase_const = 0.0;
+    double phase_ref = 0.0;
+    double phase_comp = 0.0;
+    int phase_type = 0;
+
     for (ipatch = 0; ipatch < BCStructNumPatches(bc_struct); ipatch++)
     {
       bc_patch_values = BCStructPatchValues(bc_struct, ipatch, is);
@@ -1111,11 +1130,11 @@ void    RichardsJacobianEval(
       {
         case DirichletBC:
         {
-          double fcn_phase_const = 0.0;
-          double der_phase_const = 0.0;
-          double phase_ref = 0.0;
-          double phase_comp =0.0;
-          int phase_type = 0;
+          fcn_phase_const = 0.0;
+          der_phase_const = 0.0;
+          phase_ref = 0.0;
+          phase_comp = 0.0;
+          phase_type = 0;
 
           ThisPFModule = density_module;
           PhaseDensityConstants(0, CALCFCN, &phase_type,
@@ -1127,11 +1146,8 @@ void    RichardsJacobianEval(
                                 &phase_ref,
                                 &phase_comp);
 
-          _BCStructPatchLoop(LOCALS(ip, im, value, den_d, dend_d,
-                                    prod, prod_der, prod_val,
-                                    coeff, diff, o_temp,
-                                    lower_cond, upper_cond, op),
-                             i, j, k, fdir, ival, bc_struct, ipatch, is,
+          __BCStructPatchLoop(NO_LOCALS,
+                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             /* PFModuleInvokeType(PhaseDensityInvoke, density_module, */
             /*                    (0, NULL, NULL, &value, &den_d, CALCFCN)); */
@@ -1270,11 +1286,12 @@ void    RichardsJacobianEval(
           });
 
           break;
-        }               /* End DirichletBC case */
+        } /* End DirichletBC case */
+
 
         case FluxBC:
         {
-          _BCStructPatchLoop(LOCALS(im, op),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -1301,7 +1318,7 @@ void    RichardsJacobianEval(
 
         case OverlandBC:     //sk
         {
-          _BCStructPatchLoop(LOCALS(im, ip, op),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -1345,7 +1362,7 @@ void    RichardsJacobianEval(
 
             case simple:
             {
-              _BCStructPatchLoop(LOCALS(ip, io, im),
+              __BCStructPatchLoop(NO_LOCALS,
                                  i, j, k, fdir, ival, bc_struct, ipatch, is,
               {
                 if (fdir[2] == 1)
@@ -1375,7 +1392,7 @@ void    RichardsJacobianEval(
               {
                 vol = dx * dy * dz;
                 /* add flux loss equal to excess head  that overwrites the prior overland flux */
-                _BCStructPatchLoop(LOCALS(ip, io, im),
+                __BCStructPatchLoop(NO_LOCALS,
                                    i, j, k, fdir, ival, bc_struct, ipatch, is,
                 {
                   if (fdir[2] == 1)
@@ -1434,7 +1451,7 @@ void    RichardsJacobianEval(
         {
           vol = dx * dy * dz;
           /* add flux loss equal to excess head  that overwrites the prior overland flux */
-          _BCStructPatchLoop(LOCALS(ip, io, im),
+          __BCStructPatchLoop(NO_LOCALS,
                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2] == 1)
@@ -1460,7 +1477,7 @@ void    RichardsJacobianEval(
         /*  OverlandBC for KWE with upwinding, call module */
         case OverlandKinematicBC:
         {
-          _BCStructPatchLoop(LOCALS(im, ip, op),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -1503,7 +1520,7 @@ void    RichardsJacobianEval(
         /* OverlandDiffusiveBC */
         case OverlandDiffusiveBC:
         {
-          _BCStructPatchLoop(LOCALS(im, ip, op),
+          __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -1548,10 +1565,11 @@ void    RichardsJacobianEval(
     }          /* End ipatch loop */
   }            /* End subgrid loop */
 
-  PFModuleInvokeType(RichardsBCInternalInvoke, bc_internal, (problem, problem_data, NULL, J, time,
-                                                             pressure, CALCDER));
-
-
+#pragma omp master
+  {
+    PFModuleInvokeType(RichardsBCInternalInvoke, bc_internal, (problem, problem_data, NULL, J, time,
+                                                               pressure, CALCDER));
+  }
 
   if (public_xtra->type == overland_flow)
   {
@@ -1673,7 +1691,7 @@ void    RichardsJacobianEval(
           /* Fall through cases for new Overland types */
           case OverlandKinematicBC:
           {
-            _BCStructPatchLoop(LOCALS(io, io1, itop, ip, im, k1),
+            __BCStructPatchLoop(NO_LOCALS,
                                i, j, k, fdir, ival, bc_struct, ipatch, is,
             {
               if (fdir[2] == 1)
@@ -1760,7 +1778,7 @@ void    RichardsJacobianEval(
 
           case OverlandDiffusiveBC:
           {
-            _BCStructPatchLoop(LOCALS(io, io1, itop, ip, im, k1),
+            __BCStructPatchLoop(NO_LOCALS,
                                i, j, k, fdir, ival, bc_struct, ipatch, is,
             {
               if (fdir[2] == 1)
@@ -1846,7 +1864,7 @@ void    RichardsJacobianEval(
 
           case OverlandBC:
           {
-            _BCStructPatchLoop(LOCALS(io, io1, itop, ip, im, k1),
+            __BCStructPatchLoop(NO_LOCALS,
                                i, j, k, fdir, ival, bc_struct, ipatch, is,
             {
               if (fdir[2] == 1)
@@ -1958,14 +1976,14 @@ void    RichardsJacobianEval(
   }
 
 
-
   /* Set pressures outside domain to zero.
    * Recall: equation to solve is f = 0, so components of f outside
    * domain are set to the respective pressure value.
    *
    * Should change this to set pressures to scaling value.
    * CSW: Should I set this to pressure * vol * dt ??? */
-
+#pragma omp master
+  {
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -2020,6 +2038,9 @@ void    RichardsJacobianEval(
 //#endif */
     });
   }
+  }
+
+  } // End Parallel Region
 
 
   /*-----------------------------------------------------------------------
