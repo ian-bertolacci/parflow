@@ -138,14 +138,14 @@ void     PCG(
   if (two_norm)
   {
     /* eps = (tol^2)*<b,b> */
-    bi_prod = InnerProd(b, b);
+    bi_prod = ParflowInnerProd(b, b);
     eps = (tol * tol) * bi_prod;
   }
   else
   {
     /* eps = (tol^2)*<C*b,b> */
     PFModuleInvokeType(PrecondInvoke, precond, (p, b, 0.0, 1));
-    bi_prod = InnerProd(p, b);
+    bi_prod = ParflowInnerProd(p, b);
     eps = (tol * tol) * bi_prod;
   }
 
@@ -156,7 +156,7 @@ void     PCG(
   PFModuleInvokeType(PrecondInvoke, precond, (p, r, 0.0, 1));
 
   /* gamma = <r,p> */
-  gamma = InnerProd(r, p);
+  gamma = ParflowInnerProd(r, p);
 
   while (((i + 1) <= max_iter) && (gamma > 0))
   {
@@ -166,7 +166,7 @@ void     PCG(
     Matvec(1.0, A, p, 0.0, s);
 
     /* alpha = gamma / <s,p> */
-    alpha = gamma / InnerProd(s, p);
+    alpha = gamma / ParflowInnerProd(s, p);
 
     gamma_old = gamma;
 
@@ -180,11 +180,11 @@ void     PCG(
     PFModuleInvokeType(PrecondInvoke, precond, (s, r, 0.0, 1));
 
     /* gamma = <r,s> */
-    gamma = InnerProd(r, s);
+    gamma = ParflowInnerProd(r, s);
 
     /* set i_prod for convergence test */
     if (two_norm)
-      i_prod = InnerProd(r, r);
+      i_prod = ParflowInnerProd(r, r);
     else
       i_prod = gamma;
 

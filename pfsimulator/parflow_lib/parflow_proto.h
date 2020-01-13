@@ -278,7 +278,7 @@ void HBT_scanf(FILE *file, HBT *tree);
 double InfinityNorm(Vector *x);
 
 /* innerprod.c */
-double InnerProd(Vector *x, Vector *y);
+double ParflowInnerProd(Vector *x, Vector *y);
 
 /* input_porosity.c */
 void InputPorosity(GeomSolid *geounit, GrGeomSolid *gr_geounit, Vector *field);

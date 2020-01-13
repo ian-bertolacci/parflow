@@ -128,7 +128,7 @@ void     CGHS(
     InitVector(x, 0.0);
 
   /* eps = (tol^2)*<b,b> */
-  b_dot_b = InnerProd(b, b);
+  b_dot_b = ParflowInnerProd(b, b);
   eps = (tol * tol) * b_dot_b;
 
   /* r = b - Ax,  (overwrite b with r) */
@@ -138,7 +138,7 @@ void     CGHS(
   Copy(r, p);
 
   /* gamma = <r,r> */
-  gamma = InnerProd(r, r);
+  gamma = ParflowInnerProd(r, r);
 
   while (((i + 1) <= max_iter) && (gamma > 0))
   {
@@ -148,7 +148,7 @@ void     CGHS(
     Matvec(1.0, A, p, 0.0, s);
 
     /* alpha = gamma / <s,p> */
-    alpha = gamma / InnerProd(s, p);
+    alpha = gamma / ParflowInnerProd(s, p);
 
     gamma_old = gamma;
 
@@ -159,7 +159,7 @@ void     CGHS(
     ParflowAxpy(-alpha, s, r);
 
     /* gamma = <r,r> */
-    gamma = InnerProd(r, r);
+    gamma = ParflowInnerProd(r, r);
 
 #if 0
     if (!amps_Rank(amps_CommWorld))

@@ -46,7 +46,7 @@ extern "C"{
 /* This must be in the global scope due to __managed__ keyword */
 __managed__ static double result;
 
-double   InnerProd(
+double   ParflowInnerProd(
                    Vector *x,
                    Vector *y)
 {

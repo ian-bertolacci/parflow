@@ -215,7 +215,7 @@ void     MGSemi(
   if (tol > 0.0)
   {
     /* eps = (tol^2)*<b,b> */
-    b_dot_b = InnerProd(b, b);
+    b_dot_b = ParflowInnerProd(b, b);
     eps = (tol * tol) * b_dot_b;
   }
 
@@ -240,7 +240,7 @@ void     MGSemi(
     {
       if (!almost_converged)
       {
-        r_dot_r = InnerProd(temp_vec_l[0], temp_vec_l[0]);
+        r_dot_r = ParflowInnerProd(temp_vec_l[0], temp_vec_l[0]);
         if (r_dot_r < eps)
           almost_converged = 1;
 
@@ -345,7 +345,7 @@ void     MGSemi(
       {
         Copy(b, temp_vec_l[0]);
         Matvec(-1.0, A, x, 1.0, temp_vec_l[0]);
-        r_dot_r = InnerProd(temp_vec_l[0], temp_vec_l[0]);
+        r_dot_r = ParflowInnerProd(temp_vec_l[0], temp_vec_l[0]);
 
 #if 0
         if (!amps_Rank(amps_CommWorld))

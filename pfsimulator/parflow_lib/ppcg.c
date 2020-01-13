@@ -195,8 +195,8 @@ void     PPCG(
 
   /* Compute endpoints ia=ib = <Ab,b>/<b,b>  */
   Matvec(1.0, A, b, 0.0, s);
-  b_dot_b = InnerProd(b, b);
-  ia = InnerProd(s, b) / b_dot_b;
+  b_dot_b = ParflowInnerProd(b, b);
+  ia = ParflowInnerProd(s, b) / b_dot_b;
   ib = ia;
 
   /* eps = (tol^2)*<b,b> */
@@ -209,7 +209,7 @@ void     PPCG(
   PFModuleInvokeType(ChebyshevInvoke, precond, (p, r, 0.0, 1, ia, ib, degree));
 
   /* gamma = <r,p> */
-  gamma = InnerProd(r, p);
+  gamma = ParflowInnerProd(r, p);
 
   /* Main interation loop */
   while (((i + 1) <= max_iter) && (gamma > 0))
@@ -222,7 +222,7 @@ void     PPCG(
     Matvec(1.0, A, p, 0.0, s);
 
     /* alpha = gamma / <s,p> */
-    prod = InnerProd(s, p);
+    prod = ParflowInnerProd(s, p);
     alpha = gamma / prod;
     alpha_vec[size - 1] = alpha;
     pdotAp_vec[size - 1] = prod;
@@ -239,7 +239,7 @@ void     PPCG(
     PFModuleInvokeType(ChebyshevInvoke, precond, (s, r, 0.0, 1, ia, ib, degree));
 
     /* gamma = <r,s> */
-    gamma = InnerProd(r, s);
+    gamma = ParflowInnerProd(r, s);
 
     /* beta = gamma / gamma_old */
     beta = gamma / gamma_old;
@@ -251,7 +251,7 @@ void     PPCG(
 
     /* set i_prod for convergence test */
     if (two_norm)
-      i_prod = InnerProd(r, r);
+      i_prod = ParflowInnerProd(r, r);
     else
       i_prod = gamma * cond;
 
@@ -307,7 +307,7 @@ void     PPCG(
       PFModuleInvokeType(ChebyshevInvoke, precond, (p, r, 0.0, 1, ia, ib, degree));
 
       /* gamma = <r,p> */
-      gamma = InnerProd(r, p);
+      gamma = ParflowInnerProd(r, p);
     }
   }
 
