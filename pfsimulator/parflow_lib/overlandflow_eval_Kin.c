@@ -22,7 +22,16 @@
 *
 * @LEC, @RMM
 *****************************************************************************/
+
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
+
 #include "parflow.h"
+#include "pf_parallel.h"
 #include "llnlmath.h"
 /*--------------------------------------------------------------------------
  * Structures
@@ -120,7 +129,8 @@ void    OverlandFlowEvalKin(
 
   if (fcn == CALCFCN)
   {
-    BCStructPatchLoopOvrlnd(i, j, k, fdir, ival, bc_struct, ipatch, sg,
+    __BCStructPatchLoopOvrlnd(NO_LOCALS,
+                              i, j, k, fdir, ival, bc_struct, ipatch, sg,
     {
       if (fdir[2] == 1)
       {
@@ -196,7 +206,8 @@ void    OverlandFlowEvalKin(
       }
     });
 
-    BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, sg,
+    __BCStructPatchLoop(NO_LOCALS,
+                        i, j, k, fdir, ival, bc_struct, ipatch, sg,
     {
       if (fdir[2] == 1)
       {
@@ -210,7 +221,8 @@ void    OverlandFlowEvalKin(
   }
   else          //fcn = CALCDER calculates the derivs
   {
-    BCStructPatchLoopOvrlnd(i, j, k, fdir, ival, bc_struct, ipatch, sg,
+    __BCStructPatchLoopOvrlnd(NO_LOCALS,
+                              i, j, k, fdir, ival, bc_struct, ipatch, sg,
     {
       if (fdir[2] == 1)
       {
@@ -371,3 +383,8 @@ int  OverlandFlowEvalKinSizeOfTempData()
 {
   return 0;
 }
+
+
+#ifdef USING_PARALLEL
+}
+#endif

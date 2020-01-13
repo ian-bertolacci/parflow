@@ -1506,30 +1506,26 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
           // SGS Fix this up later after things are a bit more stable.   Probably should
           // Use this loop inside the overland flow eval as it is more efficient.
 #if 1
-          if (diffusive == 0)
-          {
-#pragma omp single
+          /* TODO: This isn't executing the barriers correctly? One thread always ends up stranded */
+            if (diffusive == 0)
             {
-            /* Call overlandflow_eval to compute fluxes across the east, west, north, and south faces */
-            PFModuleInvokeType(OverlandFlowEvalInvoke, overlandflow_module,
-                               (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
-                                ke_, kw_, kn_, ks_, qx_, qy_, CALCFCN));
+              /* Call overlandflow_eval to compute fluxes across the east, west, north, and south faces */
+              PFModuleInvokeType(OverlandFlowEvalInvoke, overlandflow_module,
+                                 (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
+                                  ke_, kw_, kn_, ks_, qx_, qy_, CALCFCN));
             }
-          }
-          else
-          {
-            /*  @RMM this is modified to be kinematic wave routing, with a new module for diffusive wave
-             * routing added */
-            double *dummy1, *dummy2, *dummy3, *dummy4;
-#pragma omp single
+            else
             {
-            PFModuleInvokeType(OverlandFlowEvalDiffInvoke, overlandflow_module_diff,
-                               (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
-                                ke_, kw_, kn_, ks_,
-                                dummy1, dummy2, dummy3, dummy4,
-                                qx_, qy_, CALCFCN));
+              /*  @RMM this is modified to be kinematic wave routing, with a new module for diffusive wave
+               * routing added */
+              double *dummy1, *dummy2, *dummy3, *dummy4;
+              PFModuleInvokeType(OverlandFlowEvalDiffInvoke, overlandflow_module_diff,
+                                 (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
+                                  ke_, kw_, kn_, ks_,
+                                  dummy1, dummy2, dummy3, dummy4,
+                                  qx_, qy_, CALCFCN));
             }
-          }
+
 #else
           // SGS TODO can these loops be merged?
           BCStructPatchLoopOvrlnd(i, j, k, fdir, ival, bc_struct, ipatch, is,
@@ -1583,8 +1579,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
           });
 #endif
 
-
-
           __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
@@ -1622,7 +1616,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
               }
             }
           });
-
           break;
         }         /* End OverlandBC case */
 
@@ -1919,8 +1912,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
             fp[ip] += dt * dir * u_new;
           });
 
-#pragma omp single
-          {
           //printf("Case overland_flow \n");
           /*  @RMM this is modified to be kinematic wave routing, with a new module for diffusive wave
            * routing added */
@@ -1930,7 +1921,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
                               ke_, kw_, kn_, ks_,
                               dummy1, dummy2, dummy3, dummy4,
                               qx_, qy_, CALCFCN));
-          }
 
           __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
@@ -2135,14 +2125,12 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
 
           /*  @RMM this is a new module for diffusive wave
            */
-#pragma omp single
-          {
           double *dummy1, *dummy2, *dummy3, *dummy4;
-          PFModuleInvokeType(OverlandFlowEvalDiffInvoke, overlandflow_module_diff, (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
-                                                                                    ke_, kw_, kn_, ks_,
-                                                                                    dummy1, dummy2, dummy3, dummy4,
-                                                                                    qx_, qy_, CALCFCN));
-          }
+          PFModuleInvokeType(OverlandFlowEvalDiffInvoke, overlandflow_module_diff,
+                             (grid, is, bc_struct, ipatch, problem_data, pressure, old_pressure,
+                              ke_, kw_, kn_, ks_,
+                              dummy1, dummy2, dummy3, dummy4,
+                              qx_, qy_, CALCFCN));
 
           __BCStructPatchLoop(NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
@@ -2223,11 +2211,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       }        /* End switch BCtype */
     }          /* End ipatch loop */
   }            /* End subgrid loop */
-#pragma omp master
-  {
-    FreeBCStruct(bc_struct);
   }
-  }
+
+  FreeBCStruct(bc_struct);
 
   PFModuleInvokeType(RichardsBCInternalInvoke, bc_internal, (problem, problem_data, fval, NULL,
                                                              time, pressure, CALCFCN));

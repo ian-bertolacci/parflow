@@ -36,7 +36,14 @@
 * -DOK
 *****************************************************************************/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
+#include "pf_parallel.h"
 #include "llnlmath.h"
 //#include "llnltyps.h"
 /*--------------------------------------------------------------------------
@@ -111,7 +118,8 @@ void    OverlandFlowEval(
   {
     if (qx_v == NULL || qy_v == NULL)  /* do not return velocity fluxes */
     {
-      BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, sg,
+      __BCStructPatchLoop(NO_LOCALS,
+                          i, j, k, fdir, ival, bc_struct, ipatch, sg,
       {
         if (fdir[2] == 1)
         {
@@ -179,7 +187,8 @@ void    OverlandFlowEval(
     }
     else   /* return velocity fluxes */
     {
-      BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, sg,
+      __BCStructPatchLoop(NO_LOCALS,
+                          i, j, k, fdir, ival, bc_struct, ipatch, sg,
       {
         if (fdir[2] == 1)
         {
@@ -250,7 +259,8 @@ void    OverlandFlowEval(
   {
     if (qx_v == NULL || qy_v == NULL)  /* Do not return derivs of velocity fluxes */
     {
-      BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, sg,
+      __BCStructPatchLoop(NO_LOCALS,
+                          i, j, k, fdir, ival, bc_struct, ipatch, sg,
       {
         if (fdir[2] == 1)
         {
@@ -290,7 +300,8 @@ void    OverlandFlowEval(
     }
     else   /* return derivs of velocity fluxes */
     {
-      BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, sg,
+      __BCStructPatchLoop(NO_LOCALS,
+                          i, j, k, fdir, ival, bc_struct, ipatch, sg,
       {
         if (fdir[2] == 1)
         {
@@ -402,3 +413,8 @@ int  OverlandFlowEvalSizeOfTempData()
 {
   return 0;
 }
+
+
+#ifdef USING_PARALLEL
+}
+#endif

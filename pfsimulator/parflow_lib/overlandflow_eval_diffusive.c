@@ -33,7 +33,15 @@
 *  It also computes the derivatives of these terms for inclusion in the Jacobian.
 * @LEC, @RMM
 *****************************************************************************/
+
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
+#include "pf_parallel.h"
 #include "llnlmath.h"
 //#include "llnltyps.h"
 /*--------------------------------------------------------------------------
@@ -134,7 +142,8 @@ void    OverlandFlowEvalDiff(
 
   if (fcn == CALCFCN)
   {
-    BCStructPatchLoopOvrlnd(i, j, k, fdir, ival, bc_struct, ipatch, sg,
+    __BCStructPatchLoopOvrlnd(NO_LOCALS,
+                              i, j, k, fdir, ival, bc_struct, ipatch, sg,
     {
       if (fdir[2] == 1)
       {
@@ -226,7 +235,8 @@ void    OverlandFlowEvalDiff(
       }
     });
 
-    BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, sg,
+    __BCStructPatchLoop(NO_LOCALS,
+                        i, j, k, fdir, ival, bc_struct, ipatch, sg,
     {
       if (fdir[2] == 1)
       {
@@ -241,7 +251,8 @@ void    OverlandFlowEvalDiff(
   }
   else          //fcn = CALCDER calculates the derivs of KE KW KN KS wrt to current cell (i,j,k)
   {
-    BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, sg,
+    __BCStructPatchLoop(NO_LOCALS,
+                        i, j, k, fdir, ival, bc_struct, ipatch, sg,
     {
       if (fdir[2] == 1)
       {
@@ -481,3 +492,7 @@ int  OverlandFlowEvalDiffSizeOfTempData()
 {
   return 0;
 }
+
+#ifdef USING_PARALLEL
+}
+#endif
