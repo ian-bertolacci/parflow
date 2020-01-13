@@ -138,8 +138,10 @@ CommHandle  *InitMatrixUpdate(
                               Matrix *matrix)
 {
   CommHandle *return_handle = NULL;
-
   enum ParflowGridType grid_type = invalid_grid_type;
+
+#pragma omp master
+  {
 
 #ifdef HAVE_SAMRAI
   switch (matrix->type)
@@ -192,6 +194,8 @@ CommHandle  *InitMatrixUpdate(
     matrix->boundary_fill_schedule->fillData(time);
 #endif
   }
+  } // End master
+  #pragma omp barrier
 
   return return_handle;
 }
@@ -204,10 +208,14 @@ CommHandle  *InitMatrixUpdate(
 void         FinalizeMatrixUpdate(
                                   CommHandle *handle)
 {
+  #pragma omp master
+  {
   if (handle)
   {
     FinalizeCommunication(handle);
   }
+  }
+  #pragma omp barrier
 }
 
 

@@ -54,6 +54,8 @@ extern "C"{
 #include "llnltyps.h"
 #include "assert.h"
 
+#include <unistd.h>
+
 /*---------------------------------------------------------------------
  * Define module structures
  *---------------------------------------------------------------------*/
@@ -355,10 +357,12 @@ void    RichardsJacobianEval(
   InitMatrix(JC, 0.0);
 
   BCStruct    *bc_struct;
+  bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
+                                 (problem_data, grid, gr_domain, time));
+
   /* Calculate time term contributions. */
 #pragma omp parallel private(handle, vector_update_handle)
   {
-
       /* Overland flow variables */  //DOK
   Subvector   *kw_sub, *ke_sub, *kn_sub, *ks_sub, *kwns_sub, *kens_sub, *knns_sub, *ksns_sub, *top_sub, *sx_sub;
   double      *kw_der, *ke_der, *kn_der, *ks_der, *kwns_der, *kens_der, *knns_der, *ksns_der;
@@ -505,12 +509,6 @@ void    RichardsJacobianEval(
                  ddp[iv] * pp[iv] + sp[iv] * dp[iv]); //sk start
     });
   }    /* End subgrid loop */
-
-  #pragma omp single
-  {
-    bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
-                                   (problem_data, grid, gr_domain, time));
-  }
 
   /* Get boundary pressure values for Dirichlet boundaries.   */
   /* These are needed for upstream weighting in mobilities - need boundary */
@@ -2038,10 +2036,9 @@ void    RichardsJacobianEval(
 //#endif */
     });
   }
-  }
+  } // End master region
 
   } // End Parallel Region
-
 
   /*-----------------------------------------------------------------------
    * Update matrix ghost points
