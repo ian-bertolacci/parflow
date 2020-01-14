@@ -84,14 +84,11 @@ CommPkg  *NewVectorCommPkg(
 /*--------------------------------------------------------------------------
  * InitVectorUpdate
  *--------------------------------------------------------------------------*/
-#ifdef DEBUGGING_VECTOR_UPDATE
-VectorUpdateCommHandle  *_InitVectorUpdate(Vector *vector, int     update_mode)
-#else
 VectorUpdateCommHandle  *InitVectorUpdate(Vector *vector, int     update_mode)
-#endif
 {
   VectorUpdateCommHandle *vector_update_comm_handle = NULL;
-#pragma omp master
+
+#pragma omp single copyprivate(vector_update_comm_handle)
   {
   enum ParflowGridType grid_type = invalid_grid_type;
 
@@ -186,8 +183,6 @@ VectorUpdateCommHandle  *InitVectorUpdate(Vector *vector, int     update_mode)
 
   }
 
-  #pragma omp barrier
-
   return vector_update_comm_handle;
 }
 
@@ -195,13 +190,9 @@ VectorUpdateCommHandle  *InitVectorUpdate(Vector *vector, int     update_mode)
 /*--------------------------------------------------------------------------
  * FinalizeVectorUpdate
  *--------------------------------------------------------------------------*/
-#ifdef DEBUGGING_VECTOR_UPDATE
-void         _FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
-#else
 void         FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
-#endif
 {
-  #pragma omp master
+  #pragma omp single
   {
   switch (handle->vector->type)
   {
@@ -234,8 +225,6 @@ void         FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
 
   tfree(handle);
   }
-  #pragma omp barrier
-
 }
 
 
@@ -789,6 +778,66 @@ void    InitVector(
     });
   }
 }
+
+/*--------------------------------------------------------------------------
+ * NewParallel_InitVectorAll
+ * Placeholder function to deal with InitVectorAll calls in active parallel
+ * regions that are only being executed by one thread (ex: functions in clustering.c)
+ *--------------------------------------------------------------------------*/
+
+void    NewParallel_InitVectorAll(
+                      Vector *v,
+                      double  value)
+{
+  Grid       *grid = VectorGrid(v);
+
+  Subvector  *v_sub;
+  double     *vp;
+
+  Subgrid    *subgrid;
+
+  int ix_v, iy_v, iz_v;
+  int nx_v, ny_v, nz_v;
+
+  int i_s;
+  int i, j, k, iv;
+
+
+  ForSubgridI(i_s, GridSubgrids(grid))
+  {
+    subgrid = GridSubgrid(grid, i_s);
+
+    v_sub = VectorSubvector(v, i_s);
+
+    ix_v = SubvectorIX(v_sub);
+    iy_v = SubvectorIY(v_sub);
+    iz_v = SubvectorIZ(v_sub);
+
+    nx_v = SubvectorNX(v_sub);
+    ny_v = SubvectorNY(v_sub);
+    nz_v = SubvectorNZ(v_sub);
+
+    vp = SubvectorData(v_sub);
+
+    iv = 0;
+    _BoxLoopI1(NewParallel, NO_LOCALS,
+               i, j, k,
+               ix_v, iy_v, iz_v,
+               nx_v, ny_v, nz_v,
+               iv, nx_v, ny_v, nz_v, 1, 1, 1,
+    {
+      vp[iv] = value;
+    });
+  }
+
+#ifdef SHMEM_OBJECTS
+#pragma omp single
+  {
+    amps_Sync(amps_CommWorld);
+  }
+#endif
+}
+
 
 /*--------------------------------------------------------------------------
  * InitVectorAll

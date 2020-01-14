@@ -435,7 +435,7 @@ void     MGSemi(
  * SetupCoarseOps
  *--------------------------------------------------------------------------*/
 
-#if 0
+#if 1
 void              SetupCoarseOps(
                                  Matrix **        A_l,
                                  Matrix **        P_l,
@@ -443,6 +443,8 @@ void              SetupCoarseOps(
                                  SubregionArray **f_sra_l,
                                  SubregionArray **c_sra_l)
 {
+#pragma omp parallel
+  {
   SubregionArray *subregion_array;
 
   Subregion      *subregion;
@@ -480,8 +482,7 @@ void              SetupCoarseOps(
   /*-----------------------------------------------------------------------
    * Set fine grid conductivity, current solution, and finest matrix.
    *-----------------------------------------------------------------------*/
-#pragma omp parallel
-  {
+
     for (l = 0; l <= (num_levels - 2); l++)
     {
       /*--------------------------------------------------------------
@@ -495,7 +496,10 @@ void              SetupCoarseOps(
       P_sz = StencilSize(P_stencil);
       A_sz = StencilSize(A_stencil);
 
-#pragma omp for private(j)
+      // TODO: Come back to this later
+      // These stencil sizes are at most 7 (see above, s_num[7]), so a single clause is fine for now
+#pragma omp single copyprivate(s_num)
+      {
       for (j = 0; j < A_sz; j++)
         s_num[j] = j;
 
@@ -507,11 +511,15 @@ void              SetupCoarseOps(
               (A_ss[j][1] == P_ss[k][1]) &&
               (A_ss[j][2] == P_ss[k][2]))
           {
-            s_num[j] = s_num[k + 1];
-            s_num[k + 1] = j;
+            #pragma omp critical
+            {
+              s_num[j] = s_num[k + 1];
+              s_num[k + 1] = j;
+            }
             break;
           }
         }
+      }
       }
 
       /*--------------------------------------------------------------------
@@ -563,7 +571,7 @@ void              SetupCoarseOps(
           iP = SubmatrixEltIndex(P_sub, ix, iy, iz);
           iA = SubmatrixEltIndex(A_sub, ix, iy, iz);
 
-          _BoxLoopI2(LOCALS(ap0),
+          _BoxLoopI2(InParallel, NO_LOCALS,
                       ii, jj, kk, ix, iy, iz, nx, ny, nz,
                       iP, nx_P, ny_P, nz_P, 1, 1, 1,
                       iA, nx_A, ny_A, nz_A, sx, sy, sz,
@@ -587,10 +595,8 @@ void              SetupCoarseOps(
       /*--------------------------------------------------------------------
        * Update prolongation matrix boundaries
        *--------------------------------------------------------------------*/
-#pragma omp single
-      {
         FinalizeMatrixUpdate(InitMatrixUpdate(P_l[l]));
-      }
+
       /*--------------------------------------------------------------------
        * Compute coarse coefficient matrix
        *--------------------------------------------------------------------*/
@@ -674,7 +680,7 @@ void              SetupCoarseOps(
             dA12 = SubmatrixNX(A_sub) * SubmatrixNY(A_sub);
           }
 
-          _BoxLoopI3(LOCALS(iP2, iA1, iA2),
+          _BoxLoopI3(InParallel, NO_LOCALS,
                       ii, jj, kk, ix, iy, iz, nx, ny, nz,
                       iP1, nx_P, ny_P, nz_P, 1, 1, 1,
                       iA, nx_A, ny_A, nz_A, sx, sy, sz,
@@ -702,11 +708,7 @@ void              SetupCoarseOps(
       /*--------------------------------------------------------------------
        * Update coefficient matrix boundaries
        *--------------------------------------------------------------------*/
-
-#pragma omp single
-      {
         FinalizeMatrixUpdate(InitMatrixUpdate(A_l[l + 1]));
-      }
 
       /*--------------------------------------------------------------------
        * Complete computation of center coefficient
@@ -744,7 +746,7 @@ void              SetupCoarseOps(
 
           iAc = SubmatrixEltIndex(Ac_sub, ix / sx, iy / sy, iz / sz);
 
-          _BoxLoopI1(NO_LOCALS,
+          _BoxLoopI1(InParallel, NO_LOCALS,
                       ii, jj, kk, ix, iy, iz, nx, ny, nz,
                       iAc, nx_Ac, ny_Ac, nz_Ac, 1, 1, 1,
           {

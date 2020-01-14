@@ -26,7 +26,14 @@
  *  USA
  **********************************************************************EHEADER*/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
+#include "pf_parallel.h"
 #include "clustering.h"
 #include "index_space.h"
 #include "llnlmath.h"
@@ -793,6 +800,8 @@ void BergerRigoutsos(Vector*    vector,
  */
 BoxList* ComputePatchBoxes(GrGeomSolid *geom_solid, int patch)
 {
+  #pragma omp parallel
+  {
   Grid *grid = CreateGrid(GlobalsUserGrid);
 
   Vector* indicator = NewVectorType(grid, 1, num_ghost, vector_cell_centered);
@@ -886,6 +895,7 @@ BoxList* ComputePatchBoxes(GrGeomSolid *geom_solid, int patch)
 
   FreeVector(indicator);
   FreeGrid(grid);
+  }
 }
 
 /**
@@ -899,6 +909,8 @@ BoxList* ComputePatchBoxes(GrGeomSolid *geom_solid, int patch)
  */
 void ComputeSurfaceBoxes(GrGeomSolid *geom_solid)
 {
+  #pragma omp parallel
+  {
   Grid *grid = CreateGrid(GlobalsUserGrid);
 
   Vector* indicator = NewVectorType(grid, 1, num_ghost, vector_cell_centered);
@@ -991,6 +1003,7 @@ void ComputeSurfaceBoxes(GrGeomSolid *geom_solid)
 
   FreeVector(indicator);
   FreeGrid(grid);
+  }
 }
 
 /**
@@ -1003,6 +1016,8 @@ void ComputeSurfaceBoxes(GrGeomSolid *geom_solid)
  */
 void ComputeInteriorBoxes(GrGeomSolid *geom_solid)
 {
+  #pragma omp parallel
+  {
   DoubleTags tag;
 
   tag.as_tags = 1;
@@ -1085,20 +1100,39 @@ void ComputeInteriorBoxes(GrGeomSolid *geom_solid)
   FreeBoxList(boxes);
   FreeVector(indicator);
   FreeGrid(grid);
+  }
 }
 
 void ComputeBoxes(GrGeomSolid *geom_solid)
 {
   BeginTiming(ClusteringTimingIndex);
 
-  ComputeInteriorBoxes(geom_solid);
-
-  ComputeSurfaceBoxes(geom_solid);
-
-  for (int patch = 0; patch < GrGeomSolidNumPatches(geom_solid); patch++)
+#pragma omp parallel
   {
-    ComputePatchBoxes(geom_solid, patch);
-  }
+    /*
+       @MCB: Note: Using 'single nowait' instead of a 'parallel sections' pragma
+       in order to allow us to have the 'for' clause for patch box calls
+    */
+    #pragma omp single nowait
+    {
+      ComputeInteriorBoxes(geom_solid);
+    }
+
+    #pragma omp single nowait
+    {
+      ComputeSurfaceBoxes(geom_solid);
+    }
+
+    #pragma omp for
+    for (int patch = 0; patch < GrGeomSolidNumPatches(geom_solid); patch++)
+    {
+      ComputePatchBoxes(geom_solid, patch);
+    }
+  } // End Parallel Region
 
   EndTiming(ClusteringTimingIndex);
 }
+
+#ifdef USING_PARALLEL
+}
+#endif

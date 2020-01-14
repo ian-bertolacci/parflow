@@ -42,15 +42,6 @@
 
 //#define DEBUGGING_VECTOR_UPDATE
 
-#ifdef DEBUGGING_VECTOR_UPDATE
-#define InitVectorUpdate(v, m) \
-  (printf("%d | %s:%d\n", amps_Rank(amps_CommWorld), __FILE__, __LINE__),\
-   _InitVectorUpdate(v, m));
-
-#define FinalizeVectorUpdate(h) \
-  printf("%d | %s:%d\n", amps_Rank(amps_CommWorld), __FILE__, __LINE__); \
-  _FinalizeVectorUpdate(h);
-#endif
 
 #include "amps.h"
 

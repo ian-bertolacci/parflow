@@ -25,6 +25,11 @@
 #define NO_LOCALS DEFER(_NO_LOCALS)
 #define _NO_LOCALS
 
+#define MASTER(body) PRAGMA(omp master)         \
+	{                                             \
+		body;                                       \
+  }
+
 /*
   Keeps the BoxLoop macros much tidier
   For GrGeomInLoop macros, the macro name will be used, not its expanded value
@@ -149,8 +154,6 @@ INC_IDX(int idx, int i, int j, int k,
   return (k * kinc + (k * ny + j) * jinc +
           (k * ny * nx + j * nx + i) * sx) + idx;
 }
-
-#define MASTER(body) PRAGMA(omp master) body
 
 #if 1
 

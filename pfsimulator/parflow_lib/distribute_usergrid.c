@@ -147,7 +147,11 @@ SubgridArray   *DistributeUserGrid(
       static char first_call = 1;
       if (first_call && !amps_Rank(amps_CommWorld))
       {
+        #ifdef HAVE_OMP
+        amps_Printf("Using process grid (%d,%d,%d) with %d OMP Threads\n", P, Q, R, omp_get_max_threads());
+        #else
         amps_Printf("Using process grid (%d,%d,%d)\n", P, Q, R);
+        #endif
         first_call = 0;
       }
     }
@@ -203,4 +207,3 @@ SubgridArray   *DistributeUserGrid(
 
   return all_subgrids;
 }
-

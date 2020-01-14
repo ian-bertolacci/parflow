@@ -140,7 +140,7 @@ CommHandle  *InitMatrixUpdate(
   CommHandle *return_handle = NULL;
   enum ParflowGridType grid_type = invalid_grid_type;
 
-#pragma omp master
+#pragma omp single copyprivate(return_handle)
   {
 
 #ifdef HAVE_SAMRAI
@@ -195,7 +195,6 @@ CommHandle  *InitMatrixUpdate(
 #endif
   }
   } // End master
-  #pragma omp barrier
 
   return return_handle;
 }
@@ -208,14 +207,13 @@ CommHandle  *InitMatrixUpdate(
 void         FinalizeMatrixUpdate(
                                   CommHandle *handle)
 {
-  #pragma omp master
+  #pragma omp single
   {
-  if (handle)
-  {
-    FinalizeCommunication(handle);
+    if (handle)
+    {
+      FinalizeCommunication(handle);
+    }
   }
-  }
-  #pragma omp barrier
 }
 
 
