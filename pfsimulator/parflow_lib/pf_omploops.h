@@ -30,6 +30,11 @@
 		body;                                       \
   }
 
+#define SINGLE(body, ...) PRAGMA(omp single __VA_ARGS__) \
+  {                                                      \
+    body;                                                \
+  }
+
 /*
   Keeps the BoxLoop macros much tidier
   For GrGeomInLoop macros, the macro name will be used, not its expanded value

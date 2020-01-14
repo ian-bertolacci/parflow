@@ -116,8 +116,11 @@ void  LogGlobals()
             GlobalsNumProcsY,
             GlobalsNumProcsZ);
 
+    #ifdef HAVE_OMP
+    fprintf(log_file, "OpenMP threads = %d\n",
+            omp_get_max_threads());
+    #endif
+
     CloseLogFile(log_file);
   }
 }
-
-

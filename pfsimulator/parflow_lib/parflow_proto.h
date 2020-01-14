@@ -14,6 +14,7 @@ int GodunovSizeOfTempData(void);
 
 /* axpy.c */
 void Axpy(double alpha, Vector *x, Vector *y);
+void InParallel_Axpy(double alpha, Vector *x, Vector *y);
 
 /* background.c */
 Background *ReadBackground(void);
@@ -389,6 +390,7 @@ void InitMatrix(Matrix *A, double value);
 
 /* matvec.c */
 void Matvec(double alpha, Matrix *A, Vector *x, double beta, Vector *y);
+void InParallel_Matvec(double alpha, Matrix *A, Vector *x, double beta, Vector *y);
 
 /* matvecSubMat.c */
 void MatvecSubMat(void *  current_state,
@@ -1259,6 +1261,7 @@ Vector  *NewVectorType(
                        enum vector_type type);
 void FreeVector(Vector *vector);
 void InitVector(Vector *v, double value);
+void NewParallel_InitVectorAll(Vector *v, double value);
 void InitVectorAll(Vector *v, double value);
 void InitVectorInc(Vector *v, double value, double inc);
 void InitVectorRandom(Vector *v, long seed);

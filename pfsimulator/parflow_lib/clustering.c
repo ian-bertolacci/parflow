@@ -1123,7 +1123,7 @@ void ComputeBoxes(GrGeomSolid *geom_solid)
       ComputeSurfaceBoxes(geom_solid);
     }
 
-    #pragma omp for
+    #pragma omp for nowait
     for (int patch = 0; patch < GrGeomSolidNumPatches(geom_solid); patch++)
     {
       ComputePatchBoxes(geom_solid, patch);

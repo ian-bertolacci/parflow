@@ -90,7 +90,7 @@ void     Copy(
 
     i_x = 0;
     i_y = 0;
-    #if 1
+    #if 0
     _BoxLoopI2(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                i_x, nx_x, ny_x, nz_x, 1, 1, 1,
