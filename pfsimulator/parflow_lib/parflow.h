@@ -42,6 +42,31 @@
 
 //#define DEBUGGING_VECTOR_UPDATE
 
+#ifdef DEBUGGING_VECTOR_UPDATE
+
+#define InitVectorUpdate(v, m) \
+  (printf("VInit: %d | %s:%d\n", amps_Rank(amps_CommWorld), __FILE__, __LINE__),\
+   _InitVectorUpdate(v, m))
+#define FinalizeVectorUpdate(h) \
+  printf("VFinal: %d | %s:%d\n", amps_Rank(amps_CommWorld), __FILE__, __LINE__); \
+  _FinalizeVectorUpdate(h);
+
+#define InitMatrixUpdate(m) \
+  (printf("MInit: %d | %s:%d\n", amps_Rank(amps_CommWorld), __FILE__, __LINE__), \
+   _InitMatrixUpdate(m))
+#define FinalizeMatrixUpdate(h) \
+  printf("MFinal: %d | %s:%d\n", amps_Rank(amps_CommWorld), __FILE__, __LINE__); \
+  _FinalizeMatrixUpdate(h);
+
+#else
+
+#define InitVectorUpdate(v, m) _InitVectorUpdate(v, m)
+#define FinalizeVectorUpdate(h) _FinalizeVectorUpdate(h)
+#define InitMatrixUpdate(m) _InitMatrixUpdate(m)
+#define FinalizeMatrixUpdate(h) _FinalizeMatrixUpdate(h)
+
+#endif
+
 
 #include "amps.h"
 

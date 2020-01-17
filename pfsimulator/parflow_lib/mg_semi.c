@@ -161,10 +161,18 @@ void     MGSemi(
 
   BeginTiming(public_xtra->time_index);
 
+  /* @MCB: Check this before allocating temp vectors */
+  if ((i + 1) > max_iter)
+  {
+    Copy(b, x);
+    EndTiming(public_xtra->time_index);
+    return;
+  }
 
   /*-----------------------------------------------------------------------
    * Allocate temp vectors
    *-----------------------------------------------------------------------*/
+
   x_l = talloc(Vector *, num_levels);
   b_l = talloc(Vector *, num_levels);
   temp_vec_l = talloc(Vector *, num_levels);
@@ -173,6 +181,8 @@ void     MGSemi(
   prolong_comm_pkg_l = talloc(CommPkg *, (num_levels - 1));
 
   temp_vec_l[0] = NewVector(instance_xtra->grid_l[0], 1, 1);
+
+  /* @MCB: Can we do this in an omp for? */
   for (l = 0; l < (num_levels - 1); l++)
   {
     /*-----------------------------------------------------------------
@@ -194,35 +204,31 @@ void     MGSemi(
                        (instance_xtra->prolong_compute_pkg_l[l]));
   }
 
-  /*-----------------------------------------------------------------------
-   * Do V-cycles:
-   *   For each index l, "fine" = l, "coarse" = (l+1)
-   *-----------------------------------------------------------------------*/
-  /* @MCB: Shouldn't this occur before the temp vector alloc? Memory leak? */
-  if ((i + 1) > max_iter)
-  {
-    Copy(b, x);
-    EndTiming(public_xtra->time_index);
-    return;
-  }
 
   int omp_stop = 0;
 #pragma omp parallel private(i, l)
   {
     int tid = omp_get_thread_num();
 
+  /*-----------------------------------------------------------------------
+   * Do V-cycles:
+   *   For each index l, "fine" = l, "coarse" = (l+1)
+   *-----------------------------------------------------------------------*/
+
+
     if (tol > 0.0)
     {
       /* eps = (tol^2)*<b,b> */
-      SINGLE(b_dot_b = InnerProd(b, b));
+      b_dot_b = InnerProd(b, b);
       eps = (tol * tol) * b_dot_b;
     }
 
   /* smooth (use `zero' to determine initial x) */
     PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, zero));
-  while (!omp_stop)
-  {
-    i++;
+    //while (!omp_stop)
+    for (i = 1; i < max_iter; i++)
+    {
+      //i++;
     /*--------------------------------------------------------------------
      * Down cycle
      *--------------------------------------------------------------------*/
@@ -238,18 +244,15 @@ void     MGSemi(
     {
       if (!almost_converged)
       {
-        SINGLE(
-        {
-          r_dot_r = InnerProd(temp_vec_l[0], temp_vec_l[0]);
-          if (r_dot_r < eps)
-            almost_converged = 1;
+        r_dot_r = InnerProd(temp_vec_l[0], temp_vec_l[0]);
+        if (r_dot_r < eps)
+          almost_converged = 1;
 
-          IfLogging(1)
-          {
-            norm_log[i - 1] = sqrt(r_dot_r);
-            rel_norm_log[i - 1] = b_dot_b ? sqrt(r_dot_r / b_dot_b) : 0.0;
-          }
-        });
+        IfLogging(1)
+        {
+          norm_log[i - 1] = sqrt(r_dot_r);
+          rel_norm_log[i - 1] = b_dot_b ? sqrt(r_dot_r / b_dot_b) : 0.0;
+        }
       }
     }
 
@@ -344,9 +347,7 @@ void     MGSemi(
       {
         Copy(b, temp_vec_l[0]);
         InParallel_Matvec(-1.0, A, x, 1.0, temp_vec_l[0]);
-        SINGLE(
-        {
-          r_dot_r = InnerProd(temp_vec_l[0], temp_vec_l[0]);
+        r_dot_r = InnerProd(temp_vec_l[0], temp_vec_l[0]);
 
 #if 0
         if (!amps_Rank(amps_CommWorld))
@@ -361,24 +362,13 @@ void     MGSemi(
         }
 
         if (r_dot_r < eps)
-          omp_stop = 1;
-
-        });
-      }
-    }
-    else if ((i + 1) > max_iter)
-    {
-#pragma omp single
-      {
-        omp_stop = 1;
+          break;
+          //omp_stop = 1;
       }
     }
 
     /* smooth (non-zero initial x) */
-    if (!omp_stop)
-    {
-      PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, 0));
-    }
+    PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, 0));
   }
   }
 
@@ -947,7 +937,7 @@ void              SetupCoarseOps(
       /*--------------------------------------------------------------------
        * Update prolongation matrix boundaries
        *--------------------------------------------------------------------*/
-        FinalizeMatrixUpdate(InitMatrixUpdate(P_l[l]));
+      FinalizeMatrixUpdate(InitMatrixUpdate(P_l[l]));
 
       /*--------------------------------------------------------------------
        * Compute coarse coefficient matrix
@@ -1060,7 +1050,7 @@ void              SetupCoarseOps(
       /*--------------------------------------------------------------------
        * Update coefficient matrix boundaries
        *--------------------------------------------------------------------*/
-        FinalizeMatrixUpdate(InitMatrixUpdate(A_l[l + 1]));
+      FinalizeMatrixUpdate(InitMatrixUpdate(A_l[l + 1]));
 
       /*--------------------------------------------------------------------
        * Complete computation of center coefficient

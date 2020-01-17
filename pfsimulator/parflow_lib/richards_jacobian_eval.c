@@ -426,6 +426,8 @@ void    RichardsJacobianEval(
   PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density_der, &dtmp,
                                                           &dtmp, CALCDER));
 
+  BARRIER;
+
   PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation, pressure,
                                                            density, gravity, problem_data,
                                                            CALCFCN));
@@ -552,6 +554,7 @@ void    RichardsJacobianEval(
 
   /* Calculate rel_perm and rel_perm_der */
 
+  /* @MCB: TODO: Convert these modules into NoWait with a trailing barrier */
   PFModuleInvokeType(PhaseRelPermInvoke, rel_perm_module,
                      (rel_perm, pressure, density, gravity, problem_data,
                       CALCFCN));
@@ -1569,6 +1572,12 @@ void    RichardsJacobianEval(
                                                                pressure, CALCDER));
   }
 
+  /* @MCB:
+     TODO:
+     End parallel region here?  This is a LOT of barriers and syncs.
+     Maybe change amps comms so they don't have an internal barrier,
+     and always explicitly sync after the calls?
+  */
   if (public_xtra->type == overland_flow)
   {
     // SGS always have to do communication here since

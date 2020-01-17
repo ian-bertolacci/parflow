@@ -144,12 +144,14 @@ void             MGSemiProlong(
     switch (compute_i)
     {
       case 0:
-        handle = InitCommunication(e_f_comm_pkg);
+        MASTER(handle = InitCommunication(e_f_comm_pkg));
+        #pragma omp barrier
         compute_reg = ComputePkgIndRegion(compute_pkg);
         break;
 
       case 1:
-        FinalizeCommunication(handle);
+        MASTER(FinalizeCommunication(handle));
+        #pragma omp barrier
         compute_reg = ComputePkgDepRegion(compute_pkg);
         break;
     }
@@ -321,12 +323,18 @@ void             MGSemiProlong(
     switch (compute_i)
     {
       case 0:
+#pragma omp single
+      {
         handle = InitCommunication(e_f_comm_pkg);
+      }
         compute_reg = ComputePkgIndRegion(compute_pkg);
         break;
 
       case 1:
+#pragma omp single
+      {
         FinalizeCommunication(handle);
+      }
         compute_reg = ComputePkgDepRegion(compute_pkg);
         break;
     }

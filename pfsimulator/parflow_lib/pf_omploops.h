@@ -35,6 +35,35 @@
     body;                                                \
   }
 
+/* @MCB:
+	 By default, OpenMP nested parallel regions are disabled, and
+	 will only spawn one thread in the inner regions.  Because the
+	 regions are dynamically scoped, this means the "active" region
+	 will only have a thread count of one.  This ensures that any
+	 calls within the body region that encounter omp pragmas such as
+	 loop distributions, reductions, or barriers only apply as a
+	 single threaded context.
+
+	 A common reason for this is the InitVector calls.  If there are
+	 sections of code that need to be executed serially within a parallel
+	 region, such as in clustering.c, but have InitVector calls within
+	 said sections, then the region context needs to understand it only has
+	 one thread executing in order to handle the for loops properly.
+*/
+#define SINGLE_REGION(body, ...)                \
+  PRAGMA(omp single __VA_ARGS__)                \
+  {                                             \
+    PRAGMA(omp parallel)                        \
+    {                                           \
+      body;                                     \
+    }                                           \
+  }
+
+// @MCB: Note, the trailing {} is to deal with potential semicolons
+#define BARRIER PRAGMA(omp barrier) {}
+
+#define BEGIN_REGION PRAGMA(omp parallel) {
+#define END_REGION }
 /*
   Keeps the BoxLoop macros much tidier
   For GrGeomInLoop macros, the macro name will be used, not its expanded value

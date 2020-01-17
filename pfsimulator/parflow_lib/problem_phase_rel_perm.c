@@ -503,7 +503,7 @@ void         PhaseRelPerm(
 
           if (fcn == CALCFCN)
           {
-            _GrGeomSurfLoop(InParallel, LOCALS(ipr),
+            _GrGeomSurfLoop(NoWait, LOCALS(ipr),
                             i, j, k, fdir, gr_solid, r, ix, iy, iz,
                             nx, ny, nz,
             {
@@ -514,7 +514,7 @@ void         PhaseRelPerm(
           }
           else    /* fcn = CALCDER */
           {
-            _GrGeomSurfLoop(InParallel, LOCALS(ipr),
+            _GrGeomSurfLoop(NoWait, LOCALS(ipr),
                             i, j, k, fdir, gr_solid, r, ix, iy, iz,
                             nx, ny, nz,
             {
@@ -549,7 +549,7 @@ void         PhaseRelPerm(
           prdat = SubvectorData(pr_sub);
           if (fcn == CALCFCN)
           {
-            _GrGeomInLoop(InParallel, LOCALS(ipr),
+            _GrGeomInLoop(NoWait, LOCALS(ipr),
                           i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
             {
               ipr = SubvectorEltIndex(pr_sub, i, j, k);

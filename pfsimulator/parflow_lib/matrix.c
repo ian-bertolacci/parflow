@@ -134,7 +134,8 @@ CommPkg   *NewMatrixUpdatePkg(
  * InitMatrixUpdate
  *--------------------------------------------------------------------------*/
 
-CommHandle  *InitMatrixUpdate(
+//CommHandle  *InitMatrixUpdate(
+CommHandle  *_InitMatrixUpdate(
                               Matrix *matrix)
 {
   CommHandle *return_handle = NULL;
@@ -194,7 +195,7 @@ CommHandle  *InitMatrixUpdate(
     matrix->boundary_fill_schedule->fillData(time);
 #endif
   }
-  } // End master
+  } // End barrier
 
   return return_handle;
 }
@@ -204,16 +205,18 @@ CommHandle  *InitMatrixUpdate(
  * FinalizeMatrixUpdate
  *--------------------------------------------------------------------------*/
 
-void         FinalizeMatrixUpdate(
+//void         FinalizeMatrixUpdate(
+void         _FinalizeMatrixUpdate(
                                   CommHandle *handle)
 {
-  #pragma omp single
+#pragma omp master
   {
-    if (handle)
-    {
-      FinalizeCommunication(handle);
-    }
+  if (handle)
+  {
+    FinalizeCommunication(handle);
   }
+  }
+  #pragma omp barrier
 }
 
 

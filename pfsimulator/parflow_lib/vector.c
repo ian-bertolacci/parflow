@@ -84,10 +84,12 @@ CommPkg  *NewVectorCommPkg(
 /*--------------------------------------------------------------------------
  * InitVectorUpdate
  *--------------------------------------------------------------------------*/
-VectorUpdateCommHandle  *InitVectorUpdate(Vector *vector, int     update_mode)
+//VectorUpdateCommHandle  *InitVectorUpdate(Vector *vector, int     update_mode)
+VectorUpdateCommHandle  *_InitVectorUpdate(Vector *vector, int     update_mode)
 {
   VectorUpdateCommHandle *vector_update_comm_handle = NULL;
 
+//  #pragma omp master
 #pragma omp single copyprivate(vector_update_comm_handle)
   {
   enum ParflowGridType grid_type = invalid_grid_type;
@@ -190,10 +192,12 @@ VectorUpdateCommHandle  *InitVectorUpdate(Vector *vector, int     update_mode)
 /*--------------------------------------------------------------------------
  * FinalizeVectorUpdate
  *--------------------------------------------------------------------------*/
-void         FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
+//void         FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
+void         _FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
 {
-  #pragma omp single
+  #pragma omp master
   {
+
   switch (handle->vector->type)
   {
     case vector_cell_centered:
@@ -225,6 +229,8 @@ void         FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
 
   tfree(handle);
   }
+
+  #pragma omp barrier
 }
 
 

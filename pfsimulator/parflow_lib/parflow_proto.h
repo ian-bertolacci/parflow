@@ -380,8 +380,15 @@ int MatDiagScaleSizeOfTempData(void);
 /* matrix.c */
 Stencil *NewStencil(int shape [][3 ], int sz);
 CommPkg *NewMatrixUpdatePkg(Matrix *matrix, Stencil *ghost);
+
+#ifdef DEBUGGING_VECTOR_UPDATE
+CommHandle *_InitMatrixUpdate(Matrix *matrix);
+void _FinalizeMatrixUpdate(CommHandle *handle);
+#else
 CommHandle *InitMatrixUpdate(Matrix *matrix);
 void FinalizeMatrixUpdate(CommHandle *handle);
+#endif
+
 Matrix *NewMatrix(Grid *grid, SubregionArray *range, Stencil *stencil, int symmetry, Stencil *ghost);
 Matrix *NewMatrixType(Grid *grid, SubregionArray *range, Stencil *stencil, int symmetry, Stencil *ghost, enum matrix_type type);
 void FreeStencil(Stencil *stencil);
@@ -391,6 +398,7 @@ void InitMatrix(Matrix *A, double value);
 /* matvec.c */
 void Matvec(double alpha, Matrix *A, Vector *x, double beta, Vector *y);
 void InParallel_Matvec(double alpha, Matrix *A, Vector *x, double beta, Vector *y);
+void TestMatvec(double alpha, Matrix *A, Vector *x, double  beta, Vector *y);
 
 /* matvecSubMat.c */
 void MatvecSubMat(void *  current_state,

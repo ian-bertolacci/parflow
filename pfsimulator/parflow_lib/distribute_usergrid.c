@@ -148,7 +148,7 @@ SubgridArray   *DistributeUserGrid(
       if (first_call && !amps_Rank(amps_CommWorld))
       {
         #ifdef HAVE_OMP
-        amps_Printf("Using process grid (%d,%d,%d) with %d OMP Threads\n", P, Q, R, omp_get_max_threads());
+        amps_Printf("Using process grid (%d,%d,%d) with %d OMP Threads per process\n", P, Q, R, omp_get_max_threads());
         #else
         amps_Printf("Using process grid (%d,%d,%d)\n", P, Q, R);
         #endif

@@ -52,7 +52,19 @@ double   InnerProd(
 
   double       *yp, *xp;
 
-  double result = 0.0;
+  /*
+    @MCB:
+    For OpenMP parallelism to work correctly here when
+    calling InnerProd from an outer parallel region,
+    result needs to be declared as a static variable and
+    reset each time.  This allows us to use a reduction
+    clause.
+
+    WARNING: Because this is static, any kind of parallel tasking
+    calls CANNOT be done if they make a call to InnerProd. Any call
+    to InnerProd MUST be done by one active region at a time.
+  */
+  static double result = 0.0;
 
   int ix, iy, iz;
   int nx, ny, nz;
@@ -63,7 +75,7 @@ double   InnerProd(
   amps_Invoice result_invoice;
 
 
-  result_invoice = amps_NewInvoice("%d", &result);
+  MASTER(result_invoice = amps_NewInvoice("%d", &result));
 
   ForSubgridI(i_s, GridSubgrids(grid))
   {
@@ -96,12 +108,24 @@ double   InnerProd(
     });
   }
 
+  MASTER(
   amps_AllReduce(amps_CommWorld, result_invoice, amps_Add);
   amps_FreeInvoice(result_invoice);
-
   IncFLOPCount(2 * VectorSize(x) - 1);
+    );
 
-  return result;
+  BARRIER;
+
+  //return result;
+  /*
+    @MCB:
+    This is basically to confuse the compiler so that
+    it doesn't optimize away resetting result to 0
+    for subsequent calls
+  */
+  double temp = result;
+  result = 0.0;
+  return temp;
 }
 
 #ifdef USING_PARALLEL

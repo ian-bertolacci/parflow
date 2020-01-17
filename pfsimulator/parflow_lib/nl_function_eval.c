@@ -281,6 +281,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   double dtmp;
   PFModuleInvokeType(PhaseDensityInvoke, density_module, (0, pressure, density, &dtmp, &dtmp,
                                                           CALCFCN));
+  BARRIER;
 
   PFModuleInvokeType(SaturationInvoke, saturation_module, (saturation, pressure, density,
                                                            gravity, problem_data, CALCFCN));
@@ -357,7 +358,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     pop = SubvectorData(po_sub);
     fp = SubvectorData(f_sub);
 
-    _GrGeomInLoop(InParallel, NO_LOCALS,
+    _GrGeomInLoop(NoWait, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
@@ -2194,8 +2195,8 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       {
         case DirichletBC:
         {
-          //__BCStructPatchLoop(NO_LOCALS,
-          BCStructPatchLoop(
+          //BCStructPatchLoop(
+          __BCStructPatchLoop(NO_LOCALS,
                               i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);

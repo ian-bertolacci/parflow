@@ -3,7 +3,6 @@
 #ifndef _PF_PARALLEL_H
 #define _PF_PARALLEL_H
 
-
 #ifdef HAVE_OMP
 
 #if 1
