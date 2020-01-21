@@ -200,7 +200,7 @@ void    PhaseDensity(
           id = 0;
           if (fcn == CALCFCN)
           {
-            _BoxLoopI1(NoWait, NO_LOCALS,
+            _BoxLoopI1(InParallel, NO_LOCALS,
                        i, j, k, ix, iy, iz, nx, ny, nz,
                        id, nx_d, ny_d, nz_d, 1, 1, 1,
             {
@@ -209,7 +209,7 @@ void    PhaseDensity(
           }
           else   /* fcn = CALCDER */
           {
-            _BoxLoopI1(NoWait, NO_LOCALS,
+            _BoxLoopI1(InParallel, NO_LOCALS,
                        i, j, k, ix, iy, iz, nx, ny, nz,
                        id, nx_d, ny_d, nz_d, 1, 1, 1,
             {
@@ -273,7 +273,7 @@ void    PhaseDensity(
 
           if (fcn == CALCFCN)
           {
-            _BoxLoopI2(NoWait, NO_LOCALS,
+            _BoxLoopI2(InParallel, NO_LOCALS,
                        i, j, k, ix, iy, iz, nx, ny, nz,
                        ip, nx_p, ny_p, nz_p, 1, 1, 1,
                        id, nx_d, ny_d, nz_d, 1, 1, 1,
@@ -283,7 +283,7 @@ void    PhaseDensity(
           }
           else          /* fcn = CALCDER */
           {
-            _BoxLoopI2(NoWait, NO_LOCALS,
+            _BoxLoopI2(InParallel, NO_LOCALS,
                        i, j, k, ix, iy, iz, nx, ny, nz,
                        ip, nx_p, ny_p, nz_p, 1, 1, 1,
                        id, nx_d, ny_d, nz_d, 1, 1, 1,

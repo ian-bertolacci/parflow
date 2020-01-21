@@ -208,12 +208,11 @@ void     MGSemi(
   int omp_stop = 0;
 #pragma omp parallel private(i, l)
   {
-    int tid = omp_get_thread_num();
 
-  /*-----------------------------------------------------------------------
-   * Do V-cycles:
-   *   For each index l, "fine" = l, "coarse" = (l+1)
-   *-----------------------------------------------------------------------*/
+    /*-----------------------------------------------------------------------
+     * Do V-cycles:
+     *   For each index l, "fine" = l, "coarse" = (l+1)
+     *-----------------------------------------------------------------------*/
 
 
     if (tol > 0.0)
@@ -225,6 +224,7 @@ void     MGSemi(
 
   /* smooth (use `zero' to determine initial x) */
     PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, zero));
+
     //while (!omp_stop)
     for (i = 1; i < max_iter; i++)
     {
@@ -853,11 +853,9 @@ void              SetupCoarseOps(
               (A_ss[j][1] == P_ss[k][1]) &&
               (A_ss[j][2] == P_ss[k][2]))
           {
-            #pragma omp critical
-            {
-              s_num[j] = s_num[k + 1];
-              s_num[k + 1] = j;
-            }
+            s_num[j] = s_num[k + 1];
+            s_num[k + 1] = j;
+
             break;
           }
         }

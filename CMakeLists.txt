@@ -114,9 +114,9 @@ set (PARFLOW_USING_PARALLEL False CACHE BOOL "OpenMP or CUDA Parallelism Flag")
 #-----------------------------------------------------------------------------
 set (PARFLOW_ENABLE_OMP False CACHE BOOL "Enable OpenMP")
 if ( ${PARFLOW_ENABLE_OMP} )
-# TODO: Check for versioning requirements?
-   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
-   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+
+   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp -save-temps")
+   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -save-temps")
    set (PARFLOW_HAVE_OMP "yes")
    set (HAVE_OMP ${PARFLOW_HAVE_OMP})
    set (PARFLOW_USING_PARALLEL "yes")
@@ -405,6 +405,8 @@ else( ${PARFLOW_ENABLE_PROFILING} )
   set (PARFLOW_PROFILE_OPTS "")
 endif( ${PARFLOW_ENABLE_PROFILING} )
 
+#set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fno-omit-frame-pointer -O2 -DNDEBUG")
+#set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fno-omit-frame-pointer -O2 -DNDEBUG")
 
 include_directories ("${CMAKE_SOURCE_DIR}/pfsimulator/parflow_lib")
 include_directories ("${PROJECT_SOURCE_DIR}/pfsimulator/amps/${PARFLOW_AMPS_LAYER}")

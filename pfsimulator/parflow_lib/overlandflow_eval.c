@@ -118,7 +118,7 @@ void    OverlandFlowEval(
   {
     if (qx_v == NULL || qy_v == NULL)  /* do not return velocity fluxes */
     {
-      __BCStructPatchLoop(NO_LOCALS,
+      _BCStructPatchLoop(InParallel, NO_LOCALS,
                           i, j, k, fdir, ival, bc_struct, ipatch, sg,
       {
         if (fdir[2] == 1)
@@ -187,7 +187,7 @@ void    OverlandFlowEval(
     }
     else   /* return velocity fluxes */
     {
-      __BCStructPatchLoop(NO_LOCALS,
+      _BCStructPatchLoop(InParallel, NO_LOCALS,
                           i, j, k, fdir, ival, bc_struct, ipatch, sg,
       {
         if (fdir[2] == 1)
@@ -259,7 +259,7 @@ void    OverlandFlowEval(
   {
     if (qx_v == NULL || qy_v == NULL)  /* Do not return derivs of velocity fluxes */
     {
-      __BCStructPatchLoop(NO_LOCALS,
+      _BCStructPatchLoop(InParallel, NO_LOCALS,
                           i, j, k, fdir, ival, bc_struct, ipatch, sg,
       {
         if (fdir[2] == 1)
@@ -300,7 +300,7 @@ void    OverlandFlowEval(
     }
     else   /* return derivs of velocity fluxes */
     {
-      __BCStructPatchLoop(NO_LOCALS,
+      _BCStructPatchLoop(InParallel, NO_LOCALS,
                           i, j, k, fdir, ival, bc_struct, ipatch, sg,
       {
         if (fdir[2] == 1)

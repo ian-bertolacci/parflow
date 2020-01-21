@@ -56,6 +56,7 @@ extern "C"{
 
 #include <unistd.h>
 
+
 /*---------------------------------------------------------------------
  * Define module structures
  *---------------------------------------------------------------------*/
@@ -136,12 +137,22 @@ int jacobian_stencil_shape_C[5][3] = { { 0, 0, 0 },
 /*---------------------------------------------------------------------
  * Define macros for jacobian evaluation
  *---------------------------------------------------------------------*/
+#ifdef HAVE_OMP
+
+  /* OpenMP SIMD enabled versions */
+#define PMean(a, b, c, d)   _HarmonicMean(c, d)
+#define PMeanDZ(a, b, c, d) _HarmonicMeanDZ(a, b, c, d)
+#define RPMean(a, b, c, d)  _UpstreamMean(a, b, c, d)
+#define Mean(a, b)          _ArithmeticMean(a, b)
+
+#else
 
 #define PMean(a, b, c, d)    HarmonicMean(c, d)
 #define PMeanDZ(a, b, c, d)     HarmonicMeanDZ(a, b, c, d)
 #define RPMean(a, b, c, d)   UpstreamMean(a, b, c, d)
 #define Mean(a, b) ArithmeticMean(a, b)  //@RMM
 
+#endif
 /*  This routine provides the interface between KINSOL and ParFlow
  *  for richards' equation jacobian evaluations and matrix-vector multiplies.*/
 
@@ -323,10 +334,41 @@ void    RichardsJacobianEval(
   rel_perm = saturation;
   rel_perm_der = saturation_der;
 
+  #if 0
+  static int check_vals = 0;
+  Vector *checkvec;
   /* Pass pressure values to neighbors.  */
+  if (check_vals)
+  {
+    checkvec = NewVectorType(pressure->grid, 1, 1, vector_cell_centered);
+    PFVCopy(pressure, checkvec);
+    for (int i = 0; i < NumUpdateModes; i++)
+      checkvec->comm_pkg[i] = pressure->comm_pkg[i];
+
+    #pragma omp parallel
+    {
+      vector_update_handle = InitVectorUpdate(checkvec, VectorUpdateAll);
+      FinalizeVectorUpdate(vector_update_handle);
+    }
+  }
+
   vector_update_handle = InitVectorUpdate(pressure, VectorUpdateAll);
   FinalizeVectorUpdate(vector_update_handle);
 
+  if (check_vals)
+  {
+    CheckVec(pressure, checkvec);
+    fprintf(stderr, "Valid.\n");
+    exit(1);
+  }
+
+  check_vals = 1;
+  #else
+
+  vector_update_handle = InitVectorUpdate(pressure, VectorUpdateAll);
+  FinalizeVectorUpdate(vector_update_handle);
+
+  #endif
 /* Define grid for surface contribution */
   Vector      *KW, *KE, *KN, *KS, *KWns, *KEns, *KNns, *KSns;
   KW = NewVectorType(grid2d, 1, 1, vector_cell_centered);
@@ -360,9 +402,34 @@ void    RichardsJacobianEval(
   bc_struct = PFModuleInvokeType(BCPressureInvoke, bc_pressure,
                                  (problem_data, grid, gr_domain, time));
 
+
+  // Temporary vectors for split loop reduction (@IJB)
+  Vector* north_temp_vector;
+  Vector* south_temp_vector;
+  Vector* east_temp_vector;
+  Vector* west_temp_vector;
+  Vector* upper_temp_vector;
+  Vector* lower_temp_vector;
+
+  north_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
+  south_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
+  east_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
+  west_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
+  upper_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
+  lower_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
+
   /* Calculate time term contributions. */
 #pragma omp parallel private(handle, vector_update_handle)
   {
+    Subvector* north_temp_sub;
+    Subvector* south_temp_sub;
+    Subvector* east_temp_sub;
+    Subvector* west_temp_sub;
+    Subvector* upper_temp_sub;
+    Subvector* lower_temp_sub;
+
+    double *north_temp_array, *south_temp_array, *east_temp_array, *west_temp_array, *upper_temp_array, *lower_temp_array;
+
       /* Overland flow variables */  //DOK
   Subvector   *kw_sub, *ke_sub, *kn_sub, *ks_sub, *kwns_sub, *kens_sub, *knns_sub, *ksns_sub, *top_sub, *sx_sub;
   double      *kw_der, *ke_der, *kn_der, *ks_der, *kwns_der, *kens_der, *knns_der, *ksns_der;
@@ -498,7 +565,7 @@ void    RichardsJacobianEval(
     pop = SubvectorData(po_sub);     // porosity
     ss = SubvectorData(ss_sub);     // sepcific storage
 
-    _GrGeomInLoop(InParallel,  LOCALS(im, ipo, iv, vol2),
+    _GrGeomInLoop(InParallel, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -539,7 +606,7 @@ void    RichardsJacobianEval(
       {
         case DirichletBC:
         {
-          __BCStructPatchLoop(NO_LOCALS,
+          _BCStructPatchLoop(InParallel, NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -554,7 +621,6 @@ void    RichardsJacobianEval(
 
   /* Calculate rel_perm and rel_perm_der */
 
-  /* @MCB: TODO: Convert these modules into NoWait with a trailing barrier */
   PFModuleInvokeType(PhaseRelPermInvoke, rel_perm_module,
                      (rel_perm, pressure, density, gravity, problem_data,
                       CALCFCN));
@@ -562,6 +628,8 @@ void    RichardsJacobianEval(
   PFModuleInvokeType(PhaseRelPermInvoke, rel_perm_module,
                      (rel_perm_der, pressure, density, gravity, problem_data,
                       CALCDER));
+
+  BARRIER;
 
   /* Calculate contributions from second order derivatives and gravity */
   ForSubgridI(is, GridSubgrids(grid))
@@ -579,6 +647,22 @@ void    RichardsJacobianEval(
     permy_sub = VectorSubvector(permeability_y, is);
     permz_sub = VectorSubvector(permeability_z, is);
     J_sub = MatrixSubmatrix(J, is);
+
+
+    west_temp_sub = VectorSubvector( west_temp_vector, is );
+    east_temp_sub = VectorSubvector( east_temp_vector, is );
+    south_temp_sub = VectorSubvector( south_temp_vector, is );
+    north_temp_sub = VectorSubvector( north_temp_vector, is );
+    lower_temp_sub = VectorSubvector( lower_temp_vector, is );
+    upper_temp_sub = VectorSubvector( upper_temp_vector, is );
+
+    west_temp_array = SubvectorData(west_temp_sub);
+    east_temp_array = SubvectorData(east_temp_sub);
+    south_temp_array = SubvectorData(south_temp_sub);
+    north_temp_array = SubvectorData(north_temp_sub);
+    lower_temp_array = SubvectorData(lower_temp_sub);
+    upper_temp_array = SubvectorData(upper_temp_sub);
+
 
     /* @RMM added to provide access to x/y slopes */
     x_ssl_sub = VectorSubvector(x_ssl, is);
@@ -647,18 +731,7 @@ void    RichardsJacobianEval(
     FBy_dat = SubvectorData(FBy_sub);
     FBz_dat = SubvectorData(FBz_sub);
 
-    _GrGeomInLoop(InParallel,  LOCALS(ip, im, ioo,
-                         prod, prod_der, prod_rt, prod_rt_der,
-                         prod_no, prod_no_der, prod_up, prod_up_der,
-                         x_dir_g, x_dir_g_c, y_dir_g, y_dir_g_c,
-                         diff, updir, x_coeff, y_coeff, z_coeff, sep,
-                         sym_west_temp, west_temp,
-                         sym_east_temp, east_temp,
-                         sym_south_temp, south_temp,
-                         sym_north_temp, north_temp,
-                         sym_lower_temp, lower_temp,
-                         sym_upper_temp, upper_temp,
-                         lower_cond, upper_cond),
+    _GrGeomInLoop(InParallel, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -814,27 +887,36 @@ void    RichardsJacobianEval(
                                   prod_up)))
                    + sym_upper_temp;
 
+/*
+      cp[im] -= west_temp + south_temp + lower_temp;
+      cp[im + 1] -= east_temp;
+      cp[im + sy_m] -= north_temp;
+      cp[im + sz_m] -= upper_temp;
+*/
+      west_temp_array[ip] = west_temp;
+      east_temp_array[ip] = east_temp;
+      north_temp_array[ip] = north_temp;
+      south_temp_array[ip] = south_temp;
+      upper_temp_array[ip] = upper_temp;
+      lower_temp_array[ip] = lower_temp;
 
-
-      /* cp[im] -= west_temp + south_temp + lower_temp; */
-      /* cp[im + 1] -= east_temp; */
-      /* cp[im + sy_m] -= north_temp; */
-      /* cp[im + sz_m] -= upper_temp; */
-
+      /*
       PlusEquals(cp[im], -(west_temp + south_temp + lower_temp));
       PlusEquals(cp[im + 1], -east_temp);
       PlusEquals(cp[im + sy_m], -north_temp);
       PlusEquals(cp[im + sz_m], -upper_temp);
+      */
 
       if (!symm_part)
       {
         ep[im] += east_temp;
         np[im] += north_temp;
         up[im] += upper_temp;
-
+/*
         wp[im + 1] += west_temp;
         sop[im + sy_m] += south_temp;
         lp[im + sz_m] += lower_temp;
+*/
       }
       else     /* Symmetric matrix: just update upper coeffs */
       {
@@ -844,6 +926,77 @@ void    RichardsJacobianEval(
       }
     });
   }  //
+
+  #pragma omp single
+  {
+  ForSubgridI(is, GridSubgrids(grid))
+  {
+    subgrid = GridSubgrid(grid, is);
+
+    west_temp_sub = VectorSubvector( west_temp_vector, is );
+    east_temp_sub = VectorSubvector( east_temp_vector, is );
+    south_temp_sub = VectorSubvector( south_temp_vector, is );
+    north_temp_sub = VectorSubvector( north_temp_vector, is );
+    lower_temp_sub = VectorSubvector( lower_temp_vector, is );
+    upper_temp_sub = VectorSubvector( upper_temp_vector, is );
+
+    J_sub = MatrixSubmatrix(J, is);
+
+    r = SubgridRX(subgrid);
+
+    ix = SubgridIX(subgrid) - 1;
+    iy = SubgridIY(subgrid) - 1;
+    iz = SubgridIZ(subgrid) - 1;
+
+    nx = SubgridNX(subgrid) + 1;
+    ny = SubgridNY(subgrid) + 1;
+    nz = SubgridNZ(subgrid) + 1;
+
+    nx_v = SubvectorNX(p_sub);
+    ny_v = SubvectorNY(p_sub);
+    nz_v = SubvectorNZ(p_sub);
+
+    int sx_v = 1;
+    sy_v = nx_v;
+    sz_v = ny_v * nx_v;
+
+    west_temp_array = SubvectorData(west_temp_sub);
+    east_temp_array = SubvectorData(east_temp_sub);
+    south_temp_array = SubvectorData(south_temp_sub);
+    north_temp_array = SubvectorData(north_temp_sub);
+    lower_temp_array = SubvectorData(lower_temp_sub);
+    upper_temp_array = SubvectorData(upper_temp_sub);
+
+    cp = SubmatrixStencilData(J_sub, 0);
+    wp = SubmatrixStencilData(J_sub, 1);
+    ep = SubmatrixStencilData(J_sub, 2);
+    sop = SubmatrixStencilData(J_sub, 3);
+    np = SubmatrixStencilData(J_sub, 4);
+    lp = SubmatrixStencilData(J_sub, 5);
+    up = SubmatrixStencilData(J_sub, 6);
+
+    //_GrGeomInLoop(InParallel, NO_LOCALS,
+    GrGeomInLoop(
+                  i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
+    {
+      im = SubmatrixEltIndex(J_sub, i, j, k);
+      //int it = SubvectorEltIndex(west_temp_sub, i, j, k);
+      ip = SubvectorEltIndex(p_sub, i, j, k);
+
+      cp[im] -= west_temp_array[ip] + south_temp_array[ip] + lower_temp_array[ip];
+      cp[im + 1] -= east_temp_array[ip];
+      cp[im + sy_m] -= north_temp_array[ip];
+      cp[im + sz_m] -= upper_temp_array[ip];
+
+      if (!symm_part)
+      {
+        wp[im + 1] += west_temp_array[ip];
+        sop[im + sy_m] += south_temp_array[ip];
+        lp[im + sz_m] += lower_temp_array[ip];
+      }
+    });
+  }
+  }
 
   /*  Calculate correction for boundary conditions */
 
@@ -909,7 +1062,7 @@ void    RichardsJacobianEval(
 
       for (ipatch = 0; ipatch < BCStructNumPatches(bc_struct); ipatch++)
       {
-        __BCStructPatchLoop(NO_LOCALS,
+        _BCStructPatchLoop(InParallel, NO_LOCALS,
                             i, j, k, fdir, ival, bc_struct, ipatch, is,
         {
           ip = SubvectorEltIndex(p_sub, i, j, k);
@@ -1131,6 +1284,18 @@ void    RichardsJacobianEval(
       {
         case DirichletBC:
         {
+          /* @MCB:
+             Previously there was two module invokes on every iteratoin
+             of the BC Loop.  However, these calls were only retrieving
+             some constant value and (potentially) multiplying it against
+             the BC patch value.
+
+             Instead, the PhaseDensityConstants function was added to
+             retrieve those values once, and instead set den_d and dend_d
+             to the appropriate value based on the phase_type of the module.
+             This is much cheaper and also addresses the issue of module invokes
+             within a CUDA-enabled loop.
+           */
           fcn_phase_const = 0.0;
           der_phase_const = 0.0;
           phase_ref = 0.0;
@@ -1147,7 +1312,7 @@ void    RichardsJacobianEval(
                                 &phase_ref,
                                 &phase_comp);
 
-          __BCStructPatchLoop(NO_LOCALS,
+          _BCStructPatchLoop(InParallel, NO_LOCALS,
                               i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             /* PFModuleInvokeType(PhaseDensityInvoke, density_module, */
@@ -1292,7 +1457,7 @@ void    RichardsJacobianEval(
 
         case FluxBC:
         {
-          __BCStructPatchLoop(NO_LOCALS,
+          _BCStructPatchLoop(InParallel, NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -1319,7 +1484,7 @@ void    RichardsJacobianEval(
 
         case OverlandBC:     //sk
         {
-          __BCStructPatchLoop(NO_LOCALS,
+          _BCStructPatchLoop(InParallel, NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -1363,7 +1528,7 @@ void    RichardsJacobianEval(
 
             case simple:
             {
-              __BCStructPatchLoop(NO_LOCALS,
+              _BCStructPatchLoop(InParallel, NO_LOCALS,
                                  i, j, k, fdir, ival, bc_struct, ipatch, is,
               {
                 if (fdir[2] == 1)
@@ -1393,7 +1558,7 @@ void    RichardsJacobianEval(
               {
                 vol = dx * dy * dz;
                 /* add flux loss equal to excess head  that overwrites the prior overland flux */
-                __BCStructPatchLoop(NO_LOCALS,
+                _BCStructPatchLoop(InParallel, NO_LOCALS,
                                    i, j, k, fdir, ival, bc_struct, ipatch, is,
                 {
                   if (fdir[2] == 1)
@@ -1452,7 +1617,7 @@ void    RichardsJacobianEval(
         {
           vol = dx * dy * dz;
           /* add flux loss equal to excess head  that overwrites the prior overland flux */
-          __BCStructPatchLoop(NO_LOCALS,
+          _BCStructPatchLoop(InParallel, NO_LOCALS,
                             i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             if (fdir[2] == 1)
@@ -1478,7 +1643,7 @@ void    RichardsJacobianEval(
         /*  OverlandBC for KWE with upwinding, call module */
         case OverlandKinematicBC:
         {
-          __BCStructPatchLoop(NO_LOCALS,
+          _BCStructPatchLoop(InParallel, NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -1521,7 +1686,7 @@ void    RichardsJacobianEval(
         /* OverlandDiffusiveBC */
         case OverlandDiffusiveBC:
         {
-          __BCStructPatchLoop(NO_LOCALS,
+          _BCStructPatchLoop(InParallel, NO_LOCALS,
                              i, j, k, fdir, ival, bc_struct, ipatch, is,
           {
             im = SubmatrixEltIndex(J_sub, i, j, k);
@@ -1572,10 +1737,12 @@ void    RichardsJacobianEval(
                                                                pressure, CALCDER));
   }
 
+  BARRIER;
+
   /* @MCB:
      TODO:
      End parallel region here?  This is a LOT of barriers and syncs.
-     Maybe change amps comms so they don't have an internal barrier,
+     Maybe change update funcs so they don't have an internal barrier,
      and always explicitly sync after the calls?
   */
   if (public_xtra->type == overland_flow)
@@ -1698,7 +1865,7 @@ void    RichardsJacobianEval(
           /* Fall through cases for new Overland types */
           case OverlandKinematicBC:
           {
-            __BCStructPatchLoop(NO_LOCALS,
+            _BCStructPatchLoop(InParallel, NO_LOCALS,
                                i, j, k, fdir, ival, bc_struct, ipatch, is,
             {
               if (fdir[2] == 1)
@@ -1785,7 +1952,7 @@ void    RichardsJacobianEval(
 
           case OverlandDiffusiveBC:
           {
-            __BCStructPatchLoop(NO_LOCALS,
+            _BCStructPatchLoop(InParallel, NO_LOCALS,
                                i, j, k, fdir, ival, bc_struct, ipatch, is,
             {
               if (fdir[2] == 1)
@@ -1871,7 +2038,7 @@ void    RichardsJacobianEval(
 
           case OverlandBC:
           {
-            __BCStructPatchLoop(NO_LOCALS,
+            _BCStructPatchLoop(InParallel, NO_LOCALS,
                                i, j, k, fdir, ival, bc_struct, ipatch, is,
             {
               if (fdir[2] == 1)
@@ -2098,6 +2265,13 @@ void    RichardsJacobianEval(
   FreeVector(KEns);
   FreeVector(KNns);
   FreeVector(KSns);
+
+  FreeVector(north_temp_vector);
+  FreeVector(south_temp_vector);
+  FreeVector(east_temp_vector);
+  FreeVector(west_temp_vector);
+  FreeVector(upper_temp_vector);
+  FreeVector(lower_temp_vector);
 
   return;
 }

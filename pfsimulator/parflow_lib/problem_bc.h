@@ -80,8 +80,8 @@ typedef struct {
  * Looping macro:
  *--------------------------------------------------------------------------*/
 
-#define _BCStructPatchLoop(locals, ...) BCStructPatchLoop( __VA_ARGS__ )
-#define _BCStructPatchLoopOvrlnd(locals, ...) BCStructPatchLoopOvrlnd( __VA_ARGS__ )
+#define _BCStructPatchLoop(pragma, locals, ...) BCStructPatchLoop( __VA_ARGS__ )
+#define _BCStructPatchLoopOvrlnd(pragma, locals, ...) BCStructPatchLoopOvrlnd( __VA_ARGS__ )
 
 #define BCStructPatchLoop(i, j, k, fdir, ival, bc_struct, ipatch, is, body) \
   {                                                                         \

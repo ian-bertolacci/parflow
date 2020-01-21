@@ -54,6 +54,73 @@ using namespace SAMRAI;
 
 static int samrai_vector_ids[5][2048];
 
+
+
+
+Vector *CloneVector(Vector *x)
+{
+  Vector *v = NewVectorType(x->grid, 1, 1, vector_cell_centered);
+  PFVCopy(x, v);
+  for (int i = 0; i < NumUpdateModes; i++)
+    v->comm_pkg[i] = x->comm_pkg[i];
+  return v;
+}
+
+void CheckVector(Vector *x, Vector *y)
+{
+  Grid       *grid = VectorGrid(x);
+  Subgrid    *subgrid;
+
+  Subvector  *x_sub;
+  Subvector  *y_sub;
+
+  double     *xp;
+  double     *yp;
+
+  int ix, iy, iz;
+  int nx, ny, nz;
+  int nx_x, ny_x, nz_x;
+
+  int sg, i, j, k, i_x;
+
+  ForSubgridI(sg, GridSubgrids(grid))
+  {
+    subgrid = GridSubgrid(grid, sg);
+
+    x_sub = VectorSubvector(x, sg);
+    y_sub = VectorSubvector(y, sg);
+
+    ix = SubgridIX(subgrid);
+    iy = SubgridIY(subgrid);
+    iz = SubgridIZ(subgrid);
+
+    nx = SubgridNX(subgrid);
+    ny = SubgridNY(subgrid);
+    nz = SubgridNZ(subgrid);
+
+    nx_x = SubvectorNX(x_sub);
+    ny_x = SubvectorNY(x_sub);
+    nz_x = SubvectorNZ(x_sub);
+
+    xp = SubvectorElt(x_sub, ix, iy, iz);
+    yp = SubvectorElt(y_sub, ix, iy, iz);
+    i_x = 0;
+    BoxLoopI1(i, j, k, ix, iy, iz, 1, 1, 1,
+              i_x, nx_x, ny_x, nz_x, 1, 1, 1,
+    {
+      /*
+      if (xp[i_x] != yp[i_x])
+      {
+        fprintf(stderr, "Error: Value not valid at position %d.  %lf | %lf\n", i_x, xp[i_x], yp[i_x]);
+        exit(1);
+      }
+      */
+      fprintf(stderr, "%lf | %lf\n", xp[i_x], yp[i_x]);
+    });
+  }
+}
+
+
 /*--------------------------------------------------------------------------
  * NewVectorCommPkg:
  *--------------------------------------------------------------------------*/
@@ -89,8 +156,9 @@ VectorUpdateCommHandle  *_InitVectorUpdate(Vector *vector, int     update_mode)
 {
   VectorUpdateCommHandle *vector_update_comm_handle = NULL;
 
-//  #pragma omp master
-#pragma omp single copyprivate(vector_update_comm_handle)
+  BARRIER;
+//#pragma omp single copyprivate(vector_update_comm_handle)
+  #pragma omp master
   {
   enum ParflowGridType grid_type = invalid_grid_type;
 
@@ -184,6 +252,7 @@ VectorUpdateCommHandle  *_InitVectorUpdate(Vector *vector, int     update_mode)
   vector_update_comm_handle->comm_handle = amps_com_handle;
 
   }
+  BARRIER;
 
   return vector_update_comm_handle;
 }
@@ -195,8 +264,12 @@ VectorUpdateCommHandle  *_InitVectorUpdate(Vector *vector, int     update_mode)
 //void         FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
 void         _FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
 {
+  BARRIER;
+
   #pragma omp master
   {
+
+    //Vector *v = CloneVector(handle->vector);
 
   switch (handle->vector->type)
   {
@@ -219,6 +292,7 @@ void         _FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
 #ifdef NO_VECTOR_UPDATE
 #else
       FinalizeCommunication(handle->comm_handle);
+      //CheckVector(handle->vector, v);
 #endif
 #endif
 
@@ -230,7 +304,7 @@ void         _FinalizeVectorUpdate(VectorUpdateCommHandle *handle)
   tfree(handle);
   }
 
-  #pragma omp barrier
+  BARRIER;
 }
 
 
@@ -313,7 +387,6 @@ static void     AllocateVectorData(
                                    Vector *vector)
 {
   Grid       *grid = VectorGrid(vector);
-
   int i;
 
   /* if necessary, free old CommPkg's */

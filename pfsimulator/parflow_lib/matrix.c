@@ -141,7 +141,9 @@ CommHandle  *_InitMatrixUpdate(
   CommHandle *return_handle = NULL;
   enum ParflowGridType grid_type = invalid_grid_type;
 
-#pragma omp single copyprivate(return_handle)
+  BARRIER;
+//#pragma omp single copyprivate(return_handle)
+  #pragma omp master
   {
 
 #ifdef HAVE_SAMRAI
@@ -195,7 +197,9 @@ CommHandle  *_InitMatrixUpdate(
     matrix->boundary_fill_schedule->fillData(time);
 #endif
   }
-  } // End barrier
+  } // End Master
+
+  BARRIER;
 
   return return_handle;
 }
@@ -209,14 +213,20 @@ CommHandle  *_InitMatrixUpdate(
 void         _FinalizeMatrixUpdate(
                                   CommHandle *handle)
 {
+  BARRIER;
+
 #pragma omp master
   {
   if (handle)
   {
     FinalizeCommunication(handle);
+  } else {
+    fprintf(stderr, "Error, no handle on matrix\n");
+    exit(1);
   }
   }
-  #pragma omp barrier
+
+  BARRIER;
 }
 
 
@@ -784,7 +794,7 @@ void    InitMatrix(
         Ap = SubmatrixElt(A_sub, s, ix, iy, iz);
 
         im = 0;
-        _BoxLoopI1(NoWait, NO_LOCALS,
+        _BoxLoopI1(InParallel, NO_LOCALS,
                   i, j, k, ix, iy, iz, nx, ny, nz,
                   im, nx_m, ny_m, nz_m, 1, 1, 1,
         {

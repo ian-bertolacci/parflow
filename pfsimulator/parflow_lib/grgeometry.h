@@ -74,8 +74,8 @@ typedef struct {
 /*------------------------------------------------------------------------
   Wrapper definitions around omp macros
   ------------------------------------------------------------------------*/
-#define _GrGeomSurfLoop(locals, ...) GrGeomSurfLoop( __VA_ARGS__ )
-#define _GrGeomInLoop(locals, ...) GrGeomInLoop( __VA_ARGS__ )
+#define _GrGeomSurfLoop(pragma, locals, ...) GrGeomSurfLoop( __VA_ARGS__ )
+#define _GrGeomInLoop(pragma, locals, ...) GrGeomInLoop( __VA_ARGS__ )
 
 
 /*--------------------------------------------------------------------------

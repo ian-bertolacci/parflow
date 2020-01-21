@@ -109,6 +109,14 @@ typedef struct {
 /*--------------------------------------------------------------------------
  * Saturation:
  *    This routine returns a Vector of saturations based on pressures.
+ *
+ * @MCB 01/17/2020:
+ * With regards to OpenMP barriers:
+ * Because there are instances where we loop over a set of regions, yielding
+ * a different geometry solid and therefore potentially different cell indices,
+ * these GrGeom loops need the implicit barrier.  Some of these can have a NoWait
+ * clause used instead, but because we have to sync after the module call in NLFE
+ * and RJE anyways, there's little benefit compared to the technical costs.
  *--------------------------------------------------------------------------*/
 
 void     Saturation(
@@ -207,7 +215,7 @@ void     Saturation(
 
           if (fcn == CALCFCN)
           {
-            _GrGeomInLoop(InParallel, LOCALS(ips),
+            _GrGeomInLoop(InParallel, NO_LOCALS,
                           i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);
@@ -216,7 +224,7 @@ void     Saturation(
           }
           else   /* fcn = CALCDER */
           {
-            _GrGeomInLoop(InParallel, LOCALS(ips),
+            _GrGeomInLoop(InParallel, NO_LOCALS,
                           i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
             {
               ips = SubvectorEltIndex(ps_sub, i, j, k);

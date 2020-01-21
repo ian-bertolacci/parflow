@@ -724,7 +724,8 @@ double PFVDotProd(
 
     i_x = 0;
     i_y = 0;
-    BoxLoopReduceI2(NO_LOCALS, sum,
+    //BoxLoopReduceI2(NO_LOCALS, sum,
+    BoxLoopI2(
                     i, j, k, ix, iy, iz, nx, ny, nz,
                     i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                     i_y, nx_y, ny_y, nz_y, 1, 1, 1,
@@ -849,7 +850,8 @@ double PFVWrmsNorm(
 
     i_x = 0;
     i_w = 0;
-    BoxLoopReduceI2(LOCALS(prod), sum,
+    //BoxLoopReduceI2(LOCALS(prod), sum,
+    BoxLoopI2(
                     i, j, k, ix, iy, iz, nx, ny, nz,
                     i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                     i_w, nx_w, ny_w, nz_w, 1, 1, 1,
@@ -919,7 +921,8 @@ double PFVWL2Norm(
 
     i_x = 0;
     i_w = 0;
-    BoxLoopReduceI2(LOCALS(prod), sum,
+    //BoxLoopReduceI2(LOCALS(prod), sum,
+    BoxLoopI2(
                     i, j, k, ix, iy, iz, nx, ny, nz,
                     i_x, nx_x, ny_x, nz_x, 1, 1, 1,
                     i_w, nx_w, ny_w, nz_w, 1, 1, 1,
@@ -979,7 +982,8 @@ double PFVL1Norm(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     i_x = 0;
-    BoxLoopReduceI1(NO_LOCALS, sum,
+    //BoxLoopReduceI1(NO_LOCALS, sum,
+    BoxLoopI1(
                     i, j, k, ix, iy, iz, nx, ny, nz,
                     i_x, nx_x, ny_x, nz_x, 1, 1, 1,
     {
@@ -1041,8 +1045,6 @@ double PFVMin(
     /* Get initial guess for min_val */
     if (sg == 0)
     {
-/* @MCB: This loop appears to not do anything, i_x will end up being 0 and no iterations occur
- This is equivalent to just min_val = xp[0]? */
       i_x = 0;
       BoxLoopI1(i, j, k, ix, iy, iz, 1, 1, 1,
                 i_x, nx_x, ny_x, nz_x, 1, 1, 1,

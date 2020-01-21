@@ -154,6 +154,7 @@ CommPkg         *NewCommPkg(
                             int             num_vars, /* number of variables in the vector */
                             double *        data)
 {
+
   CommPkg         *new_comm_pkg;
 
   amps_Invoice invoice;

@@ -129,8 +129,8 @@ void    OverlandFlowEvalKin(
 
   if (fcn == CALCFCN)
   {
-    __BCStructPatchLoopOvrlnd(NO_LOCALS,
-                              i, j, k, fdir, ival, bc_struct, ipatch, sg,
+    _BCStructPatchLoopOvrlnd(InParallel, NO_LOCALS,
+                             i, j, k, fdir, ival, bc_struct, ipatch, sg,
     {
       if (fdir[2] == 1)
       {
@@ -206,7 +206,7 @@ void    OverlandFlowEvalKin(
       }
     });
 
-    __BCStructPatchLoop(NO_LOCALS,
+    _BCStructPatchLoop(InParallel, NO_LOCALS,
                         i, j, k, fdir, ival, bc_struct, ipatch, sg,
     {
       if (fdir[2] == 1)
@@ -221,7 +221,7 @@ void    OverlandFlowEvalKin(
   }
   else          //fcn = CALCDER calculates the derivs
   {
-    __BCStructPatchLoopOvrlnd(NO_LOCALS,
+    _BCStructPatchLoopOvrlnd(InParallel, NO_LOCALS,
                               i, j, k, fdir, ival, bc_struct, ipatch, sg,
     {
       if (fdir[2] == 1)

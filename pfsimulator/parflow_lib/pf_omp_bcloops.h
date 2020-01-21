@@ -1,0 +1,175 @@
+#ifndef _PF_OMP_BCLOOPS_H
+#define _PF_OMP_BCLOOPS_H
+
+#undef _BCStructPatchLoop
+#define _BCStructPatchLoop(pragma, locals,                              \
+                           i, j, k, fdir, ival, bc_struct,              \
+                           ipatch, is, body)                            \
+  {                                                                     \
+    GrGeomSolid  *PV_gr_domain = BCStructGrDomain(bc_struct);           \
+    int PV_patch_index = BCStructPatchIndex(bc_struct, ipatch);         \
+    Subgrid      *PV_subgrid = BCStructSubgrid(bc_struct, is);          \
+                                                                        \
+    int PV_r = SubgridRX(PV_subgrid);                                   \
+    int PV_ix = SubgridIX(PV_subgrid);                                  \
+    int PV_iy = SubgridIY(PV_subgrid);                                  \
+    int PV_iz = SubgridIZ(PV_subgrid);                                  \
+    int PV_nx = SubgridNX(PV_subgrid);                                  \
+    int PV_ny = SubgridNY(PV_subgrid);                                  \
+    int PV_nz = SubgridNZ(PV_subgrid);                                  \
+                                                                        \
+    ival = 0;                                                           \
+    if (PV_r != 0 ||                                                    \
+        !GrGeomSolidPatchBoxes(PV_gr_domain, PV_patch_index, GrGeomOctreeNumFaces -1)) \
+    {                                                                   \
+      if(!amps_Rank(amps_CommWorld))                                    \
+      {                                                                 \
+        amps_Printf("Use of OpenMP requires box clustering! Aborting from:\n%s:%d\n", __FILE__, __LINE__); \
+      }                                                                 \
+      exit(1);                                                          \
+    }                                                                   \
+    pragma ## _GrGeomPatchLoopBoxes(locals, i, j, k,                    \
+                                    fdir, PV_gr_domain, PV_patch_index, \
+                                    PV_r, PV_ix, PV_iy, PV_iz,          \
+                                    PV_nx, PV_ny, PV_nz, body);         \
+  }
+
+#undef _BCStructPatchLoopOvrlnd
+#define _BCStructPatchLoopOvrlnd(pragma, locals,                        \
+                                 i, j, k, fdir, ival, bc_struct,        \
+                                 ipatch, is, body)                      \
+  {                                                                     \
+    GrGeomSolid  *PV_gr_domain = BCStructGrDomain(bc_struct);           \
+    int PV_patch_index = BCStructPatchIndex(bc_struct, ipatch);         \
+    Subgrid      *PV_subgrid = BCStructSubgrid(bc_struct, is);          \
+                                                                        \
+    int PV_r = SubgridRX(PV_subgrid);                                   \
+    int PV_ix = SubgridIX(PV_subgrid) - 1;                              \
+    int PV_iy = SubgridIY(PV_subgrid) - 1;                              \
+    int PV_iz = SubgridIZ(PV_subgrid) - 1;                              \
+    int PV_nx = SubgridNX(PV_subgrid) + 2;                              \
+    int PV_ny = SubgridNY(PV_subgrid) + 2;                              \
+    int PV_nz = SubgridNZ(PV_subgrid) + 2;                              \
+                                                                        \
+    ival = 0;                                                           \
+    if (PV_r != 0 ||                                                    \
+        !GrGeomSolidPatchBoxes(PV_gr_domain, PV_patch_index, GrGeomOctreeNumFaces -1)) \
+    {                                                                   \
+      if(!amps_Rank(amps_CommWorld))                                    \
+      {                                                                 \
+        amps_Printf("Use of OpenMP requires box clustering! Aborting from:\n%s:%d\n", __FILE__, __LINE__); \
+      }                                                                 \
+      exit(1);                                                          \
+    }                                                                   \
+    pragma ## _GrGeomPatchLoopBoxes(locals, i, j, k,                    \
+                                    fdir, PV_gr_domain, PV_patch_index, \
+                                    PV_r, PV_ix, PV_iy, PV_iz,          \
+                                    PV_nx, PV_ny, PV_nz, body);         \
+  }
+
+#define MainBody_GrGeomPatchLoopBoxes(pragma_clause, locals,            \
+                                      i, j, k, fdir,                    \
+                                      grgeom, patch_num,                \
+                                      r, ix, iy, iz,                    \
+                                      nx, ny, nz, body)                 \
+  {                                                                     \
+    int PV_ixl, PV_iyl, PV_izl, PV_ixu, PV_iyu, PV_izu;                 \
+    int *PV_visiting = NULL;                                            \
+    int PV_fdir[3];                                                     \
+    fdir = PV_fdir;                                                     \
+    for (int PV_f = 0; PV_f < GrGeomOctreeNumFaces; PV_f++)             \
+    {                                                                   \
+      switch (PV_f)                                                     \
+      {                                                                 \
+        case GrGeomOctreeFaceL:                                         \
+          fdir[0] = -1; fdir[1] = 0; fdir[2] = 0;                       \
+          break;                                                        \
+        case GrGeomOctreeFaceR:                                         \
+          fdir[0] = 1; fdir[1] = 0; fdir[2] = 0;                        \
+          break;                                                        \
+        case GrGeomOctreeFaceD:                                         \
+          fdir[0] = 0; fdir[1] = -1; fdir[2] = 0;                       \
+          break;                                                        \
+        case GrGeomOctreeFaceU:                                         \
+          fdir[0] = 0; fdir[1] = 1; fdir[2] = 0;                        \
+          break;                                                        \
+        case GrGeomOctreeFaceB:                                         \
+          fdir[0] = 0; fdir[1] = 0; fdir[2] = -1;                       \
+          break;                                                        \
+        case GrGeomOctreeFaceF:                                         \
+          fdir[0] = 0; fdir[1] = 0; fdir[2] = 1;                        \
+          break;                                                        \
+        default:                                                        \
+          fdir[0] = -9999; fdir[1] = -9999; fdir[2] = -99999;           \
+          break;                                                        \
+      }                                                                 \
+                                                                        \
+      BoxArray* boxes = GrGeomSolidPatchBoxes(grgeom, patch_num, PV_f); \
+      for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)      \
+      {                                                                 \
+        Box box = BoxArrayGetBox(boxes, PV_box);                        \
+        /* find octree and region intersection */                       \
+        PV_ixl = pfmax(ix, box.lo[0]);                                  \
+        PV_iyl = pfmax(iy, box.lo[1]);                                  \
+        PV_izl = pfmax(iz, box.lo[2]);                                  \
+        PV_ixu = pfmin((ix + nx - 1), box.up[0]);                       \
+        PV_iyu = pfmin((iy + ny - 1), box.up[1]);                       \
+        PV_izu = pfmin((iz + nz - 1), box.up[2]);                       \
+                                                                        \
+        int PV_diff_x = PV_ixu - PV_ixl;                                \
+        int PV_diff_y = PV_iyu - PV_iyl;                                \
+        int PV_diff_z = PV_izu - PV_izl;                                \
+        int x_scale = !!PV_diff_x;                                      \
+        int y_scale = !!PV_diff_y;                                      \
+        int z_scale = !!PV_diff_z;                                      \
+        if (PV_diff_x * PV_diff_y * PV_diff_z != 0) {                   \
+          fprintf(stderr, "ERROR: Diff not 0 at %s %d\n", __FILE__, __LINE__); \
+          exit(-1);                                                     \
+        }                                                               \
+        PRAGMA(omp pragma_clause collapse(3) private(i, j, k, ival locals)) \
+          for (k = PV_izl; k <= PV_izu; k++)                            \
+          {                                                             \
+            for (j = PV_iyl; j <= PV_iyu; j++)                          \
+            {                                                           \
+              for (i = PV_ixl; i <= PV_ixu; i++)                        \
+              {                                                         \
+                if (!z_scale) {                                         \
+                  ival = (PV_diff_x * j + j + i);                       \
+                } else if (!y_scale) {                                  \
+                  ival = (PV_diff_x * k + k + i);                       \
+                } else {                                                \
+                  ival = (PV_diff_y * k + k + j);                       \
+                }                                                       \
+                body;                                                   \
+              }                                                         \
+            }                                                           \
+          }                                                             \
+      }                                                                 \
+    }                                                                   \
+  }
+
+/*------------------------------------------------------------------------
+ * BCPatchLoop Redefinitions
+ *------------------------------------------------------------------------*/
+#define NewParallel_GrGeomPatchLoopBoxes(locals,                        \
+                                         i, j, k, fdir,                 \
+                                         grgeom, patch_num,             \
+                                         r, ix, iy, iz,                 \
+                                         nx, ny, nz, body)              \
+  PRAGMA(omp parallel private(fdir))                                    \
+  {                                                                     \
+    MainBody_GrGeomPatchLoopBoxes(for, locals,                          \
+                                  i, j, k, fdir,                        \
+                                  grgeom, patch_num,                    \
+                                  r, ix, iy, iz,                        \
+                                  nx, ny, nz, body);                    \
+  }
+
+#define InParallel_GrGeomPatchLoopBoxes(...) \
+  MainBody_GrGeomPatchLoopBoxes(for, __VA_ARGS__)
+
+#define NoWait_GrGeomPatchLoopBoxes(...)  \
+  MainBody_GrGeomPatchLoopBoxes(for nowait, __VA_ARGS__)
+
+
+#endif // _PF_OMP_BCLOOPS_H
