@@ -143,21 +143,13 @@ void             MGSemiProlong(
     switch (compute_i)
     {
       case 0:
-      {
-        BARRIER;
-        MASTER(handle = InitCommunication(e_f_comm_pkg));
-        BARRIER;
+        handle = InitCommunication(e_f_comm_pkg);
         compute_reg = ComputePkgIndRegion(compute_pkg);
-      }
         break;
 
       case 1:
-      {
-        BARRIER;
-        MASTER(FinalizeCommunication(handle));
-        BARRIER;
+        FinalizeCommunication(handle);
         compute_reg = ComputePkgDepRegion(compute_pkg);
-      }
         break;
     }
 
@@ -205,7 +197,7 @@ void             MGSemiProlong(
 
         i_c = 0;
         i_f = 0;
-        _BoxLoopI2(InParallel, NO_LOCALS,
+        _BoxLoopI2(NoWait, NO_LOCALS,
                    ii, jj, kk, ix, iy, iz, nx, ny, nz,
                    i_c, nx_c, ny_c, nz_c, 1, 1, 1,
                    i_f, nx_f, ny_f, nz_f, sx, sy, sz,

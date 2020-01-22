@@ -695,7 +695,7 @@ void         PhaseRelPerm(
                   // Spline
                   case 0:
                   {
-                    _GrGeomSurfLoop(InParallel, NO_LOCALS,
+                    _GrGeomSurfLoop(NoWait, NO_LOCALS,
                                     i, j, k, fdir, gr_solid, r, ix, iy, iz,
                                     nx, ny, nz,
                     {
@@ -732,7 +732,7 @@ void         PhaseRelPerm(
                     int num_sample_points = lookup_table->num_sample_points;
                     int max = num_sample_points + 1;
 
-                    _GrGeomSurfLoop(InParallel, NO_LOCALS,
+                    _GrGeomSurfLoop(NoWait, NO_LOCALS,
                                     i, j, k, fdir, gr_solid, r, ix, iy, iz,
                                     nx, ny, nz,
                     {
@@ -773,7 +773,7 @@ void         PhaseRelPerm(
               {
                 /* Compute VanG curve */
 
-                _GrGeomSurfLoop(InParallel, NO_LOCALS,
+                _GrGeomSurfLoop(NoWait, NO_LOCALS,
                                 i, j, k, fdir, gr_solid, r, ix, iy, iz,
                                 nx, ny, nz,
                 {
@@ -810,7 +810,7 @@ void         PhaseRelPerm(
                   // Spline
                   case 0:
                   {
-                    _GrGeomSurfLoop(InParallel, NO_LOCALS,
+                    _GrGeomSurfLoop(NoWait, NO_LOCALS,
                                     i, j, k, fdir, gr_solid, r, ix, iy, iz,
                                     nx, ny, nz,
                     {
@@ -846,7 +846,7 @@ void         PhaseRelPerm(
                     int num_sample_points = lookup_table->num_sample_points;
                     int max = num_sample_points + 1;
 
-                    _GrGeomSurfLoop(InParallel, NO_LOCALS,
+                    _GrGeomSurfLoop(NoWait, NO_LOCALS,
                                     i, j, k, fdir, gr_solid, r, ix, iy, iz,
                                     nx, ny, nz,
                     {
@@ -893,7 +893,7 @@ void         PhaseRelPerm(
               {
                 /* Compute VanG curve */
 
-                _GrGeomSurfLoop(InParallel, NO_LOCALS,
+                _GrGeomSurfLoop(NoWait, NO_LOCALS,
                                 i, j, k, fdir, gr_solid, r, ix, iy, iz,
                                nx, ny, nz,
                 {
@@ -967,7 +967,7 @@ void         PhaseRelPerm(
 
           if (fcn == CALCFCN)
           {
-            _GrGeomSurfLoop(InParallel, NO_LOCALS,
+            _GrGeomSurfLoop(NoWait, NO_LOCALS,
                             i, j, k, fdir, gr_solid, r, ix, iy, iz,
                             nx, ny, nz,
             {
@@ -999,7 +999,7 @@ void         PhaseRelPerm(
           }
           else    /* fcn = CALCDER */
           {
-            _GrGeomSurfLoop(InParallel, NO_LOCALS,
+            _GrGeomSurfLoop(NoWait, NO_LOCALS,
                             i, j, k, fdir, gr_solid, r, ix, iy, iz,
                             nx, ny, nz,
             {
@@ -1037,6 +1037,8 @@ void         PhaseRelPerm(
           }     /* End else clause */
         }       /* End subgrid loop */
       }         /* End if data_from_file */
+
+      BARRIER;
 
       /* Compute rel. perms. on interior */
       if (data_from_file == 0)  /* alphas and ns given by region */

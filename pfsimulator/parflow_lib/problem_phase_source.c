@@ -148,7 +148,7 @@ void         PhaseSource(
           r = SubgridRX(subgrid);
 
           data = SubvectorData(ps_sub);
-          _GrGeomInLoop(InParallel, NO_LOCALS,
+          _GrGeomInLoop(NoWait, NO_LOCALS,
                         i, j, k, gr_solid, r, ix, iy, iz, nx, ny, nz,
           {
             ips = SubvectorEltIndex(ps_sub, i, j, k);
@@ -157,6 +157,7 @@ void         PhaseSource(
           });
         }
       }
+      BARRIER;
 
       break;
     }  /* End case 0 */

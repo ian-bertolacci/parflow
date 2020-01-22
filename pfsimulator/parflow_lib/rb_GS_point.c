@@ -231,7 +231,7 @@ void     RedBlackGSPoint(
           bp = SubvectorElt(b_sub, ix, iy, iz);
 
           iv = im = 0;
-          _BoxLoopI2(InParallel, NO_LOCALS,
+          _BoxLoopI2(NoWait, NO_LOCALS,
                      i, j, k, ix, iy, iz, nx, ny, nz,
                      iv, nx_v, ny_v, nz_v, sx, sy, sz,
                      im, nx_m, ny_m, nz_m, sx, sy, sz,
@@ -362,7 +362,7 @@ void     RedBlackGSPoint(
           bp = SubvectorElt(b_sub, ix, iy, iz);
 
           iv = im = 0;
-          _BoxLoopI2(InParallel, NO_LOCALS,
+          _BoxLoopI2(NoWait, NO_LOCALS,
                      i, j, k, ix, iy, iz, nx, ny, nz,
                      iv, nx_v, ny_v, nz_v, sx, sy, sz,
                      im, nx_m, ny_m, nz_m, sx, sy, sz,

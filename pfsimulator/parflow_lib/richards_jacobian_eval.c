@@ -334,42 +334,7 @@ void    RichardsJacobianEval(
   rel_perm = saturation;
   rel_perm_der = saturation_der;
 
-  #if 0
-  static int check_vals = 0;
-  Vector *checkvec;
-  /* Pass pressure values to neighbors.  */
-  if (check_vals)
-  {
-    checkvec = NewVectorType(pressure->grid, 1, 1, vector_cell_centered);
-    PFVCopy(pressure, checkvec);
-    for (int i = 0; i < NumUpdateModes; i++)
-      checkvec->comm_pkg[i] = pressure->comm_pkg[i];
-
-    #pragma omp parallel
-    {
-      vector_update_handle = InitVectorUpdate(checkvec, VectorUpdateAll);
-      FinalizeVectorUpdate(vector_update_handle);
-    }
-  }
-
-  vector_update_handle = InitVectorUpdate(pressure, VectorUpdateAll);
-  FinalizeVectorUpdate(vector_update_handle);
-
-  if (check_vals)
-  {
-    CheckVec(pressure, checkvec);
-    fprintf(stderr, "Valid.\n");
-    exit(1);
-  }
-
-  check_vals = 1;
-  #else
-
-  vector_update_handle = InitVectorUpdate(pressure, VectorUpdateAll);
-  FinalizeVectorUpdate(vector_update_handle);
-
-  #endif
-/* Define grid for surface contribution */
+  /* Define grid for surface contribution */
   Vector      *KW, *KE, *KN, *KS, *KWns, *KEns, *KNns, *KSns;
   KW = NewVectorType(grid2d, 1, 1, vector_cell_centered);
   KE = NewVectorType(grid2d, 1, 1, vector_cell_centered);
@@ -628,7 +593,6 @@ void    RichardsJacobianEval(
   PFModuleInvokeType(PhaseRelPermInvoke, rel_perm_module,
                      (rel_perm_der, pressure, density, gravity, problem_data,
                       CALCDER));
-
   BARRIER;
 
   /* Calculate contributions from second order derivatives and gravity */
@@ -2147,7 +2111,7 @@ void    RichardsJacobianEval(
         }         /* End switch BCtype */
       }           /* End ipatch loop */
     }             /* End subgrid loop */
-  }
+  } /* End if (ovlnd_flag && public_xtra->type == overland_flow) */
 
 
   /* Set pressures outside domain to zero.

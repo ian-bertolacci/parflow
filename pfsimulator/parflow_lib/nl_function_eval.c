@@ -380,7 +380,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     pop = SubvectorData(po_sub);
     fp = SubvectorData(f_sub);
 
-    _GrGeomInLoop(InParallel, NO_LOCALS,
+    _GrGeomInLoop(NoWait, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);
