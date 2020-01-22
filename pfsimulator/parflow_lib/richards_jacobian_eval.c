@@ -419,7 +419,7 @@ void    RichardsJacobianEval(
   lower_temp_vector = NewVectorType(grid, 1, 1, pressure->type);
 
   /* Calculate time term contributions. */
-#pragma omp parallel private(handle, vector_update_handle)
+#pragma omp parallel firstprivate(handle, vector_update_handle)
   {
     Subvector* north_temp_sub;
     Subvector* south_temp_sub;
