@@ -1,6 +1,9 @@
 #ifndef _PF_OMP_BCLOOPS_H
 #define _PF_OMP_BCLOOPS_H
 
+/* Used to calculate ival */
+#define CALC_IVAL(diff, a, b) ((diff) * (a) + (a) + (b))
+
 #undef _BCStructPatchLoop
 #define _BCStructPatchLoop(pragma, locals,                              \
                            i, j, k, fdir, ival, bc_struct,              \
@@ -133,12 +136,15 @@
             {                                                           \
               for (i = PV_ixl; i <= PV_ixu; i++)                        \
               {                                                         \
+                int PV_tmp_i = i - PV_ixl;                              \
+                int PV_tmp_j = j - PV_iyl;                              \
+                int PV_tmp_k = k - PV_izl;                              \
                 if (!z_scale) {                                         \
-                  ival = (PV_diff_x * j + j + i);                       \
+                  ival = CALC_IVAL(PV_diff_x, PV_tmp_j, PV_tmp_i);      \
                 } else if (!y_scale) {                                  \
-                  ival = (PV_diff_x * k + k + i);                       \
+                  ival = CALC_IVAL(PV_diff_x, PV_tmp_k, PV_tmp_i);      \
                 } else {                                                \
-                  ival = (PV_diff_y * k + k + j);                       \
+                  ival = CALC_IVAL(PV_diff_y, PV_tmp_k, PV_tmp_j);      \
                 }                                                       \
                 body;                                                   \
               }                                                         \
