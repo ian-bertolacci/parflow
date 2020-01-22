@@ -96,7 +96,6 @@ typedef struct {
  *       <r,r>  <  (tol^2)*<b,b> = eps
  *
  *--------------------------------------------------------------------------*/
-#if 1
 void     MGSemi(
                 Vector *x,
                 Vector *b,
@@ -206,7 +205,7 @@ void     MGSemi(
 
 
   int omp_stop = 0;
-#pragma omp parallel private(i, l)
+#pragma omp parallel firstprivate(i, l, almost_converged)
   {
 
     /*-----------------------------------------------------------------------
@@ -226,7 +225,13 @@ void     MGSemi(
     PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, zero));
 
     //while (!omp_stop)
-    for (i = 1; i < max_iter; i++)
+    /* @MCB:
+       This used to be a while(++i) loop with two breaks:
+       1) if (r_dot_r < eps)
+       2) if (i + 1 > max_iter)
+       2 has been removed since we're in a for loop.
+     */
+    for (i = 1; i <= max_iter; i++)
     {
       //i++;
     /*--------------------------------------------------------------------
@@ -250,8 +255,11 @@ void     MGSemi(
 
         IfLogging(1)
         {
-          norm_log[i - 1] = sqrt(r_dot_r);
-          rel_norm_log[i - 1] = b_dot_b ? sqrt(r_dot_r / b_dot_b) : 0.0;
+          #pragma omp master
+          {
+            norm_log[i - 1] = sqrt(r_dot_r);
+            rel_norm_log[i - 1] = b_dot_b ? sqrt(r_dot_r / b_dot_b) : 0.0;
+          }
         }
       }
     }
@@ -436,342 +444,6 @@ void     MGSemi(
     }
   }
 }
-#else
-  /* Working serial version */
-void     MGSemi(
-                Vector *x,
-                Vector *b,
-                double  tol,
-                int     zero)
-{
-  PFModule      *this_module = ThisPFModule;
-  PublicXtra    *public_xtra = (PublicXtra*)PFModulePublicXtra(this_module);
-  InstanceXtra  *instance_xtra = (InstanceXtra*)PFModuleInstanceXtra(this_module);
-
-  int max_iter = (public_xtra->max_iter);
-
-  PFModule        **smooth_l = (instance_xtra->smooth_l);
-  PFModule         *solve = (instance_xtra->solve);
-
-  int num_levels = (instance_xtra->num_levels);
-
-  SubregionArray  **f_sra_l = (instance_xtra->f_sra_l);
-  SubregionArray  **c_sra_l = (instance_xtra->c_sra_l);
-
-  ComputePkg      **restrict_compute_pkg_l =
-    (instance_xtra->restrict_compute_pkg_l);
-  ComputePkg      **prolong_compute_pkg_l =
-    (instance_xtra->prolong_compute_pkg_l);
-
-  CommPkg         **restrict_comm_pkg_l = NULL;
-  CommPkg         **prolong_comm_pkg_l = NULL;
-
-  Matrix          **A_l = (instance_xtra->A_l);
-  Vector          **x_l = NULL;
-  Vector          **b_l = NULL;
-
-  Matrix          **P_l = (instance_xtra->P_l);
-
-  Vector          **temp_vec_l = NULL;
-
-  Matrix           *A = A_l[0];
-
-  double eps = 0.0;
-  double b_dot_b = 0.0, r_dot_r = 0.0;
-  int almost_converged = 0;
-
-  int l;
-  int i = 0;
-
-  double           *norm_log = NULL;
-  double           *rel_norm_log = NULL;
-
-
-  if (tol > 0.0)
-  {
-    IfLogging(1)
-    {
-      norm_log = talloc(double, max_iter + 1);
-      rel_norm_log = talloc(double, max_iter + 1);
-    }
-  }
-
-  /*-----------------------------------------------------------------------
-   * Begin timing
-   *-----------------------------------------------------------------------*/
-
-  BeginTiming(public_xtra->time_index);
-
-
-  /*-----------------------------------------------------------------------
-   * Allocate temp vectors
-   *-----------------------------------------------------------------------*/
-  x_l = talloc(Vector *, num_levels);
-  b_l = talloc(Vector *, num_levels);
-  temp_vec_l = talloc(Vector *, num_levels);
-
-  restrict_comm_pkg_l = talloc(CommPkg *, (num_levels - 1));
-  prolong_comm_pkg_l = talloc(CommPkg *, (num_levels - 1));
-
-  temp_vec_l[0] = NewVector(instance_xtra->grid_l[0], 1, 1);
-  for (l = 0; l < (num_levels - 1); l++)
-  {
-    /*-----------------------------------------------------------------
-     * Set up temporary vectors: x_l, b_l, temp_vec_l
-     *-----------------------------------------------------------------*/
-    // Non SAMRAI grids
-    x_l[l + 1] = NewVectorType(instance_xtra->grid_l[l + 1], 1, 1, vector_non_samrai);
-    b_l[l + 1] = NewVectorType(instance_xtra->grid_l[l + 1], 1, 1, vector_non_samrai);
-    temp_vec_l[l + 1] = NewVectorType(instance_xtra->grid_l[l + 1], 1, 1, vector_non_samrai);
-
-    /* Set up comm_pkg's */
-
-    /* SGS not done */
-    restrict_comm_pkg_l[l] =
-      NewVectorCommPkg(temp_vec_l[l],
-                       (instance_xtra->restrict_compute_pkg_l[l]));
-    prolong_comm_pkg_l[l] =
-      NewVectorCommPkg(temp_vec_l[l],
-                       (instance_xtra->prolong_compute_pkg_l[l]));
-  }
-
-  /*-----------------------------------------------------------------------
-   * Do V-cycles:
-   *   For each index l, "fine" = l, "coarse" = (l+1)
-   *-----------------------------------------------------------------------*/
-
-  if ((i + 1) > max_iter)
-  {
-    Copy(b, x);
-    EndTiming(public_xtra->time_index);
-    return;
-  }
-
-  if (tol > 0.0)
-  {
-    /* eps = (tol^2)*<b,b> */
-    b_dot_b = InnerProd(b, b);
-    eps = (tol * tol) * b_dot_b;
-  }
-
-  /* smooth (use `zero' to determine initial x) */
-  PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, zero));
-
-  while (++i)
-  {
-    /*--------------------------------------------------------------------
-     * Down cycle
-     *--------------------------------------------------------------------*/
-
-    /* first smoothing is already done */
-
-    /* compute residual (b - Ax) */
-    Copy(b, temp_vec_l[0]);
-    Matvec(-1.0, A, x, 1.0, temp_vec_l[0]);
-
-    /* do preliminary convergence check */
-    if (tol > 0.0)
-    {
-      if (!almost_converged)
-      {
-        r_dot_r = InnerProd(temp_vec_l[0], temp_vec_l[0]);
-        if (r_dot_r < eps)
-          almost_converged = 1;
-
-        IfLogging(1)
-        {
-          norm_log[i - 1] = sqrt(r_dot_r);
-          rel_norm_log[i - 1] = b_dot_b ? sqrt(r_dot_r / b_dot_b) : 0.0;
-        }
-      }
-    }
-
-    /* restrict residual */
-    MGSemiRestrict(A, temp_vec_l[0], b_l[1], P_l[0],
-                   f_sra_l[0], c_sra_l[0],
-                   restrict_compute_pkg_l[0], restrict_comm_pkg_l[0]);
-
-#if 0
-    /* for debugging purposes */
-    PrintVector("b.01", b_l[1]);
-#endif
-
-    for (l = 1; l <= (num_levels - 2); l++)
-    {
-      /* smooth (zero initial x) */
-      PFModuleInvokeType(LinearSolverInvoke, smooth_l[l], (x_l[l], b_l[l], 0.0, 1));
-
-      /* compute residual (b - Ax) */
-      Copy(b_l[l], temp_vec_l[l]);
-      Matvec(-1.0, A_l[l], x_l[l], 1.0, temp_vec_l[l]);
-
-      /* restrict residual */
-      MGSemiRestrict(A_l[l], temp_vec_l[l], b_l[l + 1], P_l[l],
-                     f_sra_l[l], c_sra_l[l],
-                     restrict_compute_pkg_l[l], restrict_comm_pkg_l[l]);
-
-#if 0
-      /* for debugging purposes */
-      {
-        char filename[255];
-
-        sprintf(filename, "b.%02d", l + 1);
-        PrintVector(filename, b_l[l + 1]);
-      }
-#endif
-    }
-
-    /*--------------------------------------------------------------------
-     * Bottom
-     *--------------------------------------------------------------------*/
-
-    /* solve the coarse system */
-    PFModuleInvokeType(LinearSolverInvoke, solve, (x_l[l], b_l[l], 1.0e-9, 1));
-
-    /*--------------------------------------------------------------------
-     * Up cycle
-     *--------------------------------------------------------------------*/
-
-    for (l = (num_levels - 2); l >= 1; l--)
-    {
-      /* prolong error */
-      MGSemiProlong(A_l[l], temp_vec_l[l], x_l[l + 1], P_l[l],
-                    f_sra_l[l], c_sra_l[l],
-                    prolong_compute_pkg_l[l], prolong_comm_pkg_l[l]);
-#if 0
-      /* for debugging purposes */
-      {
-        char filename[255];
-
-        sprintf(filename, "e.%02d", l);
-        PrintVector(filename, temp_vec_l[l]);
-      }
-#endif
-
-      /* update solution (x = x + e) */
-      Axpy(1.0, temp_vec_l[l], x_l[l]);
-
-      /* smooth (non-zero initial x) */
-      PFModuleInvokeType(LinearSolverInvoke, smooth_l[l], (x_l[l], b_l[l], 0.0, 0));
-    }
-
-    /* prolong error */
-    MGSemiProlong(A, temp_vec_l[0], x_l[1], P_l[0],
-                  f_sra_l[0], c_sra_l[0],
-                  prolong_compute_pkg_l[0], prolong_comm_pkg_l[0]);
-#if 0
-    /* for debugging purposes */
-    PrintVector("e.00", temp_vec_l[0]);
-#endif
-
-    /* update solution (x = x + e) */
-    Axpy(1.0, temp_vec_l[0], x);
-
-    /* smooth (non-zero initial x) */
-    PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, 0));
-
-    /*--------------------------------------------------------------------
-     * Test for convergence or max_iter
-     *--------------------------------------------------------------------*/
-
-    if (tol > 0.0)
-    {
-      if (almost_converged)
-      {
-        Copy(b, temp_vec_l[0]);
-        Matvec(-1.0, A, x, 1.0, temp_vec_l[0]);
-        r_dot_r = InnerProd(temp_vec_l[0], temp_vec_l[0]);
-
-#if 0
-        if (!amps_Rank(amps_CommWorld))
-          amps_Printf("Iteration (%d): ||r||_2 = %e, ||r||_2/||b||_2 = %e\n",
-                      i, sqrt(r_dot_r), (b_dot_b ? sqrt(r_dot_r / b_dot_b) : 0.0));
-#endif
-
-        IfLogging(1)
-        {
-          norm_log[i] = sqrt(r_dot_r);
-          rel_norm_log[i] = b_dot_b ? sqrt(r_dot_r / b_dot_b) : 0.0;
-        }
-
-        if (r_dot_r < eps)
-          break;
-      }
-    }
-
-    if ((i + 1) > max_iter)
-      break;
-
-    /* smooth (non-zero initial x) */
-    PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, 0));
-  }
-
-  if (tol > 0.0)
-  {
-    if (!amps_Rank(amps_CommWorld))
-      amps_Printf("Iterations = %d, ||r||_2 = %e, ||r||_2/||b||_2 = %e\n",
-                  i, sqrt(r_dot_r), (b_dot_b ? sqrt(r_dot_r / b_dot_b) : 0.0));
-  }
-
-  /*-----------------------------------------------------------------------
-   * Free temp vectors
-   *-----------------------------------------------------------------------*/
-
-  FreeVector(temp_vec_l[0]);
-  for (l = 0; l < (num_levels - 1); l++)
-  {
-    FreeVector(x_l[l + 1]);
-    FreeVector(b_l[l + 1]);
-    FreeVector(temp_vec_l[l + 1]);
-
-    FreeCommPkg(restrict_comm_pkg_l[l]);
-    FreeCommPkg(prolong_comm_pkg_l[l]);
-  }
-
-  tfree(temp_vec_l);
-  tfree(b_l);
-  tfree(x_l);
-
-  tfree(prolong_comm_pkg_l);
-  tfree(restrict_comm_pkg_l);
-
-  /*-----------------------------------------------------------------------
-   * End timing
-   *-----------------------------------------------------------------------*/
-
-  IncFLOPCount(2);
-  EndTiming(public_xtra->time_index);
-
-  /*-----------------------------------------------------------------------
-   * Print log.
-   *-----------------------------------------------------------------------*/
-
-  if (tol > 0.0)
-  {
-    IfLogging(1)
-    {
-      FILE  *log_file;
-      int j;
-
-      log_file = OpenLogFile("MGSemi");
-
-      fprintf(log_file, "Iters       ||r||_2    ||r||_2/||b||_2\n");
-      fprintf(log_file, "-----    ------------    ------------\n");
-
-      for (j = 0; j <= i; j++)
-      {
-        fprintf(log_file, "% 5d    %e    %e\n",
-                j, norm_log[j], rel_norm_log[j]);
-      }
-
-      CloseLogFile(log_file);
-
-      tfree(norm_log);
-      tfree(rel_norm_log);
-    }
-  }
-}
-#endif
 
 /*--------------------------------------------------------------------------
  * SetupCoarseOps

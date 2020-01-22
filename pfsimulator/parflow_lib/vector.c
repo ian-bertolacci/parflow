@@ -849,7 +849,7 @@ void    InitVector(
     vp = SubvectorElt(v_sub, ix, iy, iz);
 
     iv = 0;
-    _BoxLoopI1(NewParallel, NO_LOCALS,
+    _BoxLoopI1(InParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
