@@ -141,7 +141,7 @@ CommHandle  *_InitMatrixUpdate(
   CommHandle *return_handle = NULL;
   enum ParflowGridType grid_type = invalid_grid_type;
 
-  BARRIER;
+  //BARRIER;
 //#pragma omp single copyprivate(return_handle)
   #pragma omp master
   {
@@ -199,7 +199,7 @@ CommHandle  *_InitMatrixUpdate(
   }
   } // End Master
 
-  BARRIER;
+  //BARRIER;
 
   return return_handle;
 }
@@ -213,20 +213,11 @@ CommHandle  *_InitMatrixUpdate(
 void         _FinalizeMatrixUpdate(
                                   CommHandle *handle)
 {
-  BARRIER;
-
-#pragma omp master
-  {
-  if (handle)
-  {
+  /* @MCB:
+     We have a barrier inside FinalizeComm, so remove this if check for now?
+  */
+  //if (handle)
     FinalizeCommunication(handle);
-  } else {
-    fprintf(stderr, "Error, no handle on matrix\n");
-    exit(1);
-  }
-  }
-
-  BARRIER;
 }
 
 

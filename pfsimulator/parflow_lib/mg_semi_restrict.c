@@ -105,8 +105,10 @@ void             MGSemiRestrict(
         break;
 
       case 1:
+      {
         FinalizeCommunication(handle);
         compute_reg = ComputePkgDepRegion(compute_pkg);
+      }
         break;
     }
 
@@ -182,6 +184,7 @@ void             MGSemiRestrict(
    * Increment the flop counter
    *-----------------------------------------------------------------------*/
   MASTER(IncFLOPCount(3 * VectorSize(r_c)));
+  //BARRIER;
 }
 
 

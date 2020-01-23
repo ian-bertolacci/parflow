@@ -534,8 +534,11 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     FBy_dat = SubvectorData(FBy_sub);
     FBz_dat = SubvectorData(FBz_sub);
 
-
-    _GrGeomInLoop(InParallel, NO_LOCALS,
+    /* @MCB:
+       This doesn't need to wait because the next loop (BCStructPatch) is only writing to pressure
+       but we aren't reading from pressure here
+    */
+    _GrGeomInLoop(NoWait, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       ip = SubvectorEltIndex(f_sub, i, j, k);

@@ -77,6 +77,8 @@ double   InnerProd(
 
   MASTER(result_invoice = amps_NewInvoice("%d", &result));
 
+  BARRIER;
+
   ForSubgridI(i_s, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, i_s);
@@ -100,9 +102,9 @@ double   InnerProd(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     iv = 0;
-    BoxLoopReduceI1(NO_LOCALS, result,
-                    i, j, k, ix, iy, iz, nx, ny, nz,
-                    iv, nx_v, ny_v, nz_v, 1, 1, 1,
+    __BoxLoopReduceI1(NO_LOCALS, result,
+                      i, j, k, ix, iy, iz, nx, ny, nz,
+                      iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
       result += yp[iv] * xp[iv];
     });

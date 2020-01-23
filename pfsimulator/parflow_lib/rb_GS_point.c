@@ -147,20 +147,6 @@ void     RedBlackGSPoint(
         return;
       }
     }
-  }
-
-  if (zero)
-  {
-    //count++;
-    /* if max_iter = 0, set x to zero, and return if not symmetric */
-    /*
-    if ((count / 2) > max_iter)
-    {
-      InitVector(x, 0.0);
-      if (!symmetric)
-        return;
-    }
-    */
 
     switch (rb)
     {
@@ -231,7 +217,7 @@ void     RedBlackGSPoint(
           bp = SubvectorElt(b_sub, ix, iy, iz);
 
           iv = im = 0;
-          _BoxLoopI2(NoWait, NO_LOCALS,
+          _BoxLoopI2(InParallel, NO_LOCALS,
                      i, j, k, ix, iy, iz, nx, ny, nz,
                      iv, nx_v, ny_v, nz_v, sx, sy, sz,
                      im, nx_m, ny_m, nz_m, sx, sy, sz,
@@ -386,11 +372,14 @@ void     RedBlackGSPoint(
    *-----------------------------------------------------------------------*/
 
   EndTiming(RedBlackGSTimingIndex);
-
-  if (symmetric)
-    IncFLOPCount(13 * (iter * VectorSize(x) + (VectorSize(x) / 2)));
-  else
-    IncFLOPCount(13 * (iter * VectorSize(x)));
+#pragma omp master
+  {
+    if (symmetric)
+      IncFLOPCount(13 * (iter * VectorSize(x) + (VectorSize(x) / 2)));
+    else
+      IncFLOPCount(13 * (iter * VectorSize(x)));
+  }
+  //BARRIER;
 }
 
 

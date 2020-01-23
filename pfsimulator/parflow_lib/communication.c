@@ -28,11 +28,17 @@
 /*****************************************************************************
 *
 *****************************************************************************/
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
 
 #include <math.h>
 
 
 #include "parflow.h"
+#include "pf_parallel.h"
 #include "amps.h"
 #include "communication.h"
 
@@ -401,7 +407,15 @@ void FreeCommPkg(
 CommHandle  *InitCommunication(
                                CommPkg *comm_pkg)
 {
-  return (CommHandle*)amps_IExchangePackage(comm_pkg->package);
+  /* @MCB:
+     Only the master thread should do comms.
+     This ensures
+     1) The thread that hits AMPS always has a valid handle
+     2) We don't have to deal with copyprivate sharing or extra syncs
+  */
+  CommHandle *handle = NULL;
+  MASTER(handle = (CommHandle*)amps_IExchangePackage(comm_pkg->package));
+  return handle;
 }
 
 
@@ -412,5 +426,19 @@ CommHandle  *InitCommunication(
 void         FinalizeCommunication(
                                    CommHandle *handle)
 {
-  (void)amps_Wait((amps_Handle)handle);
+  /* @MCB:
+     Barrier on both sides of the master block to
+     1) Ensure all threads are done working on data and we're ready to sync
+     2) Ensure all threads wait until sync is done before continuing on
+  */
+  BARRIER;
+  MASTER(if (handle)
+  {
+    (void)amps_Wait((amps_Handle)handle);
+  });
+  BARRIER;
 }
+
+#ifdef USING_PARALLEL
+}
+#endif

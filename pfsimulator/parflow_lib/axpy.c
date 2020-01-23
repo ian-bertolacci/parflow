@@ -81,21 +81,12 @@ void     Axpy(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     iv = 0;
-    #if 1
     _BoxLoopI1(NewParallel, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
       yp[iv] += alpha * xp[iv];
     });
-    #else
-    _BoxLoopI1(InParallel, NO_LOCALS,
-               i, j, k, ix, iy, iz, nx, ny, nz,
-               iv, nx_v, ny_v, nz_v, 1, 1, 1,
-    {
-      yp[iv] += alpha * xp[iv];
-    });
-    #endif
   }
 
   IncFLOPCount(2 * VectorSize(x));
@@ -144,7 +135,7 @@ void     InParallel_Axpy(
     xp = SubvectorElt(x_sub, ix, iy, iz);
 
     iv = 0;
-    _BoxLoopI1(InParallel, NO_LOCALS,
+    _BoxLoopI1(NoWait, NO_LOCALS,
                i, j, k, ix, iy, iz, nx, ny, nz,
                iv, nx_v, ny_v, nz_v, 1, 1, 1,
     {
@@ -153,6 +144,8 @@ void     InParallel_Axpy(
   }
 
   MASTER(IncFLOPCount(2 * VectorSize(x)));
+
+  BARRIER;
 }
 
 #ifdef USING_PARALLEL

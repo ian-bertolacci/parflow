@@ -204,7 +204,6 @@ void     MGSemi(
   }
 
 
-  int omp_stop = 0;
 #pragma omp parallel firstprivate(i, l, almost_converged)
   {
 
@@ -224,16 +223,14 @@ void     MGSemi(
   /* smooth (use `zero' to determine initial x) */
     PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, zero));
 
-    //while (!omp_stop)
     /* @MCB:
        This used to be a while(++i) loop with two breaks:
        1) if (r_dot_r < eps)
        2) if (i + 1 > max_iter)
-       2 has been removed since we're in a for loop.
+       The second has been removed since we're in a for loop now.
      */
     for (i = 1; i <= max_iter; i++)
     {
-      //i++;
     /*--------------------------------------------------------------------
      * Down cycle
      *--------------------------------------------------------------------*/

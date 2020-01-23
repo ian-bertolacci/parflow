@@ -398,10 +398,17 @@ void InitMatrix(Matrix *A, double value);
 /* matvec.c */
 void Matvec(double alpha, Matrix *A, Vector *x, double beta, Vector *y);
 void InParallel_Matvec(double alpha, Matrix *A, Vector *x, double beta, Vector *y);
-void TestMatvec(double alpha, Matrix *A, Vector *x, double  beta, Vector *y);
+
 
 /* matvecSubMat.c */
 void MatvecSubMat(void *  current_state,
+                  double  alpha,
+                  Matrix *JB,
+                  Matrix *JC,
+                  Vector *x,
+                  double  beta,
+                  Vector *y);
+void InParallel_MatvecSubMat(void *  current_state,
                   double  alpha,
                   Matrix *JB,
                   Matrix *JC,
