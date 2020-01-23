@@ -413,8 +413,10 @@ CommHandle  *InitCommunication(
      1) The thread that hits AMPS always has a valid handle
      2) We don't have to deal with copyprivate sharing or extra syncs
   */
+  BeginTiming(CommunicationTimingIndex);
   CommHandle *handle = NULL;
   MASTER(handle = (CommHandle*)amps_IExchangePackage(comm_pkg->package));
+  EndTiming(CommunicationTimingIndex);
   return handle;
 }
 
@@ -431,12 +433,14 @@ void         FinalizeCommunication(
      1) Ensure all threads are done working on data and we're ready to sync
      2) Ensure all threads wait until sync is done before continuing on
   */
+  BeginTiming(CommunicationTimingIndex);
   BARRIER;
   MASTER(if (handle)
   {
     (void)amps_Wait((amps_Handle)handle);
   });
   BARRIER;
+  EndTiming(CommunicationTimingIndex);
 }
 
 #ifdef USING_PARALLEL

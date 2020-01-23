@@ -53,8 +53,9 @@
 #define MGRestrictTimingIndex 11
 #define MGProlongTimingIndex 12
 #define RedBlackGSTimingIndex 13
+#define CommunicationTimingIndex 14
 #ifdef VECTOR_UPDATE_TIMING
-#define VectorUpdateTimingIndex  14
+#define VectorUpdateTimingIndex  15
 #endif
 
 

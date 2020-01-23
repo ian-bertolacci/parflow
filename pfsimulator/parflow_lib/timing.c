@@ -64,6 +64,7 @@ void  NewTiming()
   RegisterTiming("MGSemiRestrict");
   RegisterTiming("MGSemiProlong");
   RegisterTiming("RBGSPoint");
+  RegisterTiming("Communication");
 #ifdef VECTOR_UPDATE_TIMING
   RegisterTiming("VectorUpdate");
 #endif
