@@ -823,8 +823,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       vx[vxi] = u_right[ip] / ffx;
       vy[vyi] = u_front[ip] / ffy;
       vz[vzi] = u_upper[ip] / ffz;
-
-      fp[ip] += dt * (u_right[ip] + u_front[ip] + u_upper[ip]);
     });
   }
 
@@ -845,9 +843,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     iy = SubgridIY(subgrid) - 1;
     iz = SubgridIZ(subgrid) - 1;
 
-    nx = SubgridNX(subgrid) + 1;
-    ny = SubgridNY(subgrid) + 1;
-    nz = SubgridNZ(subgrid) + 1;
+    nx = SubgridNX(subgrid) + 2;
+    ny = SubgridNY(subgrid) + 2;
+    nz = SubgridNZ(subgrid) + 2;
 
     nx_p = SubvectorNX(p_sub);
     ny_p = SubvectorNY(p_sub);
@@ -867,7 +865,51 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     GrGeomInLoopParallel(i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
       int ip = SubvectorEltIndex(p_sub, i, j, k);
-      fp[ip] += dt*( -u_right[ip - sx_p] + -u_front[ip - sy_p] + -u_upper[ip - sz_p] );
+
+      // ZYX-self order because for an internal cell in the original schedule,
+      // the k+1 cell writes to (i,j,k) first, then the j+1 cell,
+      // then the i+1 cell, then itself.
+
+      // Z Direction
+      #ifdef USE_GATHER_GUARDS
+        #warning USE_GATHER_GUARDS enabled
+        if( iz < k && k <= iz + nz - 1 && !( i == ix + nx -1 || j == iy + ny -1 ) ){
+      #else
+        #warning USE_GATHER_GUARDS disabled
+        if( 1 == 1 ){
+      #endif
+        // fp[ip + sz_p] -= dt * u_upper;
+        fp[ip] -= dt * u_upper[ip - sz_p];
+      }
+
+      // Y Direction
+      #ifdef USE_GATHER_GUARDS
+        if( iy < j && j <= iy + ny - 1 && !( i == ix + nx - 1 || k == iz + nz - 1 ) ){
+      #else
+        if( 1 == 1 ){
+      #endif
+        // fp[ip + sy_p] -= dt * u_front;
+        fp[ip] -= dt * u_front[ip - sy_p];
+      }
+
+      // X Direction
+      #ifdef USE_GATHER_GUARDS
+        if( ix < i && i <= ix + nx - 1 && !( j == iy + ny - 1 || k == iz + nz - 1) ){
+      #else
+        if( 1 == 1 ){
+      #endif
+        // fp[ip + 1] -= dt * u_right;
+        fp[ip] -= dt * u_right[ip - sx_p];
+      }
+
+      // Self-update
+      #ifdef USE_GATHER_GUARDS
+        if( i <= ix + nx -1 && j <= iy + ny -1 && k <= iz + nz -1 ){
+      #else
+        if( 1 == 1 ){
+      #endif
+        fp[ip] += dt * (u_right[ip] + u_front[ip] + u_upper[ip]);
+      }
     });
   }
 
