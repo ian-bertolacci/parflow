@@ -300,15 +300,10 @@ void     MGSemi(
     {
       BARRIER;
       /* prolong error */
-      #pragma omp master
-      {
-        #pragma omp parallel
-        {
-          MGSemiProlong(A_l[l], temp_vec_l[l], x_l[l + 1], P_l[l],
-                        f_sra_l[l], c_sra_l[l],
-                        prolong_compute_pkg_l[l], prolong_comm_pkg_l[l]);
-        }
-      }
+      MGSemiProlong(A_l[l], temp_vec_l[l], x_l[l + 1], P_l[l],
+                    f_sra_l[l], c_sra_l[l],
+                    prolong_compute_pkg_l[l], prolong_comm_pkg_l[l]);
+
       BARRIER;
 
       /* update solution (x = x + e) */
@@ -322,15 +317,9 @@ void     MGSemi(
 
     /* prolong error */
     BARRIER;
-    #pragma omp master
-    {
-      #pragma omp parallel
-      {
-        MGSemiProlong(A, temp_vec_l[0], x_l[1], P_l[0],
-                      f_sra_l[0], c_sra_l[0],
-                      prolong_compute_pkg_l[0], prolong_comm_pkg_l[0]);
-      }
-    }
+    MGSemiProlong(A, temp_vec_l[0], x_l[1], P_l[0],
+                  f_sra_l[0], c_sra_l[0],
+                  prolong_compute_pkg_l[0], prolong_comm_pkg_l[0]);
     BARRIER;
 
     /* update solution (x = x + e) */
