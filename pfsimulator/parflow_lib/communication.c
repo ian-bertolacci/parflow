@@ -415,7 +415,7 @@ CommHandle  *InitCommunication(
   */
   BeginTiming(CommunicationTimingIndex);
   CommHandle *handle = NULL;
-  MASTER(handle = (CommHandle*)amps_IExchangePackage(comm_pkg->package));
+  handle = (CommHandle*)amps_IExchangePackage(comm_pkg->package);
   EndTiming(CommunicationTimingIndex);
   return handle;
 }
@@ -434,12 +434,10 @@ void         FinalizeCommunication(
      2) Ensure all threads wait until sync is done before continuing on
   */
   BeginTiming(CommunicationTimingIndex);
-  BARRIER;
-  MASTER(if (handle)
+  if (handle)
   {
     (void)amps_Wait((amps_Handle)handle);
-  });
-  BARRIER;
+  }
   EndTiming(CommunicationTimingIndex);
 }
 

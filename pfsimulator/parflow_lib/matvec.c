@@ -52,6 +52,8 @@ void            Matvec(
                        double  beta,
                        Vector *y)
 {
+  NO_OMP_PARALLEL();
+
   Grid           *grid = MatrixGrid(A);
   /*-----------------------------------------------------------------------
    * Begin timing
@@ -166,7 +168,7 @@ void            Matvec(
           EventTiming[NumEvents][InitStart] = amps_Clock();
         }
 #endif
-        handle = InitVectorUpdate(x, VectorUpdateAll);
+        MASTER(handle = InitVectorUpdate(x, VectorUpdateAll));
 
 #ifdef VECTOR_UPDATE_TIMING
         #pragma omp master
@@ -237,14 +239,15 @@ void            Matvec(
         break;
 
       case 1:
-
+      {
 #ifndef NO_VECTOR_UPDATE
 #ifdef VECTOR_UPDATE_TIMING
         BeginTiming(VectorUpdateTimingIndex);
         MASTER(EventTiming[NumEvents][FinalizeStart] = amps_Clock());
 #endif
-        FinalizeVectorUpdate(handle);
-
+        BARRIER;
+        MASTER(FinalizeVectorUpdate(handle));
+        BARRIER;
 #ifdef VECTOR_UPDATE_TIMING
         MASTER(EventTiming[NumEvents][FinalizeEnd] = amps_Clock());
         EndTiming(VectorUpdateTimingIndex);
@@ -253,6 +256,7 @@ void            Matvec(
 
         compute_reg = ComputePkgDepRegion(compute_pkg);
         break;
+      }
     }
 
     ForSubregionArrayI(sra, compute_reg)
@@ -467,7 +471,7 @@ void            InParallel_Matvec(
         MASTER(EventTiming[NumEvents][InitStart] = amps_Clock());
 #endif
 
-        handle = InitVectorUpdate(x, VectorUpdateAll);
+        MASTER(handle = InitVectorUpdate(x, VectorUpdateAll));
 
 #ifdef VECTOR_UPDATE_TIMING
         MASTER(EventTiming[NumEvents][InitEnd] = amps_Clock());
@@ -541,8 +545,9 @@ void            InParallel_Matvec(
         BeginTiming(VectorUpdateTimingIndex);
         MASTER(EventTiming[NumEvents][FinalizeStart] = amps_Clock());
 #endif
-        FinalizeVectorUpdate(handle);
-
+        BARRIER;
+        MASTER(FinalizeVectorUpdate(handle));
+        BARRIER;
 #ifdef VECTOR_UPDATE_TIMING
         MASTER(EventTiming[NumEvents][FinalizeEnd] = amps_Clock());
         EndTiming(VectorUpdateTimingIndex);

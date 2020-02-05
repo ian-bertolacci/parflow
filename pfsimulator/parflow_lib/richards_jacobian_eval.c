@@ -1695,13 +1695,12 @@ void    RichardsJacobianEval(
     }          /* End ipatch loop */
   }            /* End subgrid loop */
 
+  BARRIER;
 #pragma omp master
   {
     PFModuleInvokeType(RichardsBCInternalInvoke, bc_internal, (problem, problem_data, NULL, J, time,
                                                                pressure, CALCDER));
-  }
 
-  BARRIER;
 
   /* @MCB:
      TODO:
@@ -1745,6 +1744,9 @@ void    RichardsJacobianEval(
     vector_update_handle = InitVectorUpdate(KNns, VectorUpdateAll);
     FinalizeVectorUpdate(vector_update_handle);
   }
+  } // End Master
+
+  BARRIER; // For comms
 
   /* Build submatrix JC if overland flow case */
   if (ovlnd_flag && public_xtra->type == overland_flow)

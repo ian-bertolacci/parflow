@@ -100,13 +100,15 @@ void             MGSemiRestrict(
     switch (compute_i)
     {
       case 0:
-        handle = InitCommunication(r_f_comm_pkg);
+        MASTER(handle = InitCommunication(r_f_comm_pkg));
         compute_reg = ComputePkgIndRegion(compute_pkg);
         break;
 
       case 1:
       {
-        FinalizeCommunication(handle);
+        BARRIER;
+        MASTER(FinalizeCommunication(handle));
+        BARRIER;
         compute_reg = ComputePkgDepRegion(compute_pkg);
       }
         break;
@@ -168,7 +170,7 @@ void             MGSemiRestrict(
         i_p = 0;
         i_c = 0;
         i_f = 0;
-        _BoxLoopI3(NoWait, NO_LOCALS,
+        _BoxLoopI3(InParallel, NO_LOCALS,
                    ii, jj, kk, ix, iy, iz, nx, ny, nz,
                    i_p, nx_p, ny_p, nz_p, 1, 1, 1,
                    i_c, nx_c, ny_c, nz_c, 1, 1, 1,

@@ -227,8 +227,11 @@ void     MGSemi(
     /* first smoothing is already done */
 
     /* compute residual (b - Ax) */
+    BARRIER;
     Copy(b, temp_vec_l[0]);
+    BARRIER;
     InParallel_Matvec(-1.0, A, x, 1.0, temp_vec_l[0]);
+    BARRIER;
 
     /* do preliminary convergence check */
     if (tol > 0.0)
@@ -247,10 +250,13 @@ void     MGSemi(
       }
     }
 
+    BARRIER;
     /* restrict residual */
     MGSemiRestrict(A, temp_vec_l[0], b_l[1], P_l[0],
                    f_sra_l[0], c_sra_l[0],
                    restrict_compute_pkg_l[0], restrict_comm_pkg_l[0]);
+    BARRIER;
+
 
 #if 0
     /* for debugging purposes */
@@ -259,26 +265,22 @@ void     MGSemi(
 
     for (l = 1; l <= (num_levels - 2); l++)
     {
+      BARRIER;
       /* smooth (zero initial x) */
       PFModuleInvokeType(LinearSolverInvoke, smooth_l[l], (x_l[l], b_l[l], 0.0, 1));
 
       /* compute residual (b - Ax) */
+      BARRIER;
       Copy(b_l[l], temp_vec_l[l]);
+      BARRIER;
       InParallel_Matvec(-1.0, A_l[l], x_l[l], 1.0, temp_vec_l[l]);
 
       /* restrict residual */
+      BARRIER;
       MGSemiRestrict(A_l[l], temp_vec_l[l], b_l[l + 1], P_l[l],
                      f_sra_l[l], c_sra_l[l],
                      restrict_compute_pkg_l[l], restrict_comm_pkg_l[l]);
-#if 0
-      /* for debugging purposes */
-      {
-        char filename[255];
-
-        sprintf(filename, "b.%02d", l + 1);
-        PrintVector(filename, b_l[l + 1]);
-      }
-#endif
+      BARRIER;
     }
 
     /*--------------------------------------------------------------------
@@ -286,7 +288,9 @@ void     MGSemi(
      *--------------------------------------------------------------------*/
 
     /* solve the coarse system */
+    BARRIER;
     PFModuleInvokeType(LinearSolverInvoke, solve, (x_l[l], b_l[l], 1.0e-9, 1));
+    BARRIER;
 
     /*--------------------------------------------------------------------
      * Up cycle
@@ -294,42 +298,48 @@ void     MGSemi(
 
     for (l = (num_levels - 2); l >= 1; l--)
     {
+      BARRIER;
       /* prolong error */
-      MGSemiProlong(A_l[l], temp_vec_l[l], x_l[l + 1], P_l[l],
-                    f_sra_l[l], c_sra_l[l],
-                    prolong_compute_pkg_l[l], prolong_comm_pkg_l[l]);
-#if 0
-      /* for debugging purposes */
+      #pragma omp master
       {
-        char filename[255];
-
-        sprintf(filename, "e.%02d", l);
-        PrintVector(filename, temp_vec_l[l]);
+        #pragma omp parallel
+        {
+          MGSemiProlong(A_l[l], temp_vec_l[l], x_l[l + 1], P_l[l],
+                        f_sra_l[l], c_sra_l[l],
+                        prolong_compute_pkg_l[l], prolong_comm_pkg_l[l]);
+        }
       }
-#endif
+      BARRIER;
 
       /* update solution (x = x + e) */
       InParallel_Axpy(1.0, temp_vec_l[l], x_l[l]);
+      BARRIER;
 
       /* smooth (non-zero initial x) */
       PFModuleInvokeType(LinearSolverInvoke, smooth_l[l], (x_l[l], b_l[l], 0.0, 0));
+      BARRIER;
     }
 
     /* prolong error */
-    MGSemiProlong(A, temp_vec_l[0], x_l[1], P_l[0],
-                  f_sra_l[0], c_sra_l[0],
-                  prolong_compute_pkg_l[0], prolong_comm_pkg_l[0]);
-#if 0
-    /* for debugging purposes */
-    PrintVector("e.00", temp_vec_l[0]);
-#endif
+    BARRIER;
+    #pragma omp master
+    {
+      #pragma omp parallel
+      {
+        MGSemiProlong(A, temp_vec_l[0], x_l[1], P_l[0],
+                      f_sra_l[0], c_sra_l[0],
+                      prolong_compute_pkg_l[0], prolong_comm_pkg_l[0]);
+      }
+    }
+    BARRIER;
 
     /* update solution (x = x + e) */
     InParallel_Axpy(1.0, temp_vec_l[0], x);
+    BARRIER;
 
     /* smooth (non-zero initial x) */
     PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, 0));
-
+    BARRIER;
     /*--------------------------------------------------------------------
      * Test for convergence or max_iter
      *--------------------------------------------------------------------*/
@@ -361,7 +371,11 @@ void     MGSemi(
 
     /* smooth (non-zero initial x) */
     if ((i + 1) <= max_iter)
+    {
+      BARRIER;
       PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, 0));
+      BARRIER;
+    }
 
 
   }
@@ -595,7 +609,9 @@ void              SetupCoarseOps(
       /*--------------------------------------------------------------------
        * Update prolongation matrix boundaries
        *--------------------------------------------------------------------*/
-      FinalizeMatrixUpdate(InitMatrixUpdate(P_l[l]));
+      BARRIER;
+      MASTER(FinalizeMatrixUpdate(InitMatrixUpdate(P_l[l])));
+      BARRIER;
 
       /*--------------------------------------------------------------------
        * Compute coarse coefficient matrix
@@ -708,7 +724,9 @@ void              SetupCoarseOps(
       /*--------------------------------------------------------------------
        * Update coefficient matrix boundaries
        *--------------------------------------------------------------------*/
-      FinalizeMatrixUpdate(InitMatrixUpdate(A_l[l + 1]));
+      BARRIER;
+      MASTER(FinalizeMatrixUpdate(InitMatrixUpdate(A_l[l + 1])));
+      BARRIER;
 
       /*--------------------------------------------------------------------
        * Complete computation of center coefficient

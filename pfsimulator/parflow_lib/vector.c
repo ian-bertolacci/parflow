@@ -87,13 +87,9 @@ CommPkg  *NewVectorCommPkg(
 //VectorUpdateCommHandle  *InitVectorUpdate(Vector *vector, int     update_mode)
 VectorUpdateCommHandle  *_InitVectorUpdate(Vector *vector, int     update_mode)
 {
-  VectorUpdateCommHandle *vector_update_comm_handle = NULL;
+  //VectorUpdateCommHandle *vector_update_comm_handle = NULL;
   CommHandle *amps_com_handle = NULL;
 
-  //BARRIER;
-  //#pragma omp single copyprivate(vector_update_comm_handle)
-  #pragma omp master
-  {
   enum ParflowGridType grid_type = invalid_grid_type;
 
 #ifdef HAVE_SAMRAI
@@ -180,13 +176,7 @@ VectorUpdateCommHandle  *_InitVectorUpdate(Vector *vector, int     update_mode)
 #endif
   }
 
-  //VectorUpdateCommHandle *vector_update_comm_handle = ctalloc(VectorUpdateCommHandle, 1);
-  //vector_update_comm_handle = ctalloc(VectorUpdateCommHandle, 1);
-  //vector_update_comm_handle->vector = vector;
-  //vector_update_comm_handle->comm_handle = amps_com_handle;
-
-  }
-  //BARRIER;
+  VectorUpdateCommHandle *vector_update_comm_handle = ctalloc(VectorUpdateCommHandle, 1);
   vector_update_comm_handle = ctalloc(VectorUpdateCommHandle, 1);
   vector_update_comm_handle->vector = vector;
   vector_update_comm_handle->comm_handle = amps_com_handle;

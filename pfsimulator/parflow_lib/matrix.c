@@ -141,11 +141,6 @@ CommHandle  *_InitMatrixUpdate(
   CommHandle *return_handle = NULL;
   enum ParflowGridType grid_type = invalid_grid_type;
 
-  //BARRIER;
-//#pragma omp single copyprivate(return_handle)
-  #pragma omp master
-  {
-
 #ifdef HAVE_SAMRAI
   switch (matrix->type)
   {
@@ -197,9 +192,6 @@ CommHandle  *_InitMatrixUpdate(
     matrix->boundary_fill_schedule->fillData(time);
 #endif
   }
-  } // End Master
-
-  //BARRIER;
 
   return return_handle;
 }
@@ -213,10 +205,7 @@ CommHandle  *_InitMatrixUpdate(
 void         _FinalizeMatrixUpdate(
                                   CommHandle *handle)
 {
-  /* @MCB:
-     We have a barrier inside FinalizeComm, so remove this if check for now?
-  */
-  //if (handle)
+  if (handle)
     FinalizeCommunication(handle);
 }
 

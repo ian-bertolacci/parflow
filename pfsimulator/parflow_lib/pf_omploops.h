@@ -17,6 +17,15 @@
 #include <omp.h>
 #include <stdarg.h>
 
+#define NO_OMP_PARALLEL()																								\
+	if (omp_get_active_level() != 0)																			\
+	{																																			\
+		fprintf(stderr,																											\
+						"(%d) Error: Hit Parallel region in %s when not allowed\n", \
+						amps_Rank(amps_CommWorld), __FUNCTION__);										\
+		exit(-1);																														\
+	}
+
 /* Utility macros for inserting OMP pragmas in macros */
 #define EMPTY()
 #define DEFER(x) x EMPTY()

@@ -111,9 +111,9 @@ double   InnerProd(
   }
 
   MASTER(
-  amps_AllReduce(amps_CommWorld, result_invoice, amps_Add);
-  amps_FreeInvoice(result_invoice);
-  IncFLOPCount(2 * VectorSize(x) - 1);
+         amps_AllReduce(amps_CommWorld, result_invoice, amps_Add);
+         amps_FreeInvoice(result_invoice);
+         IncFLOPCount(2 * VectorSize(x) - 1);
     );
 
   BARRIER;
