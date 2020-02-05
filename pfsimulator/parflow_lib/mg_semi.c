@@ -96,6 +96,7 @@ typedef struct {
  *       <r,r>  <  (tol^2)*<b,b> = eps
  *
  *--------------------------------------------------------------------------*/
+
 void     MGSemi(
                 Vector *x,
                 Vector *b,
@@ -160,18 +161,10 @@ void     MGSemi(
 
   BeginTiming(public_xtra->time_index);
 
-  /* @MCB: Check this before allocating temp vectors */
-  if ((i + 1) > max_iter)
-  {
-    Copy(b, x);
-    EndTiming(public_xtra->time_index);
-    return;
-  }
 
   /*-----------------------------------------------------------------------
    * Allocate temp vectors
    *-----------------------------------------------------------------------*/
-
   x_l = talloc(Vector *, num_levels);
   b_l = talloc(Vector *, num_levels);
   temp_vec_l = talloc(Vector *, num_levels);
@@ -180,8 +173,6 @@ void     MGSemi(
   prolong_comm_pkg_l = talloc(CommPkg *, (num_levels - 1));
 
   temp_vec_l[0] = NewVector(instance_xtra->grid_l[0], 1, 1);
-
-  /* @MCB: Can we do this in an omp for? */
   for (l = 0; l < (num_levels - 1); l++)
   {
     /*-----------------------------------------------------------------
@@ -203,34 +194,32 @@ void     MGSemi(
                        (instance_xtra->prolong_compute_pkg_l[l]));
   }
 
+  /*-----------------------------------------------------------------------
+   * Do V-cycles:
+   *   For each index l, "fine" = l, "coarse" = (l+1)
+   *-----------------------------------------------------------------------*/
 
-#pragma omp parallel firstprivate(i, l, almost_converged)
+  if ((i + 1) > max_iter)
   {
+    Copy(b, x);
+    EndTiming(public_xtra->time_index);
+    return;
+  }
 
-    /*-----------------------------------------------------------------------
-     * Do V-cycles:
-     *   For each index l, "fine" = l, "coarse" = (l+1)
-     *-----------------------------------------------------------------------*/
-
-
-    if (tol > 0.0)
-    {
-      /* eps = (tol^2)*<b,b> */
-      b_dot_b = InnerProd(b, b);
-      eps = (tol * tol) * b_dot_b;
-    }
+  if (tol > 0.0)
+  {
+    /* eps = (tol^2)*<b,b> */
+    b_dot_b = InnerProd(b, b);
+    eps = (tol * tol) * b_dot_b;
+  }
 
   /* smooth (use `zero' to determine initial x) */
-    PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, zero));
+  PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, zero));
 
-    /* @MCB:
-       This used to be a while(++i) loop with two breaks:
-       1) if (r_dot_r < eps)
-       2) if (i + 1 > max_iter)
-       The second has been removed since we're in a for loop now.
-     */
-    for (i = 1; i <= max_iter; i++)
-    {
+#pragma omp parallel firstprivate(l, i, almost_converged)
+  {
+  for(i = 1; i <= max_iter; i++)
+  {
     /*--------------------------------------------------------------------
      * Down cycle
      *--------------------------------------------------------------------*/
@@ -252,11 +241,8 @@ void     MGSemi(
 
         IfLogging(1)
         {
-          #pragma omp master
-          {
-            norm_log[i - 1] = sqrt(r_dot_r);
-            rel_norm_log[i - 1] = b_dot_b ? sqrt(r_dot_r / b_dot_b) : 0.0;
-          }
+          norm_log[i - 1] = sqrt(r_dot_r);
+          rel_norm_log[i - 1] = b_dot_b ? sqrt(r_dot_r / b_dot_b) : 0.0;
         }
       }
     }
@@ -265,6 +251,7 @@ void     MGSemi(
     MGSemiRestrict(A, temp_vec_l[0], b_l[1], P_l[0],
                    f_sra_l[0], c_sra_l[0],
                    restrict_compute_pkg_l[0], restrict_comm_pkg_l[0]);
+
 #if 0
     /* for debugging purposes */
     PrintVector("b.01", b_l[1]);
@@ -283,7 +270,6 @@ void     MGSemi(
       MGSemiRestrict(A_l[l], temp_vec_l[l], b_l[l + 1], P_l[l],
                      f_sra_l[l], c_sra_l[l],
                      restrict_compute_pkg_l[l], restrict_comm_pkg_l[l]);
-
 #if 0
       /* for debugging purposes */
       {
@@ -321,8 +307,10 @@ void     MGSemi(
         PrintVector(filename, temp_vec_l[l]);
       }
 #endif
+
       /* update solution (x = x + e) */
       InParallel_Axpy(1.0, temp_vec_l[l], x_l[l]);
+
       /* smooth (non-zero initial x) */
       PFModuleInvokeType(LinearSolverInvoke, smooth_l[l], (x_l[l], b_l[l], 0.0, 0));
     }
@@ -331,7 +319,6 @@ void     MGSemi(
     MGSemiProlong(A, temp_vec_l[0], x_l[1], P_l[0],
                   f_sra_l[0], c_sra_l[0],
                   prolong_compute_pkg_l[0], prolong_comm_pkg_l[0]);
-
 #if 0
     /* for debugging purposes */
     PrintVector("e.00", temp_vec_l[0]);
@@ -342,6 +329,7 @@ void     MGSemi(
 
     /* smooth (non-zero initial x) */
     PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, 0));
+
     /*--------------------------------------------------------------------
      * Test for convergence or max_iter
      *--------------------------------------------------------------------*/
@@ -351,7 +339,7 @@ void     MGSemi(
       if (almost_converged)
       {
         Copy(b, temp_vec_l[0]);
-        InParallel_Matvec(-1.0, A, x, 1.0, temp_vec_l[0]);
+        Matvec(-1.0, A, x, 1.0, temp_vec_l[0]);
         r_dot_r = InnerProd(temp_vec_l[0], temp_vec_l[0]);
 
 #if 0
@@ -367,13 +355,15 @@ void     MGSemi(
         }
 
         if (r_dot_r < eps)
-          break;
-          //omp_stop = 1;
+          i = max_iter + 1;
       }
     }
 
     /* smooth (non-zero initial x) */
-    PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, 0));
+    if ((i + 1) <= max_iter)
+      PFModuleInvokeType(LinearSolverInvoke, smooth_l[0], (x, b, 0.0, 0));
+
+
   }
   }
 
@@ -383,6 +373,7 @@ void     MGSemi(
       amps_Printf("Iterations = %d, ||r||_2 = %e, ||r||_2/||b||_2 = %e\n",
                   i, sqrt(r_dot_r), (b_dot_b ? sqrt(r_dot_r / b_dot_b) : 0.0));
   }
+
   /*-----------------------------------------------------------------------
    * Free temp vectors
    *-----------------------------------------------------------------------*/
