@@ -339,7 +339,7 @@ void     MGSemi(
       if (almost_converged)
       {
         Copy(b, temp_vec_l[0]);
-        Matvec(-1.0, A, x, 1.0, temp_vec_l[0]);
+        InParallel_Matvec(-1.0, A, x, 1.0, temp_vec_l[0]);
         r_dot_r = InnerProd(temp_vec_l[0], temp_vec_l[0]);
 
 #if 0
