@@ -57,8 +57,8 @@ double   InnerProd(
     For OpenMP parallelism to work correctly here when
     calling InnerProd from an outer parallel region,
     result needs to be declared as a static variable and
-    reset each time.  This allows us to use a reduction
-    clause.
+    reset each time.  This allows us to perform reduction
+    properly, since the variable is no longer thread private.
 
     WARNING: Because this is static, any kind of parallel tasking
     calls CANNOT be done if they make a call to InnerProd. Any call

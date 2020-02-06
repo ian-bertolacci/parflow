@@ -407,15 +407,8 @@ void FreeCommPkg(
 CommHandle  *InitCommunication(
                                CommPkg *comm_pkg)
 {
-  /* @MCB:
-     Only the master thread should do comms.
-     This ensures
-     1) The thread that hits AMPS always has a valid handle
-     2) We don't have to deal with copyprivate sharing or extra syncs
-  */
   BeginTiming(CommunicationTimingIndex);
-  CommHandle *handle = NULL;
-  handle = (CommHandle*)amps_IExchangePackage(comm_pkg->package);
+  CommHandle *handle = (CommHandle*)amps_IExchangePackage(comm_pkg->package);
   EndTiming(CommunicationTimingIndex);
   return handle;
 }
@@ -428,11 +421,6 @@ CommHandle  *InitCommunication(
 void         FinalizeCommunication(
                                    CommHandle *handle)
 {
-  /* @MCB:
-     Barrier on both sides of the master block to
-     1) Ensure all threads are done working on data and we're ready to sync
-     2) Ensure all threads wait until sync is done before continuing on
-  */
   BeginTiming(CommunicationTimingIndex);
   if (handle)
   {
