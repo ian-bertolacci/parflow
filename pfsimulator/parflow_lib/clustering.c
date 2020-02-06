@@ -26,10 +26,17 @@
  *  USA
  **********************************************************************EHEADER*/
 
+#include "parflow_config.h"
+
+#ifdef USING_PARALLEL
+extern "C"{
+#endif
+
 #include "parflow.h"
 #include "clustering.h"
 #include "index_space.h"
 #include "llnlmath.h"
+#include "pf_parallel.h"
 
 /**
  * This implementation is derived from the SAMRAI Berger-Rigoutsos
@@ -78,6 +85,15 @@ typedef struct {
   Box box;
   int *histogram[DIM];
 } HistogramBox;
+
+/**
+ * Structure to store temporary vectors and grids in between comms
+ */
+typedef struct {
+  Grid *grid;
+  Vector *indicator;
+  DoubleTags tag;
+} ComputeBox;
 
 /**
  * Get tags along the provided dimension for the global index along that dimension.
@@ -791,15 +807,24 @@ void BergerRigoutsos(Vector*    vector,
  *
  * The computed box arrays are stored in the geom_solid.
  */
-BoxList* ComputePatchBoxes(GrGeomSolid *geom_solid, int patch)
+ComputeBox* ComputePatchBoxes(GrGeomSolid *geom_solid, int patch)
 {
-  Grid *grid = CreateGrid(GlobalsUserGrid);
+  /* @MCB:
+     Goofy way to deal with tasking via parallel regions.
+     This is being called from a single task construct, but
+     nesting is disabled by default.  This "resets" the way
+     any omp regions do worksharing to be single threaded.
+  */
+  Vector* indicator;
+  Grid *grid;
+  DoubleTags tag;
+  #pragma omp parallel
+  {
+  grid = CreateGrid(GlobalsUserGrid);
 
-  Vector* indicator = NewVectorType(grid, 1, num_ghost, vector_cell_centered);
+  indicator = NewVectorType(grid, 1, num_ghost, vector_cell_centered);
 
   InitVectorAll(indicator, 0.0);
-
-  DoubleTags tag;
 
   {
     Grid        *grid = VectorGrid(indicator);
@@ -856,36 +881,13 @@ BoxList* ComputePatchBoxes(GrGeomSolid *geom_solid, int patch)
       });
     }
   }
-
-  {
-    VectorUpdateCommHandle   *handle;
-    handle = InitVectorUpdate(indicator, VectorUpdateAll);
-    FinalizeVectorUpdate(handle);
   }
 
-  Point min_box;
-  min_box[0] = 1;
-  min_box[1] = 1;
-  min_box[2] = 1;
-
-  for (int face = 0; face < GrGeomOctreeNumFaces; face++)
-  {
-    BoxList* boxes = NewBoxList();
-
-    tag.as_tags = 1 << face;
-
-    BergerRigoutsos(indicator,
-                    min_box,
-                    tag,
-                    boxes);
-
-    GrGeomSolidPatchBoxes(geom_solid, patch, face) = NewBoxArray(boxes);
-
-    FreeBoxList(boxes);
-  }
-
-  FreeVector(indicator);
-  FreeGrid(grid);
+  ComputeBox *c_box = ctalloc(ComputeBox, 1);
+  c_box->grid = grid;
+  c_box->indicator = indicator;
+  c_box->tag = tag;
+  return c_box;
 }
 
 /**
@@ -897,15 +899,18 @@ BoxList* ComputePatchBoxes(GrGeomSolid *geom_solid, int patch)
  *
  * The computed box arrays are stored in the geom_solid.
  */
-void ComputeSurfaceBoxes(GrGeomSolid *geom_solid)
+ComputeBox* ComputeSurfaceBoxes(GrGeomSolid *geom_solid)
 {
-  Grid *grid = CreateGrid(GlobalsUserGrid);
+  Vector* indicator;
+  Grid *grid;
+  DoubleTags tag;
+  #pragma omp parallel
+  {
+  grid = CreateGrid(GlobalsUserGrid);
 
-  Vector* indicator = NewVectorType(grid, 1, num_ghost, vector_cell_centered);
+  indicator = NewVectorType(grid, 1, num_ghost, vector_cell_centered);
 
   InitVectorAll(indicator, 0.0);
-
-  DoubleTags tag;
 
   {
     Grid        *grid = VectorGrid(indicator);
@@ -961,36 +966,13 @@ void ComputeSurfaceBoxes(GrGeomSolid *geom_solid)
       });
     }
   }
-
-  {
-    VectorUpdateCommHandle   *handle;
-    handle = InitVectorUpdate(indicator, VectorUpdateAll);
-    FinalizeVectorUpdate(handle);
   }
 
-  Point min_box;
-  min_box[0] = 1;
-  min_box[1] = 1;
-  min_box[2] = 1;
-
-  for (int face = 0; face < GrGeomOctreeNumFaces; face++)
-  {
-    BoxList* boxes = NewBoxList();
-
-    tag.as_tags = 1 << face;
-
-    BergerRigoutsos(indicator,
-                    min_box,
-                    tag,
-                    boxes);
-
-    GrGeomSolidSurfaceBoxes(geom_solid, face) = NewBoxArray(boxes);
-
-    FreeBoxList(boxes);
-  }
-
-  FreeVector(indicator);
-  FreeGrid(grid);
+  ComputeBox *c_box = ctalloc(ComputeBox, 1);
+  c_box->grid = grid;
+  c_box->indicator = indicator;
+  c_box->tag = tag;
+  return c_box;
 }
 
 /**
@@ -1001,15 +983,20 @@ void ComputeSurfaceBoxes(GrGeomSolid *geom_solid)
  *
  * The computed box array is stored in the geom_solid.
  */
-void ComputeInteriorBoxes(GrGeomSolid *geom_solid)
+ComputeBox* ComputeInteriorBoxes(GrGeomSolid *geom_solid)
 {
+  Vector* indicator;
+  Grid *grid;
   DoubleTags tag;
+
+  #pragma omp parallel
+  {
 
   tag.as_tags = 1;
 
-  Grid *grid = CreateGrid(GlobalsUserGrid);
+  grid = CreateGrid(GlobalsUserGrid);
 
-  Vector* indicator = NewVectorType(grid, 1, num_ghost, vector_cell_centered);
+  indicator = NewVectorType(grid, 1, num_ghost, vector_cell_centered);
   InitVectorAll(indicator, 0.0);
 
   {
@@ -1061,12 +1048,93 @@ void ComputeInteriorBoxes(GrGeomSolid *geom_solid)
       });
     }
   }
-
-  {
-    VectorUpdateCommHandle   *handle;
-    handle = InitVectorUpdate(indicator, VectorUpdateAll);
-    FinalizeVectorUpdate(handle);
   }
+
+  ComputeBox *c_box = ctalloc(ComputeBox, 1);
+  c_box->grid = grid;
+  c_box->indicator = indicator;
+  c_box->tag = tag;
+  return c_box;
+}
+
+void FinishPatchBoxes(GrGeomSolid *geom_solid, int patch, ComputeBox *c_box)
+{
+  #pragma omp parallel
+  {
+  Vector *indicator = c_box->indicator;
+  Grid *grid = c_box->grid;
+  DoubleTags tag = c_box->tag;
+  tfree(c_box);
+
+  Point min_box;
+  min_box[0] = 1;
+  min_box[1] = 1;
+  min_box[2] = 1;
+
+  for (int face = 0; face < GrGeomOctreeNumFaces; face++)
+  {
+    BoxList* boxes = NewBoxList();
+
+    tag.as_tags = 1 << face;
+
+    BergerRigoutsos(indicator,
+                    min_box,
+                    tag,
+                    boxes);
+
+    GrGeomSolidPatchBoxes(geom_solid, patch, face) = NewBoxArray(boxes);
+
+    FreeBoxList(boxes);
+  }
+
+  FreeVector(indicator);
+  FreeGrid(grid);
+  }
+}
+
+void FinishSurfaceBoxes(GrGeomSolid *geom_solid, ComputeBox *c_box)
+{
+  #pragma omp parallel
+  {
+    Vector *indicator = c_box->indicator;
+  Grid *grid = c_box->grid;
+  DoubleTags tag = c_box->tag;
+  tfree(c_box);
+
+  Point min_box;
+  min_box[0] = 1;
+  min_box[1] = 1;
+  min_box[2] = 1;
+
+  for (int face = 0; face < GrGeomOctreeNumFaces; face++)
+  {
+    BoxList* boxes = NewBoxList();
+
+    tag.as_tags = 1 << face;
+
+    BergerRigoutsos(indicator,
+                    min_box,
+                    tag,
+                    boxes);
+
+    GrGeomSolidSurfaceBoxes(geom_solid, face) = NewBoxArray(boxes);
+
+    FreeBoxList(boxes);
+  }
+
+  FreeVector(indicator);
+  FreeGrid(grid);
+  }
+}
+
+void FinishInteriorBoxes(GrGeomSolid *geom_solid, ComputeBox *c_box)
+{
+  #pragma omp parallel
+  {
+  Vector *indicator = c_box->indicator;
+  Grid *grid = c_box->grid;
+  DoubleTags tag = c_box->tag;
+  tfree(c_box);
 
   Point min_box;
   min_box[0] = 1;
@@ -1085,20 +1153,77 @@ void ComputeInteriorBoxes(GrGeomSolid *geom_solid)
   FreeBoxList(boxes);
   FreeVector(indicator);
   FreeGrid(grid);
+  }
 }
+
 
 void ComputeBoxes(GrGeomSolid *geom_solid)
 {
   BeginTiming(ClusteringTimingIndex);
 
-  ComputeInteriorBoxes(geom_solid);
+  ComputeBox **c_boxes = ctalloc(ComputeBox*, (GrGeomSolidNumPatches(geom_solid) + 2));
 
-  ComputeSurfaceBoxes(geom_solid);
-
-  for (int patch = 0; patch < GrGeomSolidNumPatches(geom_solid); patch++)
+  #pragma omp parallel
   {
-    ComputePatchBoxes(geom_solid, patch);
+    /* @MCB:
+       Use single nowait clause instead of sections because of the
+       for loop later.  Each of these function calls will spawn a new
+       parallel region, which (so long as nesting remains off) will
+       only have one thread, but any nested omp regions won't be
+       subdivided.
+    */
+    #pragma omp single nowait
+    {
+      c_boxes[0] = ComputeInteriorBoxes(geom_solid);
+    }
+
+    #pragma omp single nowait
+    {
+      c_boxes[1] = ComputeSurfaceBoxes(geom_solid);
+    }
+
+    #pragma omp for nowait
+    for (int patch = 0; patch < GrGeomSolidNumPatches(geom_solid); patch++)
+    {
+      c_boxes[patch + 2] = ComputePatchBoxes(geom_solid, patch);
+    }
+
+    /* @MCB:
+       Barrier to do communications
+    */
+    BARRIER;
+    #pragma omp master
+    {
+      for (int i = 0; i < (GrGeomSolidNumPatches(geom_solid) + 2); i++)
+      {
+        VectorUpdateCommHandle   *handle;
+        handle = InitVectorUpdate(c_boxes[i]->indicator, VectorUpdateAll);
+        FinalizeVectorUpdate(handle);
+      }
+    }
+    BARRIER;
+
+    #pragma omp single nowait
+    {
+      FinishInteriorBoxes(geom_solid, c_boxes[0]);
+    }
+
+    #pragma omp single nowait
+    {
+      FinishSurfaceBoxes(geom_solid, c_boxes[1]);
+    }
+
+    #pragma omp for nowait
+    for (int patch = 0; patch < GrGeomSolidNumPatches(geom_solid); patch++)
+    {
+      FinishPatchBoxes(geom_solid, patch, c_boxes[patch+2]);
+    }
   }
+  tfree(c_boxes);
 
   EndTiming(ClusteringTimingIndex);
 }
+
+#ifdef USING_PARALLEL
+}
+#endif

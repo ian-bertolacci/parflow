@@ -201,7 +201,6 @@ void             MGSemiProlong(
 
         i_c = 0;
         i_f = 0;
-        //double *temp_data = ctalloc(double, e_f_sub->data_size);
         _BoxLoopI2(InParallel, NO_LOCALS,
                    ii, jj, kk, ix, iy, iz, nx, ny, nz,
                    i_c, nx_c, ny_c, nz_c, 1, 1, 1,
@@ -210,18 +209,6 @@ void             MGSemiProlong(
           e_fp[i_f] = (p1[i_c] * e_fp[i_f - stride] +
                        p2[i_c] * e_fp[i_f + stride]);
         });
-/*
-        i_c = 0;
-        i_f = 0;
-        _BoxLoopI2(InParallel, NO_LOCALS,
-                   ii, jj, kk, ix, iy, iz, nx, ny, nz,
-                   i_c, nx_c, ny_c, nz_c, 1, 1, 1,
-                   i_f, nx_f, ny_f, nz_f, sx, sy, sz,
-        {
-          e_fp[i_f] = temp_data[i_f];
-        });
-        tfree(temp_data);
-*/
       }
     }
   }

@@ -158,6 +158,7 @@ set (SRC_FILES advect.F
 # need to be run through the CXX compiler for templating.
 if( ${PARFLOW_HAVE_OMP} )
   set_source_files_properties(axpy.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties(clustering.c PROPERTIES LANGUAGE CXX)
   set_source_files_properties(communication.c PROPERTIES LANGUAGE CXX)
   set_source_files_properties(copy.c PROPERTIES LANGUAGE CXX)
   set_source_files_properties(innerprod.c PROPERTIES LANGUAGE CXX)
