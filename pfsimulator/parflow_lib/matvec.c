@@ -456,7 +456,7 @@ void            InParallel_Matvec(
   /*-----------------------------------------------------------------------
    * Do (alpha != 0.0) computation
    *-----------------------------------------------------------------------*/
-
+  int tid = omp_get_thread_num();
   compute_pkg = GridComputePkg(grid, VectorUpdateAll);
 
   for (compute_i = 0; compute_i < 2; compute_i++)
@@ -465,20 +465,22 @@ void            InParallel_Matvec(
     {
       case 0:
       {
+        #pragma omp master
+        {
 #ifndef NO_VECTOR_UPDATE
 #ifdef VECTOR_UPDATE_TIMING
         BeginTiming(VectorUpdateTimingIndex);
         MASTER(EventTiming[NumEvents][InitStart] = amps_Clock());
 #endif
 
-        MASTER(handle = InitVectorUpdate(x, VectorUpdateAll));
+        handle = InitVectorUpdate(x, VectorUpdateAll);
 
 #ifdef VECTOR_UPDATE_TIMING
         MASTER(EventTiming[NumEvents][InitEnd] = amps_Clock());
         EndTiming(VectorUpdateTimingIndex);
 #endif
 #endif
-
+        }
         compute_reg = ComputePkgIndRegion(compute_pkg);
 
         /*-----------------------------------------------------------------
@@ -535,8 +537,8 @@ void            InParallel_Matvec(
             }
           }
         }
-      }
         break;
+      }
 
       case 1:
       {
@@ -555,8 +557,8 @@ void            InParallel_Matvec(
 #endif
 
         compute_reg = ComputePkgDepRegion(compute_pkg);
-      }
         break;
+      }
     }
 
     ForSubregionArrayI(sra, compute_reg)
@@ -614,7 +616,7 @@ void            InParallel_Matvec(
           ap = SubmatrixElt(A_sub, si, ix, iy, iz);
 
           vi = 0; mi = 0;
-          _BoxLoopI2(InParallel, NO_LOCALS,
+          _BoxLoopI2(NoWait, NO_LOCALS,
                      i, j, k,
                      ix, iy, iz, nx, ny, nz,
                      vi, nx_v, ny_v, nz_v, sx, sy, sz,
