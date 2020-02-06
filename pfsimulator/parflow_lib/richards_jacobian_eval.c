@@ -322,6 +322,7 @@ void    RichardsJacobianEval(
     }
   }
 
+  BeginTiming(RichardsJacobianTimingIndex);
   /*-----------------------------------------------------------------------
    * Allocate temp vectors
    *-----------------------------------------------------------------------*/
@@ -2182,6 +2183,7 @@ void    RichardsJacobianEval(
 
   } // End Parallel Region
 
+  EndTiming(RichardsJacobianTimingIndex);
   /*-----------------------------------------------------------------------
    * Update matrix ghost points
    *-----------------------------------------------------------------------*/
