@@ -1175,24 +1175,21 @@ void            MatvecSubMat(
     switch (compute_i)
     {
       case 0:
-#ifndef NO_VECTOR_UPDATE
-#ifdef VECTOR_UPDATE_TIMING
 #pragma omp master
       {
+#ifndef NO_VECTOR_UPDATE
+#ifdef VECTOR_UPDATE_TIMING
         BeginTiming(VectorUpdateTimingIndex);
         EventTiming[NumEvents][InitStart] = amps_Clock();
-      }
 #endif
         handle = InitVectorUpdate(x, VectorUpdateAll);
 
 #ifdef VECTOR_UPDATE_TIMING
-#pragma omp master
-        {
-          EventTiming[NumEvents][InitEnd] = amps_Clock();
-          EndTiming(VectorUpdateTimingIndex);
-        }
+        EventTiming[NumEvents][InitEnd] = amps_Clock();
+        EndTiming(VectorUpdateTimingIndex);
 #endif
 #endif
+      }
         compute_reg = ComputePkgIndRegion(compute_pkg);
 
         /*-----------------------------------------------------------------
@@ -1254,29 +1251,29 @@ void            MatvecSubMat(
         break;
 
       case 1:
+      {
+        BARRIER;
+#pragma omp master
+        {
 
 #ifndef NO_VECTOR_UPDATE
 #ifdef VECTOR_UPDATE_TIMING
-#pragma omp master
-      {
-        BeginTiming(VectorUpdateTimingIndex);
-        EventTiming[NumEvents][FinalizeStart] = amps_Clock();
-      }
+          BeginTiming(VectorUpdateTimingIndex);
+          EventTiming[NumEvents][FinalizeStart] = amps_Clock();
 #endif
-      FinalizeVectorUpdate(handle);
+          FinalizeVectorUpdate(handle);
 
 #ifdef VECTOR_UPDATE_TIMING
-#pragma omp master
-      {
-        EventTiming[NumEvents][FinalizeEnd] = amps_Clock();
-        EndTiming(VectorUpdateTimingIndex);
-      }
+          EventTiming[NumEvents][FinalizeEnd] = amps_Clock();
+          EndTiming(VectorUpdateTimingIndex);
 #endif
 #endif
+        }
+        BARRIER;
 
         compute_reg = ComputePkgDepRegion(compute_pkg);
-
         break;
+      }
     }
 
     /*-----------------------------------------------------------------
@@ -1411,7 +1408,7 @@ void            MatvecSubMat(
       }
     }
   }
-  }
+  } // End Parallel
   /*-----------------------------------------------------------------------
    * End timing
    *-----------------------------------------------------------------------*/
