@@ -583,7 +583,6 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
                      (rel_perm, pressure, density, gravity, problem_data,
                       CALCFCN));
 
-
   /* Calculate contributions from second order derivatives and gravity */
   ForSubgridI(is, GridSubgrids(grid))
   {
@@ -826,7 +825,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     });
   }
 
-  // Gather portion
+  // Reduction part
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -843,9 +842,9 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     iy = SubgridIY(subgrid) - 1;
     iz = SubgridIZ(subgrid) - 1;
 
-    nx = SubgridNX(subgrid) + 2;
-    ny = SubgridNY(subgrid) + 2;
-    nz = SubgridNZ(subgrid) + 2;
+    nx = SubgridNX(subgrid) + 1;
+    ny = SubgridNY(subgrid) + 1;
+    nz = SubgridNZ(subgrid) + 1;
 
     nx_p = SubvectorNX(p_sub);
     ny_p = SubvectorNY(p_sub);
@@ -869,52 +868,18 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       // ZYX-self order because for an internal cell in the original schedule,
       // the k+1 cell writes to (i,j,k) first, then the j+1 cell,
       // then the i+1 cell, then itself.
-
       // Z Direction
-      #ifdef USE_GATHER_GUARDS
-        #warning USE_GATHER_GUARDS enabled
-        if( iz < k && k <= iz + nz - 1 && !( i == ix + nx -1 || j == iy + ny -1 ) ){
-      #else
-        #warning USE_GATHER_GUARDS disabled
-        if( 1 == 1 ){
-      #endif
-        // fp[ip + sz_p] -= dt * u_upper;
-        fp[ip] -= dt * u_upper[ip - sz_p];
-      }
-
+      fp[ip] -= dt * u_upper[ip - sz_p];
       // Y Direction
-      #ifdef USE_GATHER_GUARDS
-        if( iy < j && j <= iy + ny - 1 && !( i == ix + nx - 1 || k == iz + nz - 1 ) ){
-      #else
-        if( 1 == 1 ){
-      #endif
-        // fp[ip + sy_p] -= dt * u_front;
-        fp[ip] -= dt * u_front[ip - sy_p];
-      }
-
+      fp[ip] -= dt * u_front[ip - sy_p];
       // X Direction
-      #ifdef USE_GATHER_GUARDS
-        if( ix < i && i <= ix + nx - 1 && !( j == iy + ny - 1 || k == iz + nz - 1) ){
-      #else
-        if( 1 == 1 ){
-      #endif
-        // fp[ip + 1] -= dt * u_right;
-        fp[ip] -= dt * u_right[ip - sx_p];
-      }
-
+      fp[ip] -= dt * u_right[ip - sx_p];
       // Self-update
-      #ifdef USE_GATHER_GUARDS
-        if( i <= ix + nx -1 && j <= iy + ny -1 && k <= iz + nz -1 ){
-      #else
-        if( 1 == 1 ){
-      #endif
-        fp[ip] += dt * (u_right[ip] + u_front[ip] + u_upper[ip]);
-      }
+      fp[ip] += dt * (u_right[ip] + u_front[ip] + u_upper[ip]);
     });
   }
 
   /*  Calculate correction for boundary conditions */
-
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);

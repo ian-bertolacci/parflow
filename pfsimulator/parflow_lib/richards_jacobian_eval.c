@@ -851,9 +851,9 @@ void    RichardsJacobianEval(
     iy = SubgridIY(subgrid) - 1;
     iz = SubgridIZ(subgrid) - 1;
 
-    nx = SubgridNX(subgrid) + 2;
-    ny = SubgridNY(subgrid) + 2;
-    nz = SubgridNZ(subgrid) + 2;
+    nx = SubgridNX(subgrid) + 1;
+    ny = SubgridNY(subgrid) + 1;
+    nz = SubgridNZ(subgrid) + 1;
 
     nx_v = SubvectorNX(p_sub);
     ny_v = SubvectorNY(p_sub);
@@ -886,44 +886,14 @@ void    RichardsJacobianEval(
       // ZYX-self order because for an internal cell in the original schedule,
       // the k+1 cell writes to (i,j,k) first, then the j+1 cell,
       // then the i+1 cell, then itself.
-
       // Z Direction
-      #ifdef USE_GATHER_GUARDS
-      #warning USE_GATHER_GUARDS enabled
-        if( iz < k && k <= iz + nz - 1 && !( i == ix + nx -1 || j == iy + ny -1 ) ){
-      #else
-        #warning USE_GATHER_GUARDS disabled
-        if( 1 == 1 ){
-      #endif
-        cp[im] -= upper_temp_array[it - sz_v];
-      }
-
+      cp[im] -= upper_temp_array[it - sz_v];
       // Y Direction
-      #ifdef USE_GATHER_GUARDS
-        if( iy < j && j <= iy + ny - 1 && !( i == ix + nx - 1 || k == iz + nz - 1 ) ){
-      #else
-        if( 1 == 1 ){
-      #endif
-        cp[im] -= north_temp_array[it - sy_v];
-      }
-
+      cp[im] -= north_temp_array[it - sy_v];
       // X Direction
-      #ifdef USE_GATHER_GUARDS
-        if( ix < i && i <= ix + nx - 1 && !( j == iy + ny - 1 || k == iz + nz - 1) ){
-      #else
-        if( 1 == 1 ){
-      #endif
-        cp[im] -= east_temp_array[it - sx_v];
-      }
-
+      cp[im] -= east_temp_array[it - sx_v];
       // Self-update
-      #ifdef USE_GATHER_GUARDS
-        if( i <= ix + nx -1 && j <= iy + ny -1 && k <= iz + nz -1 ){
-      #else
-        if( 1 == 1 ){
-      #endif
-        cp[im] -= west_temp_array[it] + south_temp_array[it] + lower_temp_array[it];
-      }
+      cp[im] -= west_temp_array[it] + south_temp_array[it] + lower_temp_array[it];
 
       if (!symm_part)
       {
@@ -939,7 +909,6 @@ void    RichardsJacobianEval(
   }
 
   /*  Calculate correction for boundary conditions */
-
   if (symm_part)
   {
     /*  For symmetric part only, we first adjust coefficients of normal */
