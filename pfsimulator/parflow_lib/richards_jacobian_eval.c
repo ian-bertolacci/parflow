@@ -852,12 +852,6 @@ void    RichardsJacobianEval(
                                   prod_up)))
                    + sym_upper_temp;
 
-/*
-      cp[im] -= west_temp + south_temp + lower_temp;
-      cp[im + 1] -= east_temp;
-      cp[im + sy_m] -= north_temp;
-      cp[im + sz_m] -= upper_temp;
-*/
       west_temp_array[ip] = west_temp;
       east_temp_array[ip] = east_temp;
       north_temp_array[ip] = north_temp;
@@ -865,35 +859,17 @@ void    RichardsJacobianEval(
       upper_temp_array[ip] = upper_temp;
       lower_temp_array[ip] = lower_temp;
 
-      /*
-      PlusEquals(cp[im], -(west_temp + south_temp + lower_temp));
-      PlusEquals(cp[im + 1], -east_temp);
-      PlusEquals(cp[im + sy_m], -north_temp);
-      PlusEquals(cp[im + sz_m], -upper_temp);
-      */
-
-      if (!symm_part)
-      {
-        ep[im] += east_temp;
-        np[im] += north_temp;
-        up[im] += upper_temp;
-/*
-        wp[im + 1] += west_temp;
-        sop[im + sy_m] += south_temp;
-        lp[im + sz_m] += lower_temp;
-*/
-      }
-      else     /* Symmetric matrix: just update upper coeffs */
+      /* Symmetric matrix: just update upper coeffs */
+      if (symm_part)
       {
         ep[im] += sym_east_temp;
         np[im] += sym_north_temp;
         up[im] += sym_upper_temp;
       }
     });
-  }  //
+  }
 
-  #pragma omp single
-  {
+  // Gather portion
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -940,27 +916,35 @@ void    RichardsJacobianEval(
     lp = SubmatrixStencilData(J_sub, 5);
     up = SubmatrixStencilData(J_sub, 6);
 
-    //_GrGeomInLoop(InParallel, NO_LOCALS,
-    GrGeomInLoop(
+    _GrGeomInLoop(InParallel, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
-      im = SubmatrixEltIndex(J_sub, i, j, k);
-      //int it = SubvectorEltIndex(west_temp_sub, i, j, k);
-      ip = SubvectorEltIndex(p_sub, i, j, k);
+      int im = SubmatrixEltIndex(J_sub, i, j, k);
+      int it = SubvectorEltIndex(west_temp_sub, i, j, k);
 
-      cp[im] -= west_temp_array[ip] + south_temp_array[ip] + lower_temp_array[ip];
-      cp[im + 1] -= east_temp_array[ip];
-      cp[im + sy_m] -= north_temp_array[ip];
-      cp[im + sz_m] -= upper_temp_array[ip];
+      // ZYX-self order because for an internal cell in the original schedule,
+      // the k+1 cell writes to (i,j,k) first, then the j+1 cell,
+      // then the i+1 cell, then itself.
+      // Z Direction
+      cp[im] -= upper_temp_array[it - sz_v];
+      // Y Direction
+      cp[im] -= north_temp_array[it - sy_v];
+      // X Direction
+      cp[im] -= east_temp_array[it - sx_v];
+      // Self-update
+      cp[im] -= west_temp_array[it] + south_temp_array[it] + lower_temp_array[it];
 
       if (!symm_part)
       {
-        wp[im + 1] += west_temp_array[ip];
-        sop[im + sy_m] += south_temp_array[ip];
-        lp[im + sz_m] += lower_temp_array[ip];
+        ep[im] += east_temp_array[it];
+        np[im] += north_temp_array[it];
+        up[im] += upper_temp_array[it];
+
+        wp[im] += west_temp_array[it - sx_v];
+        sop[im] += south_temp_array[it - sy_v];
+        lp[im] += lower_temp_array[it - sz_v];
       }
     });
-  }
   }
 
   /*  Calculate correction for boundary conditions */

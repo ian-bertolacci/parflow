@@ -867,25 +867,10 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
       u_right_dat[ip] = u_right;
       u_front_dat[ip] = u_front;
       u_upper_dat[ip] = u_upper;
-
-      /*
-      fp[ip] += dt * (u_right + u_front + u_upper);
-      fp[ip + 1] -= dt * u_right;
-      fp[ip + sy_p] -= dt * u_front;
-      fp[ip + sz_p] -= dt * u_upper;
-      */
-      /*
-      PlusEquals(fp[ip], (dt * (u_right + u_front + u_upper)));
-      PlusEquals(fp[ip + 1], -(dt * u_right));
-      PlusEquals(fp[ip + sy_p], -(dt * u_front));
-      PlusEquals(fp[ip + sz_p], -(dt * u_upper));
-      */
     });
   }
 
-  #pragma omp single
-  {
-// Gather portion
+  // Gather portion
   ForSubgridI(is, GridSubgrids(grid))
   {
     subgrid = GridSubgrid(grid, is);
@@ -921,17 +906,23 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
     u_front_dat = SubvectorData(u_front_sub);
     u_upper_dat = SubvectorData(u_upper_sub);
 
-    //_GrGeomInLoop(InParallel, NO_LOCALS,
-    GrGeomInLoop(
+    _GrGeomInLoop(InParallel, NO_LOCALS,
                   i, j, k, gr_domain, r, ix, iy, iz, nx, ny, nz,
     {
-      ip = SubvectorEltIndex(p_sub, i, j, k);
+      int ip = SubvectorEltIndex(p_sub, i, j, k);
+
+      // ZYX-self order because for an internal cell in the original schedule,
+      // the k+1 cell writes to (i,j,k) first, then the j+1 cell,
+      // then the i+1 cell, then itself.
+      // Z Direction
+      fp[ip] -= dt * u_upper_dat[ip - sz_p];
+      // Y Direction
+      fp[ip] -= dt * u_front_dat[ip - sy_p];
+      // X Direction
+      fp[ip] -= dt * u_right_dat[ip - sx_p];
+      // Self-update
       fp[ip] += dt * (u_right_dat[ip] + u_front_dat[ip] + u_upper_dat[ip]);
-      fp[ip + 1] -= dt * u_right_dat[ip];
-      fp[ip + sy_p] -= dt * u_front_dat[ip];
-      fp[ip + sz_p] -= dt * u_upper_dat[ip];
     });
-  }
   }
 
   /*  Calculate correction for boundary conditions */
