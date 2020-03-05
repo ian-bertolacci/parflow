@@ -55,8 +55,9 @@
 #define RedBlackGSTimingIndex 13
 #define CommunicationTimingIndex 14
 #define RichardsJacobianTimingIndex 15
+#define NLFunctionTimingIndex 16
 #ifdef VECTOR_UPDATE_TIMING
-#define VectorUpdateTimingIndex  16
+#define VectorUpdateTimingIndex  17
 #endif
 
 

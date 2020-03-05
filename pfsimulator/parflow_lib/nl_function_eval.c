@@ -44,7 +44,6 @@ extern "C"{
  *---------------------------------------------------------------------*/
 
 typedef struct {
-  int time_index;
   double SpinupDampP1;      // NBE
   double SpinupDampP2;      // NBE
   int tfgupwind;           //@RMM added for TFG formulation switch
@@ -184,7 +183,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   Grid        *grid2d = VectorGrid(x_sl);
   GrGeomSolid *gr_domain = ProblemDataGrDomain(problem_data);
 
-  BeginTiming(public_xtra->time_index);
+  BeginTiming(NLFunctionTimingIndex);
 
   /* diffusive test here, this is NOT PF style and should be
    * re-done putting keys in BC Pressure Package and adding to the
@@ -2311,7 +2310,7 @@ void NlFunctionEval(Vector *     pressure, /* Current pressure values */
   PFModuleInvokeType(RichardsBCInternalInvoke, bc_internal, (problem, problem_data, fval, NULL,
                                                              time, pressure, CALCFCN));
 
-  EndTiming(public_xtra->time_index);
+  EndTiming(NLFunctionTimingIndex);
 
   FreeVector(KW);
   FreeVector(KE);
@@ -2483,8 +2482,6 @@ PFModule   *NlFunctionEvalNewPublicXtra(char *name)
     }
   }
   NA_FreeNameArray(upwind_switch_na);
-
-  (public_xtra->time_index) = RegisterTiming("NL_F_Eval");
 
   PFModulePublicXtra(this_module) = public_xtra;
 
