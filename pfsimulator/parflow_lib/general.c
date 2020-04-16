@@ -190,28 +190,25 @@ void printMaxMemory(FILE *log_file)
 
   recordMemoryInfo();
 
-  amps_Invoice invoice = amps_NewInvoice("%i", &maxmem);
+  amps_Invoice maxmem_invoice = amps_NewInvoice("%i", &maxmem);
 
   if (amps_Rank(amps_CommWorld) != 0)
   {
     maxmem = (int)amps_ThreadLocal(s_max_memory);
-    amps_Send(amps_CommWorld, 0, invoice);
+    amps_Send(amps_CommWorld, 0, maxmem_invoice);
   }
   else
   {
-    int p = 0;
-
-    if (log_file)
+    for (int p = 0; p < amps_Size(amps_CommWorld); p++)
     {
-      fprintf(log_file,
-              "Maximum memory used on processor %d : %d MB\n",
-              p,
-              (int)amps_ThreadLocal(s_max_memory) / (1024 * 1024));
-    }
-
-    for (p = 1; p < amps_Size(amps_CommWorld); p++)
-    {
-      amps_Recv(amps_CommWorld, p, invoice);
+      if (p == amps_Rank(amps_CommWorld))
+      {
+        maxmem = (int)amps_ThreadLocal(s_max_memory);
+      }
+      else
+      {
+        amps_Recv(amps_CommWorld, p, maxmem_invoice);
+      }
       if (log_file)
       {
         fprintf(log_file,
@@ -222,7 +219,7 @@ void printMaxMemory(FILE *log_file)
     }
   }
 
-  amps_FreeInvoice(invoice);
+  amps_FreeInvoice(maxmem_invoice);
 #endif
 
   /*
@@ -230,32 +227,87 @@ void printMaxMemory(FILE *log_file)
    */
 
 #ifdef __linux__
-  if (!amps_Rank(amps_CommWorld))
+
+  const int procfile_max_path_size = 124;
+  const int procfile_max_size = 1024*10;
+   // @IJB Warning: is it safe to assume /proc/*/status files are only 10KB?
+   //               Also, thats big. Would like to has variable length
+
+  // Path Name
+  char procfilename[procfile_max_path_size];
+  char* procfile_data = talloc(char, procfile_max_size);
+
+  int pid = getpid();
+  sprintf(procfilename, "/proc/%d/status", pid);
+
+  struct stat stats;
+  if (!stat(procfilename, &stats))
   {
-    char procfilename[2056];
+    FILE *file;
+    int c;
 
-    sprintf(procfilename, "/proc/%d/status", getpid());
-
-    fprintf(log_file, "\n\nBEGIN(Contents of %s)\n", procfilename);
-
-    struct stat stats;
-    if (!stat(procfilename, &stats))
+    file = fopen(procfilename, "r");
+    int cursor = 0;
+    while ((c = fgetc(file)) != EOF)
     {
-      FILE *file;
-      int c;
-
-      file = fopen(procfilename, "r");
-
-      while ((c = fgetc(file)) != EOF)
-      {
-        fputc(c, log_file);
-      }
-
-      fclose(file);
-
-      fprintf(log_file, "\n\nEND(Contents of %s)\n", procfilename);
+      procfile_data[cursor++] = c;
     }
+    procfile_data[cursor++] = '\0';
+    fclose(file);
   }
+  else
+  {
+    amps_Printf("Failed to read proc status %s\n", procfilename);
+  }
+
+  if (amps_Rank(amps_CommWorld) != 0)
+  {
+    // TODO: @IJB Figure out how to send a string of variable length.
+    amps_Invoice send_procfile_invoice = amps_NewInvoice("%i%*c", &pid, procfile_max_size, procfile_data );
+    amps_Send(amps_CommWorld, 0, send_procfile_invoice);
+    amps_FreeInvoice( send_procfile_invoice );
+  }
+  else
+  {
+    // Data being communicated to this rank
+    int comm_pid;
+    char* comm_procfile_data = talloc(char, procfile_max_size);
+    // TODO: @IJB Figure out how to send a string of variable length.
+    amps_Invoice recv_procfile_invoice = amps_NewInvoice( "%i%*c", &comm_pid, procfile_max_size, comm_procfile_data );
+
+    // A level of indirection for printing (removed complicated state checking if otherwise using comm_* for both communicated and local data).
+    char* indirect_procfile_data;
+    int indirect_pid;
+
+    // Recieve data from each rank (or reference local data)
+    for (int p = 0; p < amps_Size(amps_CommWorld); p++)
+    {
+      // Reference local data
+      if (p == amps_Rank(amps_CommWorld))
+      {
+        indirect_procfile_data = procfile_data;
+        indirect_pid = pid;
+      }
+      // Recieve remove data
+      else
+      {
+        amps_Recv(amps_CommWorld, p, recv_procfile_invoice);
+
+        indirect_procfile_data = comm_procfile_data;
+        indirect_pid = comm_pid;
+      }
+      if (log_file)
+      {
+        fprintf(log_file, "\n\nBEGIN(Contents of rank %d /proc/%d/status)\n%s\nEND(Contents of rank %d /proc/%d/status)\n", p, indirect_pid, indirect_procfile_data, p, indirect_pid);
+      }
+    }
+
+    amps_FreeInvoice(recv_procfile_invoice);
+    tfree( comm_procfile_data );
+  }
+
+  tfree( procfile_data );
+
 #endif
 }
 
