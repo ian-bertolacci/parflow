@@ -165,6 +165,7 @@ clm_last_rst,clm_daily_rst, pf_nlevsoi, pf_nlevlak)
   !=== Open CLM text output
   write(RI,*)  rank
 
+
 ! NBE: Throughout clm.F90, any writes to unit 999 are now prefaced with the logical to disable the
 !       writing of the log files. This greatly reduces the number of files created during a run.
   if (clm_write_logs==1) open(999, file="clm_output.txt."//trim(adjustl(RI)), action="write")
