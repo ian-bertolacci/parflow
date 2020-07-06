@@ -3,7 +3,7 @@ jobs:
   - os: linux
     dist: trusty
     name: 'Ubuntu 14.04LTS'
-    env: 
+    env:
       - PF_ACC_BACKEND=none
       - PF_TEST_VER=ubuntu1404
     addons:
@@ -19,7 +19,7 @@ jobs:
   - os: linux
     dist: trusty
     name: 'Ubuntu 14.04LTS with OMP'
-    env: 
+    env:
       - PF_ACC_BACKEND=omp
       - PF_TEST_VER=ubuntu1404
     addons:
@@ -35,7 +35,7 @@ jobs:
   - os: linux
     dist: bionic
     name: 'Ubuntu 18.04LTS'
-    env: 
+    env:
       - PF_ACC_BACKEND=none
       - PF_TEST_VER=ubuntu1804
     addons:
@@ -51,7 +51,7 @@ jobs:
   - os: linux
     dist: bionic
     name: 'Ubuntu 18.04LTS with OMP'
-    env: 
+    env:
       - PF_ACC_BACKEND=omp
       - PF_TEST_VER=ubuntu1804
     addons:
@@ -62,12 +62,12 @@ jobs:
           - libhdf5-openmpi-100
           - hdf5-helpers
           - tcl-dev
-          - tk-dev     
-          
+          - tk-dev
+
   - os: linux
     dist: bionic
     name: 'Ubuntu 18.04LTS with CUDA'
-    env: 
+    env:
       - PF_ACC_BACKEND=cuda
       - PF_TEST_VER=ubuntu1804
     addons:
@@ -78,7 +78,7 @@ jobs:
           - libhdf5-openmpi-100
           - hdf5-helpers
           - tcl-dev
-          - tk-dev   
+          - tk-dev
 
 language: cpp
 
@@ -96,21 +96,21 @@ before_install:
   - sudo apt-get -qq update
 
 # Set up CMake
-  - if [[ ! -f cmake-3.14.0-Linux-x86_64/bin/cmake ]]; then 
-      wget --no-check-certificate http://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.tar.gz && tar -xvf cmake-3.14.0-Linux-x86_64.tar.gz; 
+  - if [[ ! -f cmake-3.14.0-Linux-x86_64/bin/cmake ]]; then
+      wget --no-check-certificate http://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.tar.gz && tar -xvf cmake-3.14.0-Linux-x86_64.tar.gz;
     fi
   - export PATH=$TRAVIS_BUILD_DIR/cmake-3.14.0-Linux-x86_64/bin/:$PATH;
 
 # Set up Hypre
   - wget https://computing.llnl.gov/projects/hypre-scalable-linear-solvers-multigrid-methods/download/hypre-2.11.2.tar.gz && tar -xvf hypre-2.11.2.tar.gz
-  - cd hypre-2.11.2/src 
-  - ./configure && make install 
+  - cd hypre-2.11.2/src
+  - ./configure && make install
   - export HYPRE_ROOT=`pwd`/hypre && cd ../..
 
 # Set up Silo
   - wget https://wci.llnl.gov/content/assets/docs/simulation/computer-codes/silo/silo-4.10.2/silo-4.10.2.tar.gz && tar -xvf silo-4.10.2.tar.gz
-  - cd silo-4.10.2 
-  - ./configure --disable-silex --disable-hzip --disable-fpzip && make install 
+  - cd silo-4.10.2
+  - ./configure --disable-silex --disable-hzip --disable-fpzip && make install
   - export SILO_ROOT=`pwd` && cd ..
 
   # Set up CUDA
@@ -167,9 +167,8 @@ before_script:
 script:
 # Run tests with PARFLOW_ACCELERATOR_BACKEND=$PF_ACC_BACKEND (Travis does not support running with CUDA)
   - if [[ $PF_ACC_BACKEND != 'cuda' ]]; then
-      cd $TRAVIS_BUILD_DIR/build && make test;
+      cd $TRAVIS_BUILD_DIR/build && make test ARGS=--verbose;
     fi
 
 after_failure:
   - cat $TRAVIS_BUILD_DIR/build/Testing/Temporary/LastTest.log
-  
