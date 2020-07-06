@@ -83,10 +83,7 @@ subroutine clm_coszen (clm, day, coszen)
   pi = 4.*atan(1.)  ! Value of Pi to system and types maximum precision
 
 ! Slope aspect from ParFlow terrain
-
   slope = atan( sqrt( clm%slope_x**2 + clm%slope_y**2 ) )
-!   print *, 'Slope'
-!   print *, slope
   Sy = abs(clm%slope_y)
   Sx = abs(clm%slope_x)
 
@@ -115,7 +112,6 @@ subroutine clm_coszen (clm, day, coszen)
   else if(clm%slope_y==0 .and. clm%slope_x<0) then
     aspect = -pi/2
     
-
   else if(clm%slope_y==0 .and. clm%slope_x==0) then
     aspect = 0
  
@@ -124,9 +120,6 @@ subroutine clm_coszen (clm, day, coszen)
     
   end if
   
-  
-!   print *, 'Aspect'
-!   print *, aspect
 
 ! Solar declination: match CCM2
 
@@ -134,8 +127,6 @@ subroutine clm_coszen (clm, day, coszen)
   delta = .006918 - .399912*cos(   theta) + .070257*sin(   theta) &
        - .006758*cos(2.*theta) + .000907*sin(2.*theta) &
        - .002697*cos(3.*theta) + .001480*sin(3.*theta)
-!   print *, 'delta'
-!   print *, delta
   sind = sin(delta)
   cosd = cos(delta)
 
@@ -149,12 +140,10 @@ subroutine clm_coszen (clm, day, coszen)
 ! Hour angle
 
   hrang = 15. * (loctim-12.) * pi/180.     ! 360/24 = 15
-!   print *, 'hrang'
-!   print *, hrang
+
   
   si = clm%lat
-!   print *, 'si'
-!   print*, si
+
 
 ! Cosine solar zenith angle.  Reset points with sun slightly below horizon 
 ! to slightly above horizon, as discussed in description.
@@ -167,7 +156,5 @@ subroutine clm_coszen (clm, day, coszen)
 
   if (coszen >= -0.001 .and. coszen <= 0.) coszen=0.001
 
-print *, 'coszen'
-print *, coszen
 
 end subroutine clm_coszen
