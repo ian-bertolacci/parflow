@@ -246,6 +246,29 @@ typedef struct {
 #define FrontFace GrGeomOctreeFaceF
 /** @} */
 
+#define macro_val_to_string(value, macro, rest) (((value)==(macro))? (#macro) : (rest))
+
+#define FaceType_to_string(x) \
+  macro_val_to_string(x,LeftFace, \
+  macro_val_to_string(x,RightFace, \
+  macro_val_to_string(x,DownFace, \
+  macro_val_to_string(x,UpFace, \
+  macro_val_to_string(x,BackFace, \
+  macro_val_to_string(x,FrontFace, "Unknown Face type" )  \
+  )))))
+
+#ifndef BustedFace
+#define BustedFace -2
+#else
+#define XSTR(x) STR(x)
+#define STR(x) #x
+#pragma Face XSTR(BustedFace) is busted
+#endif
+
+
+
+
+
 /**
  * @brief Unconditionally executes body at the beginning of each boundary cell iteration
  */
@@ -296,11 +319,15 @@ typedef struct {
  * @param[in] fdir Face direction to execute the body on (e.g. FaceLeft)
  * @param[in] body Arbitrary statement body block to execute
  */
-#define FACE(fdir, body)      \
-  case fdir:                  \
-  {                           \
-    body;                     \
-    break;                    \
+#define FACE(fdir, body)        \
+  case fdir:                    \
+  {                             \
+    if( fdir != BustedFace ){  \
+      body;                     \
+    } else {                    \
+      printf( "Face %s (%d) is BUSTED!\n", FaceType_to_string(fdir), fdir ); \
+    }                           \
+    break;                      \
   }
 
 /**
