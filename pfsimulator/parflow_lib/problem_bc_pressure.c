@@ -195,6 +195,7 @@ BCStruct    *BCPressure(
             patch_values_size = 0;
             ForEachPatchCell(i, j, k, ival, bc_struct, ipatch, is,
             {
+              // THIS_IS_THE_CODE_I_WANT_TO_SEE();
               patch_values_size++;
             });
             patch_values = talloc(double, patch_values_size);

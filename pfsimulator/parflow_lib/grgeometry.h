@@ -430,6 +430,12 @@ typedef struct {
     for (int PV_f = 0; PV_f < GrGeomOctreeNumFaces; PV_f++)             \
     {                                                                   \
       BoxArray* boxes = GrGeomSolidPatchBoxes(grgeom, patch_num, PV_f); \
+      printf(                                                           \
+        "GrGeomPatchLoopBoxesNoFdir_default Executing %3d boxes with face %10s (%2d) @ %s:%d\n", \
+        BoxArraySize(boxes),                                            \
+        FaceType_to_string(PV_f), PV_f,                                 \
+        __FILE__, __LINE__                                              \
+      );                                                                \
       for (int PV_box = 0; PV_box < BoxArraySize(boxes); PV_box++)      \
       {                                                                 \
         Box box = BoxArrayGetBox(boxes, PV_box);                        \
@@ -441,6 +447,15 @@ typedef struct {
         PV_iyu = pfmin((iy + ny - 1), box.up[1]);                       \
         PV_izu = pfmin((iz + nz - 1), box.up[2]);                       \
                                                                         \
+        /*printf(                                                         \
+          "GrGeomPatchLoopBoxesNoFdir_default Executing a box %3d with face %10s (%2d) of range (%3d,%3d,%3d)..(%3d,%3d,%3d) (%4d) @ %s:%d\n", \
+          PV_box,                                                             \
+          FaceType_to_string(PV_f), PV_f,                                     \
+          PV_ixl, PV_iyl, PV_izl,                                             \
+          PV_ixu, PV_iyu, PV_izu,                                             \
+          ((1+PV_ixu - PV_ixl) * (1+PV_iyu - PV_iyl) * (1+PV_izu - PV_izl)),  \
+          __FILE__, __LINE__                                                  \
+        ); */                                                                    \
         for (k = PV_izl; k <= PV_izu; k++)                              \
           for (j = PV_iyl; j <= PV_iyu; j++)                            \
             for (i = PV_ixl; i <= PV_ixu; i++)                          \
@@ -454,6 +469,12 @@ typedef struct {
                 f_up;                                                   \
                 f_back;                                                 \
                 f_front;                                                \
+                default:                                                                           \
+                  printf(                                                                          \
+                    "GrGeomPatchLoopBoxesNoFdir_default switch: Hit default case for %10s (%2d) @ %s:%d\n", \
+                    FaceType_to_string(PV_f), PV_f,                                                \
+                    __FILE__, __LINE__                                                             \
+                  );                                                                               \
               }                                                         \
               finalize;                                                 \
             }                                                           \

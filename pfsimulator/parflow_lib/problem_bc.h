@@ -29,6 +29,16 @@
 *
 *****************************************************************************/
 
+// Create Valid C string from tokens
+// Note: tokens with un-escaped quotes *will NOT* break this!
+#define STRINGIZE(x) STRINGIZE_NO_PREPROCESS(x)
+#define STRINGIZE_NO_PREPROCESS(x) #x
+
+// A delayed version of concationation operation
+#define CONCATENATE(arg1, arg2) CONCATENATE_NO_PREPROCESS(arg1, arg2)
+#define CONCATENATE_NO_PREPROCESS(arg1, arg2)  arg1##arg2
+
+
 /** @file
  * @brief Boundary condition macros
  */
@@ -49,6 +59,24 @@
 #define OverlandKinematicBC 4
 #define OverlandDiffusiveBC 5
 /** @} */
+
+/**
+ * @brief For use when a BCLoop should execute no matter what the patch type is
+ */
+#define ALL -1
+
+#define macro_val_to_string(value, macro, rest) (((value)==(macro))? (#macro) : (rest))
+
+#define BCType_to_string(x) \
+  macro_val_to_string(x,ALL,\
+  macro_val_to_string(x,DirichletBC, \
+  macro_val_to_string(x,FluxBC, \
+  macro_val_to_string(x,OverlandBC, \
+  macro_val_to_string(x,SeepageFaceBC, \
+  macro_val_to_string(x,OverlandKinematicBC, \
+  macro_val_to_string(x,OverlandDiffusiveBC, "Unknown BCType" ) \
+  ))))))
+
 
 /*----------------------------------------------------------------
  * BCStruct structure
@@ -221,10 +249,7 @@ typedef struct {
  * ForPatch loops and macros
  *--------------------------------------------------------------------------*/
 
-/**
- * @brief For use when a BCLoop should execute no matter what the patch type is
- */
-#define ALL -1
+
 
 /**
  * @brief For use when a statement body is unnecessary in ForPatchCellsPerFace().
@@ -245,6 +270,18 @@ typedef struct {
 #define BackFace GrGeomOctreeFaceB
 #define FrontFace GrGeomOctreeFaceF
 /** @} */
+
+#define FaceType_to_string(x) \
+  macro_val_to_string(x,LeftFace, \
+  macro_val_to_string(x,RightFace, \
+  macro_val_to_string(x,DownFace, \
+  macro_val_to_string(x,UpFace, \
+  macro_val_to_string(x,BackFace, \
+  macro_val_to_string(x,FrontFace, "Unknown Face type" )  \
+  )))))
+
+
+
 
 /**
  * @brief Unconditionally executes body at the beginning of each boundary cell iteration
@@ -296,11 +333,17 @@ typedef struct {
  * @param[in] fdir Face direction to execute the body on (e.g. FaceLeft)
  * @param[in] body Arbitrary statement body block to execute
  */
-#define FACE(fdir, body)      \
-  case fdir:                  \
-  {                           \
-    body;                     \
-    break;                    \
+#define FACE(fdir, body)                                                      \
+  case fdir:                                                                  \
+  {                                                                           \
+    printf(                                                                   \
+      "FACE %10s (%2d) %20s (%2d) @ %s:%d\n",    \
+      FaceType_to_string(fdir), fdir,                                         \
+      BCType_to_string(debug_bctype), debug_bctype,                           \
+      __FILE__, __LINE__                                                      \
+    );                                                                        \
+    body;                                                                     \
+    break;                                                                    \
   }
 
 /**
@@ -397,6 +440,12 @@ ForPatchCellsPerFace(NotARealBCType,
                              finalize,                        \
                              after_loop)                      \
   {                                                           \
+    int debug_bctype = (bctype);                              \
+    printf(                                                   \
+      "ForPatchCellsPerFace with boundary condition %20s (%2d) @ %s:%d\n", \
+      BCType_to_string(bctype), bctype,                       \
+      __FILE__, __LINE__                                      \
+    );                                                        \
     if ( ((bctype) == ALL) ||                                 \
          ((bctype) == _GetCurrentPatch(loopvars)))            \
     {                                                         \
@@ -425,6 +474,7 @@ ForPatchCellsPerFace(NotARealBCType,
                                       finalize,                       \
                                       after_loop)                     \
   {                                                                   \
+    int debug_bctype = (bctype);                                      \
     if ( ((bctype) == ALL) ||                                         \
          ((bctype) == _GetCurrentPatch(loopvars)))                    \
     {                                                                 \
